@@ -78,8 +78,8 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col items-center space-y-6 md:w-1/3 z-10 group">
-            <div className="h-32 md:h-40 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
-              <Image src="/assets/yellow_shield_2.svg" alt="Quality Control" width={110} height={110} className="w-auto h-24 md:h-28 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+            <div className="h-40 md:h-48 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
+              <Image src="/assets/yellow_shield_2.svg" alt="Quality Control" width={110} height={110} className="w-auto h-28 md:h-32 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
             <p className="font-serif font-bold text-2xl md:text-3xl text-foreground">Quality Control</p>
           </div>
@@ -98,7 +98,7 @@ export default function Home() {
       </section>
 
       {/* Optimize Section */}
-      <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col lg:flex-row items-center gap-16 md:gap-24 overflow-hidden">
+      <section className="py-12 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 md:gap-20 overflow-hidden">
         <div className="flex-1 space-y-6 md:space-y-10 text-center lg:text-left relative z-10">
           <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1] max-w-xl mx-auto lg:mx-0">
             <span className="text-primary block lg:inline mb-2 lg:mb-0">Optimize</span> your warehouse
@@ -155,7 +155,7 @@ export default function Home() {
       </section>
 
       {/* Join Us Section */}
-      <section className="py-24 md:py-48 flex flex-col items-center justify-center text-center px-6 relative max-w-5xl mx-auto w-full overflow-visible">
+      <section className="py-20 md:py-32 flex flex-col items-center justify-center text-center px-6 relative max-w-5xl mx-auto w-full overflow-visible">
         <div className="absolute top-10 left-0 md:left-10 opacity-20 select-none pointer-events-none hidden sm:block">
           <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} className="rotate-[-15deg] opacity-60" />
         </div>
