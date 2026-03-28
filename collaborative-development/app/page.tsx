@@ -6,8 +6,8 @@ export default function Home() {
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full bg-white">
       {/* Navbar */}
       <nav className="flex flex-row items-center justify-between px-6 md:px-12 py-8 max-w-7xl mx-auto w-full gap-4">
-        <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
-          <div className="relative w-12 h-12 transition-transform group-hover:scale-110 duration-300">
+        <Link href="/" className="flex items-center gap-4 flex-shrink-0 group">
+          <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform group-hover:scale-110 duration-300">
             <Image 
               src="/assets/logo.png" 
               alt="GoGodam Logo" 
@@ -16,7 +16,7 @@ export default function Home() {
               priority
             />
           </div>
-          <span className="text-2xl md:text-4xl font-black text-primary tracking-tighter">GoGodam</span>
+          <span className="text-2xl md:text-3xl font-black text-primary tracking-tighter">GoGodam</span>
         </Link>
         <div className="flex items-center gap-4 md:gap-10 font-bold text-sm md:text-lg whitespace-nowrap">
           <Link href="/login" className="hover:text-primary transition-colors py-2 px-1">Login</Link>
