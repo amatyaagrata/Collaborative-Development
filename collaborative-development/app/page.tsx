@@ -5,17 +5,20 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 md:px-12 py-6 max-w-7xl mx-auto w-full">
-        <Link href="/" className="relative w-32 md:w-40 h-10">
-          <Image 
-            src="/assets/logo.png" 
-            alt="GoGodam Logo" 
-            fill 
-            className="object-contain object-left"
-            priority
-          />
+      <nav className="flex flex-col sm:flex-row items-center justify-center gap-6 px-6 md:px-12 py-8 max-w-7xl mx-auto w-full">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="relative w-8 h-8">
+            <Image 
+              src="/assets/logo.png" 
+              alt="GoGodam Logo" 
+              fill 
+              className="object-contain"
+              priority
+            />
+          </div>
+          <span className="text-2xl font-black text-primary tracking-tighter">GoGodam</span>
         </Link>
-        <div className="flex items-center gap-6 md:gap-8 font-bold text-sm">
+        <div className="flex items-center gap-8 font-bold text-sm">
           <Link href="/login" className="hover:text-primary transition-colors">Login</Link>
           <Link href="/signup" className="hover:text-primary transition-colors">Signup</Link>
         </div>
@@ -47,10 +50,10 @@ export default function Home() {
       </section>
 
       {/* Seamless Continuity Section */}
-      <section className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col items-center sm:items-start text-center sm:text-left mb-16 md:mb-24">
+      <section className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col items-center">
+        <div className="flex flex-col items-center text-center mb-16 md:mb-24">
           <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-black tracking-tighter leading-[1.1] max-w-3xl">
-            <span className="text-primary block sm:inline">Seamless</span> Continuity
+            <span className="text-primary">Seamless</span> Continuity
           </h2>
           <p className="mt-6 md:mt-8 text-base md:text-lg text-zinc-600 max-w-3xl leading-relaxed font-medium">
             Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
@@ -58,8 +61,7 @@ export default function Home() {
         </div>
 
         {/* Illustrations Grid */}
-        <div className="bg-[#f2f4f7] rounded-[40px] p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 relative text-center">
-          
+        <div className="bg-[#f2f4f7] rounded-[40px] p-8 md:p-16 flex flex-col md:flex-row items-center justify-center gap-12 md:gap-4 relative text-center w-full">
           <div className="flex flex-col items-center space-y-4 md:w-1/3 z-10">
             <div className="h-32 flex items-center justify-center">
               <Image src="/assets/blue_truck.svg" alt="Replenishment" width={100} height={100} className="w-auto h-24 object-contain drop-shadow-sm hover:scale-105 transition-transform" />
@@ -92,21 +94,21 @@ export default function Home() {
       </section>
 
       {/* Optimize Section */}
-      <section className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-        <div className="space-y-6 md:space-y-10 order-2 lg:order-1 relative">
+      <section className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
+        <div className="space-y-6 md:space-y-10 mb-16 relative">
           <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-black tracking-tighter leading-[1.05]">
-            <span className="text-primary block">Optimize</span> <span className="text-foreground">your warehouse</span>
+            <span className="text-primary">Optimize</span> your warehouse
           </h2>
-          <p className="text-base md:text-lg text-zinc-600 leading-relaxed font-medium">
+          <p className="text-base md:text-lg text-zinc-600 leading-relaxed font-medium max-w-3xl">
             Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
           </p>
-          <div className="absolute -top-10 -right-10 hidden lg:block">
-            <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow pointing to screenshot" width={120} height={120} className="opacity-40" />
+          <div className="absolute -top-10 right-0 hidden lg:block opacity-30">
+            <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={80} height={80} />
           </div>
         </div>
 
-        <div className="order-1 lg:order-2 relative px-4 sm:px-0">
-          <div className="bg-[#f0f2f5] rounded-[40px] aspect-[4/3] flex items-center justify-center w-full relative group shadow-sm border border-zinc-100">
+        <div className="relative w-full max-w-4xl px-4 sm:px-0">
+          <div className="bg-[#f0f2f5] rounded-[40px] aspect-video flex items-center justify-center w-full relative group shadow-sm border border-zinc-100">
             <span className="text-3xl md:text-5xl italic font-serif opacity-30 group-hover:opacity-50 transition-opacity text-foreground">screen shot</span>
             <div className="absolute -bottom-10 right-4 sm:-right-8 w-24 md:w-32 h-24 md:h-32 z-20">
               <Image src="/assets/yellow_unbox.svg" alt="Unboxing Icon" fill className="object-contain drop-shadow-md hover:-translate-y-2 transition-transform" />
@@ -118,7 +120,7 @@ export default function Home() {
       {/* One Need Section */}
       <section className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full text-center">
         <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-black tracking-tighter mb-16 md:mb-24 leading-tight">
-          <span className="text-primary">One</span> <span className="text-foreground">need, one site.</span>
+          <span className="text-primary">One</span> need, one site.
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 sm:gap-4 md:gap-12">
             <div className="flex flex-col items-center">
@@ -152,7 +154,7 @@ export default function Home() {
         </div>
         
         <h2 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter mb-10 z-10">
-          <span className="text-primary inline-block mr-2 md:mr-4">Join</span><span className="text-foreground">us</span>
+          <span className="text-primary inline-block mr-2 md:mr-4">Join</span>us
         </h2>
         <Link 
           href="/signup" 
@@ -163,7 +165,7 @@ export default function Home() {
         <p className="mt-8 text-xs font-bold text-zinc-500 uppercase tracking-widest z-10">or continue with</p>
       </section>
 
-      {/* Footer */}
+      {/* Footer Branding */}
       <footer className="bg-dark-bg text-white pt-24 pb-8 md:pb-16 px-6 md:px-12 flex flex-col items-center relative overflow-hidden">
         <div className="mb-12 md:mb-16 z-10">
           <Image 
