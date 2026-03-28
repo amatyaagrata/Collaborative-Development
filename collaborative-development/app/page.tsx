@@ -38,11 +38,11 @@ export default function Home() {
             Start now - it's free
           </Link>
           
-          <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 z-0 hidden md:block animate-bounce opacity-40">
+          <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 z-0 hidden md:block animate-bounce opacity-80">
             <Image 
               src="/assets/grey_arrow_md_04.svg" 
               alt="Arrow pointing down" 
-              width={24} height={60} 
+              width={40} height={80} 
             />
           </div>
         </div>
