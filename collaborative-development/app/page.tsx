@@ -115,13 +115,13 @@ export default function Home() {
           <div className="bg-[#f0f2f5] rounded-[48px] md:rounded-[64px] aspect-video flex-grow flex items-center justify-center w-full relative group shadow-inner border border-zinc-100 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <span className="text-3xl md:text-5xl italic font-serif opacity-30 group-hover:opacity-60 transition-all text-foreground group-hover:scale-110 duration-700">screen shot</span>
-            
+
             <div className="absolute -bottom-8 md:-bottom-12 -right-4 md:-right-8 w-28 md:w-44 h-28 md:h-44 z-20">
               <Image src="/assets/yellow_unbox.svg" alt="Unboxing Icon" fill className="object-contain drop-shadow-2xl group-hover:-translate-y-4 group-hover:-translate-x-4 transition-transform duration-700 delay-100" />
             </div>
-            
+
             <div className="absolute top-10 right-10 opacity-10 group-hover:scale-150 transition-transform duration-1000">
-               <Image src="/assets/grey_arrow_loop_01.svg" alt="Loop" width={80} height={80} />
+              <Image src="/assets/grey_arrow_loop_01.svg" alt="Loop" width={80} height={80} />
             </div>
           </div>
         </div>
@@ -135,24 +135,21 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-24 md:gap-16 lg:gap-24">
           <div className="flex flex-col items-center group">
             <div className="h-48 md:h-64 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
+              <Image src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 transition-all duration-500" />
             </div>
-            <p className="font-serif font-bold text-2xl md:text-4xl text-foreground">Sales</p>
-            <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <p className="font-caveat font-bold text-4xl md:text-5xl text-primary italic">Sales</p>
           </div>
           <div className="flex flex-col items-center group">
             <div className="h-48 md:h-64 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500" />
+              <Image src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 transition-all duration-500" />
             </div>
-            <p className="font-serif font-bold text-2xl md:text-4xl text-foreground">Tracking</p>
-            <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <p className="font-caveat font-bold text-4xl md:text-5xl text-primary italic">Tracking</p>
           </div>
           <div className="flex flex-col items-center group">
             <div className="h-48 md:h-64 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
+              <Image src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 transition-all duration-500" />
             </div>
-            <p className="font-serif font-bold text-2xl md:text-4xl text-foreground">Inventory</p>
-            <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <p className="font-caveat font-bold text-4xl md:text-5xl text-primary italic">Inventory</p>
           </div>
         </div>
       </section>

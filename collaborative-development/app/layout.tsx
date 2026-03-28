@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Caveat } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,9 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
+const caveat = Caveat({ subsets: ['latin'], variable: '--font-caveat' });
+
 export const metadata: Metadata = {
-  title: "Collaborative Development",
-  description: "A collaborative development project",
+  title: "GoGodam | Inventory System & Logistics",
+  description: "Streamline your warehouse and logistics with our modern inventory management system.",
 };
 
 export default function RootLayout({
@@ -25,9 +28,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${caveat.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col font-sans antialiased text-foreground bg-white overflow-x-hidden">{children}</body>
     </html>
   );
 }
