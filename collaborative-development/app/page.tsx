@@ -155,12 +155,7 @@ export default function Home() {
       </section>
 
       {/* Join Us Section */}
-      <section className="pt-20 pb-32 md:py-40 flex flex-col items-center justify-center text-center px-6 relative max-w-4xl mx-auto w-full">
-        <div className="absolute -top-10 right-4 md:right-0 opacity-20 select-none pointer-events-none hidden sm:block">
-          <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={140} height={140} className="scale-x-[-1] -rotate-45" />
-        </div>
-      {/* Join Us Section */}
-      <section className="py-32 md:py-48 flex flex-col items-center justify-center text-center px-6 relative max-w-5xl mx-auto w-full overflow-visible">
+      <section className="py-24 md:py-48 flex flex-col items-center justify-center text-center px-6 relative max-w-5xl mx-auto w-full overflow-visible">
         <div className="absolute top-10 left-0 md:left-10 opacity-20 select-none pointer-events-none hidden sm:block">
           <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} className="rotate-[-15deg] opacity-60" />
         </div>
@@ -205,7 +200,6 @@ export default function Home() {
             </h1>
           </div>
         </div>
-      </footer>
       </footer>
     </div>
   );
