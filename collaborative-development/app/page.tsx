@@ -159,60 +159,53 @@ export default function Home() {
         <div className="absolute -top-10 right-4 md:right-0 opacity-20 select-none pointer-events-none hidden sm:block">
           <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={140} height={140} className="scale-x-[-1] -rotate-45" />
         </div>
-        <div className="absolute -bottom-10 left-4 md:left-0 opacity-20 select-none pointer-events-none hidden sm:block">
-          <Image src="/assets/secondary_arrow_sm_01.svg" alt="Arrow" width={100} height={100} className="rotate-45" />
+      {/* Join Us Section */}
+      <section className="py-32 md:py-48 flex flex-col items-center justify-center text-center px-6 relative max-w-5xl mx-auto w-full overflow-visible">
+        <div className="absolute top-10 left-0 md:left-10 opacity-20 select-none pointer-events-none hidden sm:block">
+          <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} className="rotate-[-15deg] opacity-60" />
+        </div>
+        <div className="absolute top-0 right-0 md:right-10 opacity-20 select-none pointer-events-none hidden sm:block">
+          <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={120} height={120} className="scale-x-[-1] rotate-[15deg] opacity-60" />
         </div>
 
-        <h2 className="text-6xl sm:text-8xl md:text-[110px] font-bold tracking-tighter mb-14 md:mb-16 z-10 leading-none">
-          <span className="text-primary inline-block mr-4 md:mr-6">Join</span>us
+        <h2 className="text-7xl md:text-[120px] font-bold tracking-tighter mb-12 z-10 leading-none">
+          <span className="text-primary mr-4">Join</span>
+          <span className="text-[#1e004b]">us</span>
         </h2>
-        <div className="flex flex-col items-center gap-6 z-10">
+        
+        <div className="flex flex-col items-center gap-8 z-10">
           <Link
             href="/signup"
-            className="bg-primary hover:bg-[#4d00cc] text-white px-10 md:px-16 py-5 md:py-7 rounded-full font-bold text-lg md:text-2xl shadow-2xl shadow-primary/40 transition-all hover:scale-105 active:scale-95"
+            className="bg-primary hover:bg-[#4d00cc] text-white px-12 md:px-20 py-5 md:py-7 rounded-full font-bold text-xl md:text-2xl shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95"
           >
-            Start now - it's free
+            Start now - It's free
           </Link>
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-[0.3em] mb-4">or continue with</p>
-            <div className="flex gap-4">
-              {/* Placeholders for social logins */}
-              <div className="w-12 h-12 rounded-full border border-zinc-100 flex items-center justify-center hover:bg-zinc-50 transition-colors cursor-pointer">G</div>
-              <div className="w-12 h-12 rounded-full border border-zinc-100 flex items-center justify-center hover:bg-zinc-50 transition-colors cursor-pointer">F</div>
-            </div>
-          </div>
+          <p className="text-sm md:text-base font-medium text-zinc-500">or continue with</p>
         </div>
       </section>
 
       {/* Footer Branding */}
-      <footer className="bg-dark-bg text-white pt-32 pb-12 md:pb-24 px-6 md:px-12 flex flex-col items-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
-
-        <div className="mb-16 md:mb-24 z-10 relative group">
-          <div className="absolute -inset-8 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors duration-700"></div>
+      <footer className="bg-[#1e004b] text-white pt-24 pb-8 flex flex-col items-center relative overflow-hidden">
+        <div className="mb-10 z-10">
           <Image
             src="/assets/white logo.png"
             alt="GoGodam White Logo"
-            width={120}
-            height={120}
-            className="object-contain w-24 md:w-32 opacity-90 relative z-10"
+            width={80}
+            height={80}
+            className="object-contain w-16 md:w-20"
           />
         </div>
 
-        <div className="flex flex-col items-center gap-4 z-10">
-          <p className="text-[10px] md:text-xs font-bold opacity-40 tracking-[0.4em] uppercase">© 2026 - GoGodam Logistics Systems</p>
-          <div className="flex gap-6 opacity-40 text-[10px] uppercase font-bold tracking-widest">
-            <Link href="#" className="hover:opacity-100 transition-opacity">Privacy</Link>
-            <Link href="#" className="hover:opacity-100 transition-opacity">Terms</Link>
-            <Link href="#" className="hover:opacity-100 transition-opacity">Contact</Link>
+        <div className="flex flex-col items-center gap-12 z-10 w-full">
+          <p className="text-sm md:text-lg font-medium opacity-90">© 2026 - GoGodam</p>
+          
+          <div className="w-full text-center select-none pointer-events-none mt-10">
+            <h1 className="text-[18vw] font-bold tracking-tighter leading-none mb-[-2vw]">
+              GoGodam
+            </h1>
           </div>
         </div>
-
-        <div className="w-full text-center mt-auto select-none pointer-events-none opacity-[0.04] absolute bottom-[-5%] left-1/2 -translate-x-1/2 overflow-hidden whitespace-nowrap">
-          <span className="text-[22vw] md:text-[20vw] lg:text-[18vw] font-bold tracking-[-0.05em] leading-[0.5] block font-sans">
-            GoGodam
-          </span>
-        </div>
+      </footer>
       </footer>
     </div>
   );
