@@ -200,7 +200,7 @@ export default function Home() {
         </div>
         
         <div className="flex flex-col items-center gap-4 z-10">
-          <p className="text-[10px] md:text-xs font-black opacity-40 tracking-[0.4em] uppercase">© 2026 - GoGodam Logistics Systems</p>
+          <p className="text-[10px] md:text-xs font-bold opacity-40 tracking-[0.4em] uppercase">© 2026 - GoGodam Logistics Systems</p>
           <div className="flex gap-6 opacity-40 text-[10px] uppercase font-bold tracking-widest">
             <Link href="#" className="hover:opacity-100 transition-opacity">Privacy</Link>
             <Link href="#" className="hover:opacity-100 transition-opacity">Terms</Link>
