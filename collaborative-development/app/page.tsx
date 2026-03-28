@@ -134,22 +134,22 @@ export default function Home() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-24 md:gap-16 lg:gap-24">
           <div className="flex flex-col items-center group">
-            <div className="h-32 md:h-48 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" width={180} height={180} className="object-contain drop-shadow-lg w-auto h-32 md:h-44 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
+            <div className="h-48 md:h-64 flex items-center justify-center mb-6">
+              <Image src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
             </div>
             <p className="font-serif font-bold text-2xl md:text-4xl text-foreground">Sales</p>
             <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </div>
           <div className="flex flex-col items-center group">
-            <div className="h-32 md:h-48 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" width={180} height={180} className="object-contain drop-shadow-lg w-auto h-32 md:h-44 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500" />
+            <div className="h-48 md:h-64 flex items-center justify-center mb-6">
+              <Image src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500" />
             </div>
             <p className="font-serif font-bold text-2xl md:text-4xl text-foreground">Tracking</p>
             <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </div>
           <div className="flex flex-col items-center group">
-            <div className="h-32 md:h-48 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" width={180} height={180} className="object-contain drop-shadow-lg w-auto h-32 md:h-44 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
+            <div className="h-48 md:h-64 flex items-center justify-center mb-6">
+              <Image src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
             </div>
             <p className="font-serif font-bold text-2xl md:text-4xl text-foreground">Inventory</p>
             <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
