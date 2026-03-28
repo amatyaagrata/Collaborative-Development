@@ -73,8 +73,8 @@ export default function Home() {
             <p className="font-serif font-bold text-2xl md:text-3xl text-foreground">Replenishment</p>
           </div>
 
-          <div className="hidden lg:block w-24 relative z-0 flex-shrink-0 opacity-80 -rotate-90">
-            <Image src="/assets/arrow_dot_02.svg" alt="Path arrow" width={100} height={30} className="w-full h-auto" />
+          <div className="hidden lg:block w-16 relative z-0 flex-shrink-0 opacity-80 -rotate-90">
+            <Image src="/assets/arrow_dot_02.svg" alt="Path arrow" width={20} height={60} className="w-full h-auto" />
           </div>
 
           <div className="flex flex-col items-center space-y-6 md:w-1/3 z-10 group">
@@ -84,8 +84,8 @@ export default function Home() {
             <p className="font-serif font-bold text-2xl md:text-3xl text-foreground">Quality Control</p>
           </div>
 
-          <div className="hidden lg:block w-24 relative z-0 flex-shrink-0 opacity-80 -rotate-90">
-            <Image src="/assets/arrow_dot_02.svg" alt="Path arrow" width={100} height={30} className="w-full h-auto" />
+          <div className="hidden lg:block w-16 relative z-0 flex-shrink-0 opacity-80 -rotate-90">
+            <Image src="/assets/arrow_dot_02.svg" alt="Path arrow" width={20} height={60} className="w-full h-auto" />
           </div>
 
           <div className="flex flex-col items-center space-y-6 md:w-1/3 z-10 group">
