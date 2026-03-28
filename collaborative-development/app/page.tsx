@@ -98,27 +98,30 @@ export default function Home() {
       </section>
 
       {/* Optimize Section */}
-      <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col items-center text-center overflow-hidden">
-        <div className="space-y-6 md:space-y-12 mb-16 md:mb-24 relative z-10">
-          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1.05] max-w-4xl mx-auto">
-            <span className="text-primary">Optimize</span> your warehouse
+      <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col lg:flex-row items-center gap-16 md:gap-24 overflow-hidden">
+        <div className="flex-1 space-y-6 md:space-y-10 text-center lg:text-left relative z-10">
+          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1] max-w-xl mx-auto lg:mx-0">
+            <span className="text-primary block lg:inline mb-2 lg:mb-0">Optimize</span> your warehouse
           </h2>
-          <p className="text-base md:text-xl text-zinc-600 leading-relaxed font-medium max-w-3xl mx-auto px-2">
-            Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds.
+          <p className="text-base md:text-xl text-zinc-600 leading-relaxed font-medium max-w-2xl mx-auto lg:mx-0">
+            Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule.
           </p>
+          <div className="absolute -top-10 -left-10 opacity-10 hidden lg:block select-none pointer-events-none">
+            <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} />
+          </div>
         </div>
 
-        <div className="relative w-full max-w-5xl px-0 sm:px-6">
-          <div className="bg-[#f0f2f5] rounded-[48px] md:rounded-[64px] aspect-video flex items-center justify-center w-full relative group shadow-inner border border-zinc-100 overflow-hidden">
+        <div className="flex-1 relative w-full px-0 sm:px-6">
+          <div className="bg-[#f0f2f5] rounded-[48px] md:rounded-[64px] aspect-video flex-grow flex items-center justify-center w-full relative group shadow-inner border border-zinc-100 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <span className="text-3xl md:text-6xl italic font-serif opacity-30 group-hover:opacity-60 transition-all text-foreground group-hover:scale-110 duration-700">screen shot</span>
-
+            <span className="text-3xl md:text-5xl italic font-serif opacity-30 group-hover:opacity-60 transition-all text-foreground group-hover:scale-110 duration-700">screen shot</span>
+            
             <div className="absolute -bottom-8 md:-bottom-12 -right-4 md:-right-8 w-28 md:w-44 h-28 md:h-44 z-20">
               <Image src="/assets/yellow_unbox.svg" alt="Unboxing Icon" fill className="object-contain drop-shadow-2xl group-hover:-translate-y-4 group-hover:-translate-x-4 transition-transform duration-700 delay-100" />
             </div>
-
+            
             <div className="absolute top-10 right-10 opacity-10 group-hover:scale-150 transition-transform duration-1000">
-              <Image src="/assets/grey_arrow_loop_01.svg" alt="Loop" width={100} height={100} />
+               <Image src="/assets/grey_arrow_loop_01.svg" alt="Loop" width={80} height={80} />
             </div>
           </div>
         </div>
