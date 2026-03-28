@@ -27,7 +27,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center pt-12 md:pt-24 pb-20 md:pb-32 text-center px-6 relative w-full overflow-hidden">
         <h1 className="text-4xl sm:text-7xl md:text-8xl lg:text-[100px] font-black leading-[0.95] md:leading-[0.9] tracking-tighter mb-8 md:mb-10 max-w-5xl break-words">
-          <span className="text-primary block mb-1 md:mb-2 italic">Inventory</span>
+          <span className="text-primary block mb-1 md:mb-2">Inventory</span>
           <span className="text-foreground">System&Logistics</span>
         </h1>
         <div className="relative z-10">
@@ -57,7 +57,7 @@ export default function Home() {
       <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col items-center">
         <div className="flex flex-col items-center text-center mb-16 md:mb-28">
           <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-black tracking-tighter leading-[1.1] max-w-3xl mb-6 md:mb-10">
-            <span className="text-primary italic">Seamless</span> Continuity
+            <span className="text-primary">Seamless</span> Continuity
           </h2>
           <p className="text-base md:text-xl text-zinc-600 max-w-4xl leading-relaxed font-medium px-2">
             Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
@@ -70,7 +70,7 @@ export default function Home() {
             <div className="h-32 md:h-40 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
               <Image src="/assets/blue_truck.svg" alt="Replenishment" width={110} height={110} className="w-auto h-24 md:h-28 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <p className="font-serif italic font-extrabold text-2xl md:text-3xl text-foreground">Replenishment</p>
+            <p className="font-serif font-extrabold text-2xl md:text-3xl text-foreground">Replenishment</p>
           </div>
 
           <div className="hidden lg:block w-24 relative z-0 flex-shrink-0 opacity-40">
@@ -81,7 +81,7 @@ export default function Home() {
             <div className="h-32 md:h-40 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
               <Image src="/assets/yellow_shield_2.svg" alt="Quality Control" width={110} height={110} className="w-auto h-24 md:h-28 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <p className="font-serif italic font-extrabold text-2xl md:text-3xl text-foreground">Quality Control</p>
+            <p className="font-serif font-extrabold text-2xl md:text-3xl text-foreground">Quality Control</p>
           </div>
 
           <div className="hidden lg:block w-24 relative z-0 flex-shrink-0 opacity-40">
@@ -92,7 +92,7 @@ export default function Home() {
             <div className="h-32 md:h-40 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
               <Image src="/assets/hand-truch.svg" alt="Storage" width={110} height={110} className="w-auto h-24 md:h-28 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <p className="font-serif italic font-extrabold text-2xl md:text-3xl text-foreground">Storage</p>
+            <p className="font-serif font-extrabold text-2xl md:text-3xl text-foreground">Storage</p>
           </div>
         </div>
       </section>
@@ -101,7 +101,7 @@ export default function Home() {
       <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col items-center text-center overflow-hidden">
         <div className="space-y-6 md:space-y-12 mb-16 md:mb-24 relative z-10">
           <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-black tracking-tighter leading-[1.05] max-w-4xl mx-auto">
-            <span className="text-primary italic">Optimize</span> your warehouse
+            <span className="text-primary">Optimize</span> your warehouse
           </h2>
           <p className="text-base md:text-xl text-zinc-600 leading-relaxed font-medium max-w-3xl mx-auto px-2">
             Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds.
@@ -127,28 +127,28 @@ export default function Home() {
       {/* One Need Section */}
       <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full text-center">
         <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-black tracking-tighter mb-20 md:mb-32 leading-tight">
-          <span className="text-primary italic">One</span> need, one site.
+          <span className="text-primary">One</span> need, one site.
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-24 md:gap-16 lg:gap-24">
             <div className="flex flex-col items-center group">
                 <div className="h-32 md:h-48 flex items-center justify-center mb-6">
                   <Image src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" width={180} height={180} className="object-contain drop-shadow-lg w-auto h-32 md:h-44 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
                 </div>
-                <p className="font-serif italic font-extrabold text-2xl md:text-4xl text-foreground">Sales</p>
+                <p className="font-serif font-extrabold text-2xl md:text-4xl text-foreground">Sales</p>
                 <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
             <div className="flex flex-col items-center group">
                 <div className="h-32 md:h-48 flex items-center justify-center mb-6">
                   <Image src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" width={180} height={180} className="object-contain drop-shadow-lg w-auto h-32 md:h-44 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500" />
                 </div>
-                <p className="font-serif italic font-extrabold text-2xl md:text-4xl text-foreground">Tracking</p>
+                <p className="font-serif font-extrabold text-2xl md:text-4xl text-foreground">Tracking</p>
                 <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
             <div className="flex flex-col items-center group">
                 <div className="h-32 md:h-48 flex items-center justify-center mb-6">
                   <Image src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" width={180} height={180} className="object-contain drop-shadow-lg w-auto h-32 md:h-44 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500" />
                 </div>
-                <p className="font-serif italic font-extrabold text-2xl md:text-4xl text-foreground">Inventory</p>
+                <p className="font-serif font-extrabold text-2xl md:text-4xl text-foreground">Inventory</p>
                 <div className="h-1 w-12 bg-primary rounded-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
         </div>
@@ -164,7 +164,7 @@ export default function Home() {
         </div>
         
         <h2 className="text-6xl sm:text-8xl md:text-[110px] font-black tracking-tighter mb-14 md:mb-16 z-10 leading-none">
-          <span className="text-primary italic inline-block mr-4 md:mr-6">Join</span>us
+          <span className="text-primary inline-block mr-4 md:mr-6">Join</span>us
         </h2>
         <div className="flex flex-col items-center gap-6 z-10">
           <Link 
@@ -209,7 +209,7 @@ export default function Home() {
         </div>
         
         <div className="w-full text-center mt-auto select-none pointer-events-none opacity-[0.04] absolute bottom-[-5%] left-1/2 -translate-x-1/2 overflow-hidden whitespace-nowrap">
-          <span className="text-[22vw] md:text-[20vw] lg:text-[18vw] font-black tracking-[-0.05em] leading-[0.5] block font-sans italic">
+          <span className="text-[22vw] md:text-[20vw] lg:text-[18vw] font-black tracking-[-0.05em] leading-[0.5] block font-sans">
             GoGodam
           </span>
         </div>
