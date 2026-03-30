@@ -176,8 +176,10 @@
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(96, 8, 248, 0.08);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(96, 8, 248, 0.15);
+  transform: translateY(-6px) scale(1.08);
+  z-index: 10;
+  position: relative;
 }
 
 .stat-card-label {
