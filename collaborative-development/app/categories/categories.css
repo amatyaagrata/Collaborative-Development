@@ -1,0 +1,257 @@
+/* ═══════════════════════════════════════════════════════════════
+   Categories Styles — GoGodam Inventory Management System
+   Scoped styles for the categories list and edit/add forms.
+   ═══════════════════════════════════════════════════════════════ */
+
+.categories-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ─── Header ────────────────────────────────────────────────── */
+.categories-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.categories-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #330062;
+}
+
+/* ─── Table ─────────────────────────────────────────────────── */
+.categories-table-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.categories-table-wrapper {
+  overflow-x: auto;
+}
+
+.categories-table {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.categories-table thead tr {
+  border-bottom: 1px solid #ece8f4;
+  background: #faf9fd;
+}
+
+.categories-table th {
+  text-align: left;
+  padding: 14px 20px;
+  font-weight: 700;
+  color: #330062;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 13px;
+}
+
+.categories-table td {
+  padding: 16px 20px;
+  color: #000000;
+  border-bottom: 1px solid #f5f3f8;
+  vertical-align: middle;
+}
+
+.categories-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.categories-table tbody tr:hover {
+  background: #f8f6ff;
+}
+
+.category-status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.category-status-active {
+  background: #e6f6ee;
+  color: #0d8246;
+}
+
+.category-status-inactive {
+  background: #feeceb;
+  color: #d12921;
+}
+
+.categories-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #8c8a94;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.categories-action-btn:hover {
+  background: #ece8f4;
+  color: var(--primary, #6008f8);
+}
+
+.categories-action-btn.delete:hover {
+  background: #feeceb;
+  color: #d12921;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Form Container (Matching Design) ──────────────────────── */
+.category-form-container {
+  background: #ffffff;
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.form-breadcrumb {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e004b;
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+  width: 100%;
+  max-width: 600px;
+  text-align: left;
+}
+
+.category-form-card {
+  background: #ffffff;
+  border: 2px solid #3ca5f4; /* The light blue borderline */
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 600px;
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.form-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #3b0099;
+}
+
+.form-input-styled {
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #ece8f4;
+  padding: 0 16px;
+  font-size: 15px;
+  color: #1e004b;
+  transition: border-color 0.2s;
+}
+
+.form-input-styled:focus {
+  outline: none;
+  border-color: var(--primary, #6008f8);
+  box-shadow: 0 0 0 3px rgba(96, 8, 248, 0.1);
+}
+
+.form-input-styled::placeholder {
+  color: #b5b3bb;
+}
+
+/* ─── Image Upload Placeholder ──────────────────────────────── */
+.image-upload-area {
+  width: 100%;
+  max-width: 300px;
+  height: 160px;
+  border: 2px dashed #ece8f4;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #faf8fc;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.image-upload-area:hover {
+  background: #f0edf5;
+  border-color: #d1cbe0;
+}
+
+/* ─── Action Buttons Stack ──────────────────────────────────── */
+.form-actions-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 32px;
+}
+
+.btn {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary {
+  background: #f0edf5;
+  color: #1e004b;
+}
+
+.btn-secondary:hover {
+  background: #e2ddea;
+}
+
+.btn-primary {
+  background: var(--primary, #6008f8);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #4d00cc;
+  box-shadow: 0 4px 12px rgba(96, 8, 248, 0.2);
+}
+
+/* Animations reused from dashboard */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
