@@ -21,13 +21,17 @@ const iconMap: Record<string, React.ElementType> = {
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+<<<<<<< HEAD
   { label: "Product", href: "/product", icon: "Package" },
+=======
+  { label: "Product", href: "/products", icon: "Package" },
+>>>>>>> 93e83cb (Order page made)
   { label: "Categories", href: "/categories", icon: "Grid3x3" },
-  { label: "Orders", href: "#", icon: "ShoppingCart" },
-  { label: "Transfer", href: "#", icon: "Truck" },
-  { label: "Reports", href: "#", icon: "FileText" },
-  { label: "Users", href: "#", icon: "Users" },
-  { label: "Settings", href: "#", icon: "Settings" },
+  { label: "Orders", href: "/orders", icon: "ShoppingCart" },  // ← Updated from "#" to "/orders"
+  { label: "Transfer", href: "/transfer", icon: "Truck" },
+  { label: "Reports", href: "/reports", icon: "FileText" },
+  { label: "Users", href: "/users", icon: "Users" },
+  { label: "Settings", href: "/settings", icon: "Settings" },
 ];
 
 export function AppLayout({ title, children }: AppLayoutProps) {
