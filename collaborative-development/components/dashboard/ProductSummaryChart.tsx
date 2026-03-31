@@ -24,7 +24,7 @@ export function ProductSummaryChart({ quantityInHand, toBeReceived }: ProductSum
       <h3 className="chart-card-title">Product Summary</h3>
       <div className="product-summary-content">
         <div className="donut-chart-container">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie
                 data={pieData}

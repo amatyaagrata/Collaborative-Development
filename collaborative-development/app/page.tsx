@@ -35,7 +35,7 @@ export default function Home() {
             href="/signup"
             className="bg-primary hover:bg-[#4d00cc] text-white px-8 md:px-12 py-4 md:py-6 rounded-full font-bold text-base md:text-xl shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 inline-block"
           >
-            Start now - it's free
+            Start now - it&apos;s free
           </Link>
 
           <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 z-0 hidden md:block animate-bounce opacity-80">
@@ -60,7 +60,7 @@ export default function Home() {
             <span className="text-primary">Seamless</span> Continuity
           </h2>
           <p className="text-base md:text-xl text-zinc-600 max-w-4xl leading-relaxed font-medium px-2">
-            Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
+            Keep your shelves stocked and your production lines moving with GoGodam&apos;s intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export default function Home() {
             <span className="text-primary block lg:inline mb-2 lg:mb-0">Optimize</span> your warehouse
           </h2>
           <p className="text-base md:text-xl text-zinc-600 leading-relaxed font-medium max-w-2xl mx-auto lg:mx-0">
-            Keep your shelves stocked and your production lines moving with GoGodam's intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule.
+            Keep your shelves stocked and your production lines moving with GoGodam&apos;s intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule.
           </p>
           <div className="absolute -top-10 -left-10 opacity-10 hidden lg:block select-none pointer-events-none">
             <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} />
@@ -173,7 +173,7 @@ export default function Home() {
             href="/signup"
             className="bg-primary hover:bg-[#4d00cc] text-white px-12 md:px-20 py-5 md:py-7 rounded-full font-bold text-xl md:text-2xl shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95"
           >
-            Start now - It's free
+            Start now - It&apos;s free
           </Link>
           <p className="text-sm md:text-base font-medium text-zinc-500">or continue with</p>
         </div>
