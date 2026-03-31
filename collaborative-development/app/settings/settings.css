@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════════════
+   Settings Page Styles — GoGodam Inventory Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+.settings-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+
+/* ─── Settings Card ────────────────────────────────────────── */
+.settings-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 16px;
+  padding: 48px 48px 40px;
+  animation: settingsFadeIn 0.5s ease forwards;
+  opacity: 0;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.settings-card:hover {
+  box-shadow: 0 4px 24px rgba(96, 8, 248, 0.08);
+}
+
+/* ─── Form Grid ────────────────────────────────────────────── */
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 40px;
+  margin-bottom: 20px;
+}
+
+/* ─── Section Divider ──────────────────────────────────────── */
+.settings-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: #ece8f4;
+  margin: 8px 0;
+}
+
+/* ─── Field Group ──────────────────────────────────────────── */
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e004b;
+  letter-spacing: -0.01em;
+}
+
+.settings-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1e004b;
+  background: #ffffff;
+  border: 1.5px solid #e0dce8;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.settings-input::placeholder {
+  color: #b5b0c3;
+  font-weight: 400;
+}
+
+.settings-input:hover {
+  border-color: #c8c0d8;
+}
+
+.settings-input:focus {
+  border-color: var(--primary, #6008f8);
+  box-shadow: 0 0 0 3px rgba(96, 8, 248, 0.1);
+}
+
+/* ─── Apply Button ─────────────────────────────────────────── */
+.settings-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+}
+
+.settings-apply-btn {
+  padding: 12px 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--primary, #6008f8);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.01em;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(96, 8, 248, 0.35);
+}
+
+.settings-apply-btn:hover {
+  background: #4d00cc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(96, 8, 248, 0.45);
+}
+
+.settings-apply-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(96, 8, 248, 0.3);
+}
+
+.settings-apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Toast-like success message ───────────────────────────── */
+.settings-success {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #16a34a;
+  animation: settingsFadeIn 0.3s ease;
+}
+
+/* ─── Animations ───────────────────────────────────────────── */
+@keyframes settingsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .settings-card {
+    padding: 32px 24px 28px;
+    border-radius: 12px;
+  }
+
+  .settings-form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .settings-apply-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-card {
+    padding: 24px 16px 24px;
+  }
+}

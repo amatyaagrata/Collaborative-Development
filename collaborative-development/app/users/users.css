@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════════
+   Users Page Styles — GoGodam Inventory Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+.users-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+
+/* ─── Users Card ───────────────────────────────────────────── */
+.users-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 16px;
+  padding: 32px;
+  animation: usersFadeIn 0.5s ease forwards;
+  opacity: 0;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.users-card:hover {
+  box-shadow: 0 4px 24px rgba(96, 8, 248, 0.08);
+}
+
+/* ─── Search Bar ───────────────────────────────────────────── */
+.users-search-wrapper {
+  margin-bottom: 32px;
+  max-width: 320px;
+}
+
+.users-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  background: #ffffff;
+  border: 1.5px solid #e0dce8;
+  border-radius: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.users-search:focus-within {
+  border-color: var(--primary, #6008f8);
+  box-shadow: 0 0 0 3px rgba(96, 8, 248, 0.1);
+}
+
+.users-search-icon {
+  color: #b5b0c3;
+  width: 18px;
+  height: 18px;
+}
+
+.users-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #1e004b;
+  outline: none;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.users-search-input::placeholder {
+  color: #b5b0c3;
+}
+
+/* ─── Users Table ──────────────────────────────────────────── */
+.users-table-wrapper {
+  overflow-x: auto;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+/* ─── Header ───────────────────────────────────────────────── */
+.users-table th {
+  text-align: left;
+  padding: 24px 16px 16px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #3b1771; /* Deep purple similar to the screenshot */
+  border-bottom: 1.5px solid #ece8f4;
+}
+
+.users-th-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── Rows ─────────────────────────────────────────────────── */
+.users-table td {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e004b;
+  border-bottom: 1px solid #f0edf5;
+}
+
+.users-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.users-table tbody tr:hover {
+  background-color: #faf9fd;
+}
+
+.users-td-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.users-circle-icon {
+  width: 16px;
+  height: 16px;
+  color: #1e004b;
+  stroke-width: 2.5;
+}
+
+/* ─── Status Badges ────────────────────────────────────────── */
+.users-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 16px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.users-status.active {
+  background-color: #d1fae5;
+  color: #10b981;
+}
+
+.users-status.inactive {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+/* ─── Animations ───────────────────────────────────────────── */
+@keyframes usersFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .users-card {
+    padding: 24px 16px;
+    border-radius: 12px;
+  }
+
+  .users-table-wrapper {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .users-table th, .users-table td {
+    padding: 12px;
+  }
+}

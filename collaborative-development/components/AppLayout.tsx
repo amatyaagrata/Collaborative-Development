@@ -21,13 +21,9 @@ const iconMap: Record<string, React.ElementType> = {
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
-<<<<<<< HEAD
   { label: "Product", href: "/product", icon: "Package" },
-=======
-  { label: "Product", href: "/products", icon: "Package" },
->>>>>>> 93e83cb (Order page made)
   { label: "Categories", href: "/categories", icon: "Grid3x3" },
-  { label: "Orders", href: "/orders", icon: "ShoppingCart" },  // ← Updated from "#" to "/orders"
+  { label: "Orders", href: "/orders", icon: "ShoppingCart" },
   { label: "Transfer", href: "/transfer", icon: "Truck" },
   { label: "Reports", href: "/reports", icon: "FileText" },
   { label: "Users", href: "/users", icon: "Users" },
