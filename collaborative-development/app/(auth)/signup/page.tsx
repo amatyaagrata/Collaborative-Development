@@ -63,26 +63,33 @@ export default function SignUp() {
     
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: { 
-        data: { 
-          username: formData.username,
-          phone_number: formData.phoneNumber,
-        } 
-      },
-    });
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Account created successfully! Please check your email to verify your account.");
+    try {
+      // TEMPORARY: Remove supabase errors until connected
+      /*
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: { 
+          data: { 
+            username: formData.username,
+            phone_number: formData.phoneNumber,
+          } 
+        },
+      });
+      
+      if (error) throw error;
+      */
+      
+      // Temporary success behavior
+      toast.success("Account created successfully (Supabase not connected)");
       setTimeout(() => {
         router.push("/login");
-      }, 3000);
+      }, 1500);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -264,7 +271,7 @@ export default function SignUp() {
                 className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mt-1"
               />
               <label htmlFor="terms" className="text-sm text-gray-600">
-                By signing up you agree to GoGodam's{" "}
+                By signing up you agree to GoGodam&apos;s{" "}
                 <button
                   type="button"
                   onClick={() => toast.info("Terms and Services will be shown here")}
