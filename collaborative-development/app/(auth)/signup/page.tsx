@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-//import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "sonner";
@@ -69,11 +69,7 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      // Store organization name in localStorage for demo
-      localStorage.setItem("organizationName", formData.organizationName);
-      
-      // TEMPORARY: Remove supabase errors until connected
-      /*
+      const supabase = createClient();
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -82,14 +78,13 @@ export default function SignUp() {
             username: formData.username,
             organization_name: formData.organizationName,
             phone_number: formData.phoneNumber,
+            full_name: formData.username, // Mirroring name
           } 
         },
       });
       
       if (error) throw error;
-      */
       
-      // Temporary success behavior
       toast.success(`Account created for ${formData.organizationName}! Please log in.`);
       setTimeout(() => {
         router.push("/login");

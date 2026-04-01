@@ -1,43 +1,35 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import {
-  Pencil, Trash2, Plus, Search,
-  SlidersHorizontal, Image as ImageIcon,
-} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Pencil, Trash2, Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 import "./product.css";
 
-// ─── Types ─────────────────────────────────────────────────────
 interface Product {
-  id: number;
+  id: string; // UUID from Supabase
   name: string;
-  productId: string;
-  category: string;
+  category_id?: string | null;
+  supplier_id?: string | null;
   price: number;
   stock: number;
-  stockAlert: number;
-  details: string;
+  created_at: string;
+  // Local UI mock fields for compatibility
+  productId?: string;
+  category?: string;
+  stockAlert?: number;
+  details?: string;
 }
 
-// ─── Dummy Data ────────────────────────────────────────────────
-const initialProducts: Product[] = [
-  { id: 1, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 2, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 3, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 4, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 5, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 6, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 7, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-  { id: 8, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 6767, stockAlert: 10, details: "" },
-  { id: 9, name: "Product", productId: "#1234", category: "Bed", price: 1000, stock: 67, stockAlert: 10, details: "" },
-];
-
 export default function ProductPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const supabase = createClient();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [formData, setFormData] = useState({
@@ -50,19 +42,28 @@ export default function ProductPage() {
     details: "",
   });
 
-  // TODO: GET /products from backend
+  const fetchProducts = useCallback(async () => {
+    const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Failed to fetch products: " + error.message);
+    } else {
+      setProducts(data || []);
+    }
+    setLoading(false);
+  }, [supabase]);
 
-  // ─── Filtered Products ───────────────────────────────────────
+  useEffect(() => {
+    Promise.resolve().then(() => fetchProducts());
+  }, [fetchProducts]);
+
   const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.productId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.category || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ─── Handlers ────────────────────────────────────────────────
   const handleAddClick = () => {
     setFormMode("add");
-    setFormData({ name: "", productId: "", category: "", price: "", stock: "", stockAlert: "", details: "" });
+    setFormData({ name: "", productId: "", category: "General", price: "0", stock: "0", stockAlert: "10", details: "" });
     setViewMode("form");
   };
 
@@ -71,108 +72,84 @@ export default function ProductPage() {
     setEditingId(product.id);
     setFormData({
       name: product.name,
-      productId: product.productId,
-      category: product.category,
+      productId: product.productId || "",
+      category: product.category || "General",
       price: product.price.toString(),
       stock: product.stock.toString(),
-      stockAlert: product.stockAlert.toString(),
-      details: product.details,
+      stockAlert: (product.stockAlert || 10).toString(),
+      details: product.details || "",
     });
     setViewMode("form");
-  };
-
-  const handleDeleteClick = (id: number) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      deleteProduct(id);
-    }
   };
 
   const handleCancelClick = () => {
     setViewMode("list");
   };
 
-  const handleSaveClick = () => {
-    if (!formData.name || !formData.category) {
-      alert("Please fill in the required fields (Name and Category).");
+  const handleSaveClick = async () => {
+    if (!formData.name) {
+      toast.error("Please fill in the required Product Name.");
       return;
     }
 
+    const payload = {
+      name: formData.name,
+      price: parseFloat(formData.price) || 0,
+      stock: parseInt(formData.stock, 10) || 0,
+    };
+
     if (formMode === "add") {
-      addProduct();
+      const { error } = await supabase.from("products").insert([payload]);
+      if (error) {
+        toast.error("Error adding product: " + error.message);
+        return;
+      }
+      toast.success("Product added successfully!");
     } else if (formMode === "edit" && editingId !== null) {
-      updateProduct(editingId);
+      const { error } = await supabase.from("products").update(payload).eq("id", editingId);
+      if (error) {
+        toast.error("Error updating product: " + error.message);
+        return;
+      }
+      toast.success("Product updated successfully!");
     }
 
+    setLoading(true);
+    fetchProducts();
     setViewMode("list");
   };
 
-  // ─── CRUD Functions (Ready for Backend) ──────────────────────
-  const addProduct = () => {
-    // TODO: POST /products
-    const newProduct: Product = {
-      id: Date.now(),
-      name: formData.name,
-      productId: formData.productId || `#${Math.floor(Math.random() * 9999)}`,
-      category: formData.category,
-      price: parseFloat(formData.price) || 0,
-      stock: parseInt(formData.stock) || 0,
-      stockAlert: parseInt(formData.stockAlert) || 10,
-      details: formData.details,
-    };
-    setProducts([...products, newProduct]);
+  const handleDeleteClick = async (id: string) => {
+    if (confirm("Are you sure you want to permanently delete this product?")) {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) {
+        toast.error("Failed to delete product: " + error.message);
+      } else {
+        toast.success("Product deleted successfully.");
+        setLoading(true);
+        fetchProducts(); // Refresh list
+      }
+    }
   };
 
-  const updateProduct = (id: number) => {
-    // TODO: PUT /products/:id
-    const updatedProducts = products.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            name: formData.name,
-            productId: formData.productId,
-            category: formData.category,
-            price: parseFloat(formData.price) || 0,
-            stock: parseInt(formData.stock) || 0,
-            stockAlert: parseInt(formData.stockAlert) || 10,
-            details: formData.details,
-          }
-        : p
-    );
-    setProducts(updatedProducts);
-  };
-
-  const deleteProduct = (id: number) => {
-    // TODO: DELETE /products/:id
-    setProducts(products.filter((p) => p.id !== id));
-  };
-
-  // ─── Dynamic Header Title ───────────────────────────────────
-  const headerTitle =
-    viewMode === "list"
-      ? "Product"
-      : formMode === "add"
-      ? "New Product"
-      : "Edit Product";
+  const headerTitle = viewMode === "list" ? "Product" : formMode === "add" ? "New Product" : "Edit Product";
 
   return (
     <AppLayout title={headerTitle}>
       <div className="product-content">
-
-        {/* ═══ LIST VIEW ═══ */}
         {viewMode === "list" && (
           <>
             <div className="product-header-row">
               <h2 className="product-title">All product</h2>
             </div>
 
-            {/* Toolbar: Search + Filter + Add */}
             <div className="product-toolbar">
               <div className="product-search-wrapper">
                 <Search size={16} className="product-search-icon" />
                 <input
                   type="text"
                   className="product-search-input"
-                  placeholder="Search"
+                  placeholder="Search products by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -185,7 +162,6 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Product Table */}
             <div className="product-table-card">
               <div className="product-table-wrapper">
                 <table className="product-table">
@@ -195,7 +171,6 @@ export default function ProductPage() {
                         <input type="checkbox" className="product-checkbox" />
                       </th>
                       <th>Product</th>
-                      <th>Product Id</th>
                       <th>Category</th>
                       <th>Price</th>
                       <th>Stock</th>
@@ -203,11 +178,13 @@ export default function ProductPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProducts.length === 0 ? (
+                    {loading ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>
-                          No products found
-                        </td>
+                        <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>Loading live products from database...</td>
+                      </tr>
+                    ) : filteredProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>No products found</td>
                       </tr>
                     ) : (
                       filteredProducts.map((product) => (
@@ -216,11 +193,10 @@ export default function ProductPage() {
                             <input type="checkbox" className="product-checkbox" />
                           </td>
                           <td style={{ fontWeight: 600 }}>{product.name}</td>
-                          <td>{product.productId}</td>
-                          <td>{product.category}</td>
-                          <td>${product.price.toLocaleString()}</td>
+                          <td>{product.category || "General"}</td>
+                          <td>Rs. {product.price.toLocaleString()}</td>
                           <td>
-                            <span className={product.stock > 100 ? "stock-low" : "stock-normal"}>
+                            <span className={product.stock > 10 ? "stock-normal" : "stock-low"}>
                               {product.stock}
                             </span>
                           </td>
@@ -244,16 +220,14 @@ export default function ProductPage() {
           </>
         )}
 
-        {/* ═══ FORM VIEW (ADD / EDIT) ═══ */}
         {viewMode === "form" && (
           <div className="product-form-container">
             <h3 className="product-form-breadcrumb">Product details</h3>
 
             <div className="product-form-card">
-              {/* Row 1: Product Name + Product ID */}
               <div className="product-form-row">
                 <div className="product-form-group">
-                  <label className="product-form-label">Product Name</label>
+                  <label className="product-form-label">Product Name *</label>
                   <input
                     type="text"
                     className="product-form-input"
@@ -263,100 +237,41 @@ export default function ProductPage() {
                   />
                 </div>
                 <div className="product-form-group">
-                  <label className="product-form-label">Product ID</label>
+                  <label className="product-form-label">Price (Rs.)</label>
                   <input
-                    type="text"
+                    type="number"
                     className="product-form-input"
-                    placeholder="#364738"
-                    value={formData.productId}
-                    onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Category + Price */}
-              <div className="product-form-row">
-                <div className="product-form-group">
-                  <label className="product-form-label">Category</label>
-                  <input
-                    type="text"
-                    className="product-form-input"
-                    placeholder="Category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  />
-                </div>
-                <div className="product-form-group">
-                  <label className="product-form-label">Price</label>
-                  <input
-                    type="text"
-                    className="product-form-input"
-                    placeholder="$.00"
+                    placeholder="1000"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Row 3: Product Quantity + Stock Alert */}
               <div className="product-form-row">
                 <div className="product-form-group">
-                  <label className="product-form-label">Product Quantity</label>
+                  <label className="product-form-label">Available Stock</label>
                   <input
-                    type="text"
+                    type="number"
                     className="product-form-input"
-                    placeholder="Product Quantity"
+                    placeholder="50"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                   />
                 </div>
-                <div className="product-form-group">
-                  <label className="product-form-label">Stock Alert</label>
-                  <input
-                    type="text"
-                    className="product-form-input"
-                    placeholder="Enter Stock Alert"
-                    value={formData.stockAlert}
-                    onChange={(e) => setFormData({ ...formData, stockAlert: e.target.value })}
-                  />
-                </div>
               </div>
 
-              {/* Details Textarea (full width) */}
-              <div className="product-form-group" style={{ marginBottom: 24 }}>
-                <label className="product-form-label">Details</label>
-                <textarea
-                  className="product-form-textarea"
-                  placeholder="Enter product details..."
-                  value={formData.details}
-                  onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-                />
-              </div>
-
-              {/* Upload Images */}
-              <div className="product-form-group">
-                <label className="product-form-label">Upload Images</label>
-                <div className="product-upload-area">
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", color: "#b5b3bb" }}>
-                    <ImageIcon size={24} />
-                    <span style={{ fontSize: "12px" }}>Click or drag</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
               <div className="product-form-actions">
                 <button className="product-btn product-btn-secondary" onClick={handleCancelClick}>
                   Cancel
                 </button>
                 <button className="product-btn product-btn-primary" onClick={handleSaveClick}>
-                  Save
+                  Save Base Product
                 </button>
               </div>
             </div>
           </div>
         )}
-
       </div>
     </AppLayout>
   );
