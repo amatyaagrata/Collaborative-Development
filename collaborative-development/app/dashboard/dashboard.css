@@ -145,6 +145,243 @@
   overflow-y: auto;
 }
 
+/* ─── Dashboard Top Bar (Organization + User Menu) ─────────── */
+.dashboard-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+/* Organization Badge */
+.organization-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  padding: 8px 16px 8px 12px;
+  border-radius: 100px;
+  border: 1px solid #e9e4ff;
+  transition: all 0.2s ease;
+}
+
+.organization-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(96, 8, 248, 0.1);
+}
+
+.org-badge-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.org-badge-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.org-badge-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.3px;
+}
+
+.org-badge-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1.2;
+}
+
+/* User Menu */
+.user-menu-container {
+  position: relative;
+}
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 8px 12px;
+  background: white;
+  border: 1px solid #eef2ff;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-menu-trigger:hover {
+  background: #fafbff;
+  border-color: #e0e7ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.user-email {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.chevron-icon {
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.chevron-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* User Dropdown */
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 260px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  z-index: 100;
+  animation: dropdownFade 0.2s ease;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #fafbff;
+}
+
+.dropdown-avatar {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.dropdown-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dropdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.dropdown-email {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f0f2f5;
+  margin: 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #ef4444;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Welcome Section */
+.welcome-section {
+  margin-bottom: 32px;
+}
+
+.welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
 /* ─── Activity Header ──────────────────────────────────────── */
 .activity-header {
   font-size: 16px;
@@ -467,6 +704,24 @@
     padding: 16px;
   }
 
+  .dashboard-top-bar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .organization-badge {
+    justify-content: center;
+  }
+
+  .user-menu-trigger {
+    justify-content: center;
+  }
+
+  .welcome-title {
+    font-size: 22px;
+  }
+
   .stat-cards-grid {
     grid-template-columns: 1fr;
   }
@@ -479,5 +734,59 @@
   .product-summary-stats {
     flex-direction: row;
     gap: 32px;
+  }
+
+  .user-dropdown {
+    right: auto;
+    left: 0;
+  }
+}
+
+/* Additional small screen adjustments */
+@media (max-width: 480px) {
+  .app-content {
+    padding: 12px;
+  }
+
+  .organization-badge {
+    padding: 6px 12px;
+  }
+
+  .org-badge-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .org-badge-name {
+    font-size: 12px;
+  }
+
+  .user-menu-trigger {
+    padding: 6px 12px;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .user-name {
+    font-size: 12px;
+  }
+
+  .user-email {
+    font-size: 10px;
+  }
+
+  .welcome-title {
+    font-size: 20px;
+  }
+
+  .stat-card {
+    padding: 16px 20px;
+  }
+
+  .stat-card-value {
+    font-size: 22px;
   }
 }
