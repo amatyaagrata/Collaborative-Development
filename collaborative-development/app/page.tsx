@@ -99,57 +99,57 @@ export default function Home() {
 
       {/* Optimize Section */}
       <section className="py-12 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 md:gap-20 overflow-hidden">
-        <div className="flex-1 space-y-6 md:space-y-10 text-center lg:text-left relative z-10">
-          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1] max-w-xl mx-auto lg:mx-0">
-            <span className="text-primary block lg:inline mb-2 lg:mb-0">Optimize</span> your warehouse
+        <div className="flex-1 space-y-6 md:space-y-10 text-center lg:text-left relative z-10 lg:pr-10">
+          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1.1] max-w-xl mx-auto lg:mx-0">
+            <span className="text-primary block mb-2">Optimize your</span>
+            <span className="text-[#1e004b] block">warehouse</span>
           </h2>
-          <p className="text-base md:text-xl text-zinc-600 leading-relaxed font-medium max-w-2xl mx-auto lg:mx-0">
-            Keep your shelves stocked and your production lines moving with GoGodam&apos;s intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule.
+          <p className="text-base md:text-xl text-[#1e004b] leading-relaxed font-medium max-w-2xl mx-auto lg:mx-0">
+            Keep your shelves stocked and your production lines moving with GoGodam&apos;s intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
           </p>
-          <div className="absolute -top-10 -left-10 opacity-10 hidden lg:block select-none pointer-events-none">
+          <div className="absolute -top-4 right-0 lg:-right-4 opacity-30 hidden lg:block select-none pointer-events-none transform -scale-x-100 rotate-[-10deg]">
             <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} />
           </div>
         </div>
 
-        <div className="flex-1 relative w-full px-0 sm:px-6">
-          <div className="bg-[#f0f2f5] rounded-[48px] md:rounded-[64px] aspect-video flex-grow flex items-center justify-center w-full relative group shadow-inner border border-zinc-100 overflow-hidden">
+        <div className="flex-1 relative w-full px-0 sm:px-6 group lg:mt-0 xl:pl-4">
+          <div className="bg-[#f0f2f5] rounded-2xl md:rounded-[32px] aspect-video flex-grow flex items-center justify-center w-full relative shadow-inner border border-zinc-100 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <span className="text-3xl md:text-5xl italic font-serif opacity-30 group-hover:opacity-60 transition-all text-foreground group-hover:scale-110 duration-700">screen shot</span>
+          </div>
 
-            <div className="absolute -bottom-8 md:-bottom-12 -right-4 md:-right-8 w-28 md:w-44 h-28 md:h-44 z-20">
-              <Image src="/assets/yellow_unbox.svg" alt="Unboxing Icon" fill className="object-contain drop-shadow-2xl group-hover:-translate-y-4 group-hover:-translate-x-4 transition-transform duration-700 delay-100" />
-            </div>
-
-            <div className="absolute top-10 right-10 opacity-10 group-hover:scale-150 transition-transform duration-1000">
-              <Image src="/assets/grey_arrow_loop_01.svg" alt="Loop" width={80} height={80} />
-            </div>
+          <div className="absolute -bottom-8 right-2 md:-bottom-12 md:right-0 w-24 h-24 md:w-32 md:h-32 z-20">
+            <Image src="/assets/yellow_unbox.svg" alt="Unboxing Icon" fill className="object-contain drop-shadow-2xl group-hover:-translate-y-4 group-hover:-translate-x-4 transition-transform duration-700 delay-100" />
           </div>
         </div>
       </section>
 
       {/* One Need Section */}
       <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full text-center">
-        <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter mb-20 md:mb-32 leading-tight">
-          <span className="text-primary">One</span> need, one site.
+        <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter mb-16 md:mb-24 leading-tight">
+          <span className="text-primary">One</span> <span className="text-[#1e004b]">need, one site.</span>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-24 md:gap-16 lg:gap-24">
-          <div className="flex flex-col items-center group">
-            <div className="h-48 md:h-64 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 transition-all duration-500" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-12 lg:gap-20">
+          <div className="flex flex-col items-center space-y-10 group">
+            <div className="flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <p className="font-caveat font-bold text-4xl md:text-5xl text-primary italic">Sales</p>
+            <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Sales</p>
           </div>
-          <div className="flex flex-col items-center group">
-            <div className="h-48 md:h-64 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 transition-all duration-500" />
+          <div className="flex flex-col items-center space-y-10 group">
+            <div className="flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <p className="font-caveat font-bold text-4xl md:text-5xl text-primary italic">Tracking</p>
+            <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Tracking</p>
           </div>
-          <div className="flex flex-col items-center group">
-            <div className="h-48 md:h-64 flex items-center justify-center mb-6">
-              <Image src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" width={240} height={240} className="object-contain drop-shadow-lg w-auto h-44 md:h-56 group-hover:scale-110 transition-all duration-500" />
+          <div className="flex flex-col items-center space-y-10 group">
+            <div className="flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <p className="font-caveat font-bold text-4xl md:text-5xl text-primary italic">Inventory</p>
+            <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Inventory</p>
           </div>
         </div>
       </section>
@@ -179,26 +179,84 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer Branding */}
-      <footer className="bg-[#1e004b] text-white pt-24 pb-8 flex flex-col items-center relative overflow-hidden">
-        <div className="mb-10 z-10">
-          <Image
-            src="/assets/white logo.png"
-            alt="GoGodam White Logo"
-            width={80}
-            height={80}
-            className="object-contain w-16 md:w-20"
-          />
+      {/* Footer Branding & Links */}
+      <footer className="bg-[#1e004b] text-white pt-20 px-6 md:px-12 flex flex-col items-center relative overflow-hidden w-full">
+        
+        {/* Top Section: Newsletter & Logo */}
+        <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center lg:items-end justify-between gap-12 mb-16 z-10">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left gap-6 w-full lg:w-1/2">
+            <h3 className="text-2xl md:text-3xl font-bold tracking-tight">Get Exclusive Offers and GoGodam News</h3>
+            <div className="flex w-full max-w-md bg-white rounded-full p-1 shadow-md">
+              <input 
+                type="email" 
+                placeholder="Email address" 
+                className="flex-1 bg-transparent px-4 py-2 text-zinc-900 outline-none w-full text-base"
+              />
+              <button className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap">
+                Sign Up
+              </button>
+            </div>
+          </div>
+          <div className="flex-shrink-0 mb-4 lg:mb-0">
+            <Image
+              src="/assets/white logo.png"
+              alt="GoGodam White Logo"
+              width={100}
+              height={100}
+              className="object-contain w-20 md:w-24 opacity-90"
+            />
+          </div>
         </div>
 
-        <div className="flex flex-col items-center gap-12 z-10 w-full">
-          <p className="text-sm md:text-lg font-medium opacity-90">© 2026 - GoGodam</p>
-          
-          <div className="w-full text-center select-none pointer-events-none mt-10">
-            <h1 className="text-[18vw] font-bold tracking-tighter leading-none mb-[-2vw]">
-              GoGodam
-            </h1>
+        {/* Divider */}
+        <div className="w-full max-w-7xl h-px bg-white/10 mb-16 z-10"></div>
+
+        {/* Middle Section: Links Grid */}
+        <div className="w-full max-w-7xl grid grid-cols-2 lg:grid-cols-4 gap-12 mb-20 z-10 text-sm md:text-base">
+          <div className="flex flex-col gap-4">
+            <h4 className="font-bold mb-2">Information</h4>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Help</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Track My Order</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Returns</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Shipping</Link>
           </div>
+          <div className="flex flex-col gap-4">
+            <h4 className="font-bold mb-2">Products</h4>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Inventory Management</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Order Tracking</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Custom Workflows</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Analytics</Link>
+          </div>
+          <div className="flex flex-col gap-4">
+            <h4 className="font-bold mb-2">Programs</h4>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">For Business</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Partner Program</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Affiliates</Link>
+            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Discounts</Link>
+          </div>
+          <div className="flex flex-col gap-4">
+            <h4 className="font-bold mb-2">Locations</h4>
+            <span className="opacity-70">United States</span>
+            <span className="opacity-70">Canada</span>
+            <span className="opacity-70">United Kingdom</span>
+            <span className="opacity-70">Australia</span>
+          </div>
+        </div>
+
+        {/* Bottom Section: Copyright & Massive Logo */}
+        <div className="flex flex-col items-center gap-2 z-10 w-full pb-8">
+          <div className="flex gap-4 text-xs font-medium opacity-60 mb-2">
+            <Link href="#" className="hover:opacity-100 transition">Terms of Service</Link>
+            <Link href="#" className="hover:opacity-100 transition">Privacy</Link>
+          </div>
+          <p className="text-xs md:text-sm font-medium opacity-60">© 2026 - GoGodam</p>
+        </div>
+        
+        {/* Massive Text at the very bottom edge */}
+        <div className="w-full text-center select-none pointer-events-none mt-4 -mb-4 z-0">
+          <h1 className="text-[18vw] font-bold tracking-tighter leading-none">
+            GoGodam
+          </h1>
         </div>
       </footer>
     </div>
