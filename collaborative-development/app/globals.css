@@ -58,3 +58,14 @@ body {
 .delay-2000 {
   animation-delay: 2s;
 }
+
+.icon-force-size {
+  width: 280px !important;
+  height: 280px !important;
+  max-width: none !important;
+  min-width: 280px !important;
+  min-height: 280px !important;
+  object-fit: none;
+  object-position: center;
+  overflow: hidden;
+}

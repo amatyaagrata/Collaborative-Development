@@ -1,58 +1,66 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
-import "./orders.css"; // You'll need to create this CSS file
+import "./orders.css";
 
 interface Order {
-  id: string;
-  product: string;
-  suppliers: string;
-  productId: string;
+  id: string; // UUID from supabase
+  product_name: string;
+  supplier_name: string;
+  custom_product_id: string;
   category: string;
-  price: number;
+  total_price: number;
   quantity: number;
+  created_at?: string;
 }
 
 export default function OrdersPage() {
+  const supabase = createClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [orders, setOrders] = useState<Order[]>([
-    { id: "1", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-    { id: "2", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-    { id: "3", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-    { id: "4", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-    { id: "5", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-    { id: "6", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-    { id: "7", product: "Product", suppliers: "AB", productId: "#1234", category: "Bed", price: 1000, quantity: 67 },
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    product: "",
-    suppliers: "",
-    productId: "",
+    product_name: "",
+    supplier_name: "",
+    custom_product_id: "",
     category: "",
-    price: "",
+    total_price: "",
     quantity: "",
   });
 
+  const fetchOrders = useCallback(async () => {
+    const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Failed to load orders: " + error.message);
+    } else {
+      setOrders(data || []);
+    }
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => fetchOrders());
+  }, [fetchOrders]);
+
   const filteredOrders = orders.filter((order) =>
-    order.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.suppliers.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.productId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (order.product_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (order.supplier_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (order.custom_product_id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (order.category || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handlers
   const handleAddClick = () => {
     setFormMode("add");
-    setFormData({ product: "", suppliers: "", productId: "", category: "", price: "", quantity: "" });
+    setFormData({ product_name: "", supplier_name: "", custom_product_id: "", category: "", total_price: "", quantity: "" });
     setViewMode("form");
   };
 
@@ -60,72 +68,67 @@ export default function OrdersPage() {
     setFormMode("edit");
     setEditingId(order.id);
     setFormData({
-      product: order.product,
-      suppliers: order.suppliers,
-      productId: order.productId,
-      category: order.category,
-      price: order.price.toString(),
-      quantity: order.quantity.toString(),
+      product_name: order.product_name || "",
+      supplier_name: order.supplier_name || "",
+      custom_product_id: order.custom_product_id || "",
+      category: order.category || "",
+      total_price: (order.total_price || 0).toString(),
+      quantity: (order.quantity || 0).toString(),
     });
     setViewMode("form");
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this order?")) {
-      setOrders(orders.filter((order) => order.id !== id));
-      toast.success("Order deleted successfully");
-    }
   };
 
   const handleCancelClick = () => {
     setViewMode("list");
   };
 
-  const handleSaveClick = () => {
-    if (!formData.product || !formData.category) {
+  const handleSaveClick = async () => {
+    if (!formData.product_name || !formData.category) {
       toast.error("Please fill in the required fields (Product and Category).");
       return;
     }
 
+    const payload = {
+      product_name: formData.product_name,
+      supplier_name: formData.supplier_name || "Unknown",
+      custom_product_id: formData.custom_product_id || `#${Math.floor(Math.random() * 9999)}`,
+      category: formData.category,
+      total_price: parseFloat(formData.total_price) || 0,
+      quantity: parseInt(formData.quantity, 10) || 0,
+    };
+
     if (formMode === "add") {
-      addOrder();
+      const { error } = await supabase.from("orders").insert([payload]);
+      if (error) {
+        toast.error("Failed to add order: " + error.message);
+        return;
+      }
+      toast.success("Order added successfully!");
     } else if (formMode === "edit" && editingId !== null) {
-      updateOrder(editingId);
+      const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
+      if (error) {
+        toast.error("Failed to update order: " + error.message);
+        return;
+      }
+      toast.success("Order updated successfully!");
     }
 
+    setLoading(true);
+    fetchOrders();
     setViewMode("list");
   };
 
-  const addOrder = () => {
-    const newOrder: Order = {
-      id: Date.now().toString(),
-      product: formData.product,
-      suppliers: formData.suppliers || "Unknown",
-      productId: formData.productId || `#${Math.floor(Math.random() * 9999)}`,
-      category: formData.category,
-      price: parseFloat(formData.price) || 0,
-      quantity: parseInt(formData.quantity) || 0,
-    };
-    setOrders([...orders, newOrder]);
-    toast.success("Order added successfully");
-  };
-
-  const updateOrder = (id: string) => {
-    const updatedOrders = orders.map((order) =>
-      order.id === id
-        ? {
-            ...order,
-            product: formData.product,
-            suppliers: formData.suppliers,
-            productId: formData.productId,
-            category: formData.category,
-            price: parseFloat(formData.price) || 0,
-            quantity: parseInt(formData.quantity) || 0,
-          }
-        : order
-    );
-    setOrders(updatedOrders);
-    toast.success("Order updated successfully");
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to permanently delete this order?")) {
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+      if (error) {
+        toast.error("Failed to delete order: " + error.message);
+      } else {
+        toast.success("Order deleted.");
+        setLoading(true);
+        fetchOrders();
+      }
+    }
   };
 
   const headerTitle = viewMode === "list" ? "Orders" : formMode === "add" ? "New Order" : "Edit Order";
@@ -134,14 +137,12 @@ export default function OrdersPage() {
     <AppLayout title={headerTitle}>
       <div className="orders-content">
         
-        {/* ═══ LIST VIEW ═══ */}
         {viewMode === "list" && (
           <>
             <div className="orders-header-row">
               <h2 className="orders-title">All Orders</h2>
             </div>
 
-            {/* Toolbar: Search + Add */}
             <div className="orders-toolbar">
               <div className="orders-search-wrapper">
                 <Search size={16} className="orders-search-icon" />
@@ -161,7 +162,6 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Orders Table */}
             <div className="orders-table-card">
               <div className="orders-table-wrapper">
                 <table className="orders-table">
@@ -180,11 +180,13 @@ export default function OrdersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrders.length === 0 ? (
+                    {loading ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>
-                          No orders found
-                        </td>
+                        <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>Loading orders from database...</td>
+                      </tr>
+                    ) : filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>No orders found</td>
                       </tr>
                     ) : (
                       filteredOrders.map((order) => (
@@ -192,11 +194,11 @@ export default function OrdersPage() {
                           <td>
                             <input type="checkbox" className="orders-checkbox" />
                           </td>
-                          <td style={{ fontWeight: 600 }}>{order.product}</td>
-                          <td>{order.suppliers}</td>
-                          <td>{order.productId}</td>
+                          <td style={{ fontWeight: 600 }}>{order.product_name}</td>
+                          <td>{order.supplier_name}</td>
+                          <td>{order.custom_product_id}</td>
                           <td>{order.category}</td>
-                          <td>${order.price.toLocaleString()}</td>
+                          <td>${Number(order.total_price).toLocaleString()}</td>
                           <td>
                             <span className={order.quantity > 50 ? "orders-quantity-high" : "orders-quantity-low"}>
                               {order.quantity}
@@ -222,13 +224,11 @@ export default function OrdersPage() {
           </>
         )}
 
-        {/* ═══ FORM VIEW (ADD / EDIT) ═══ */}
         {viewMode === "form" && (
           <div className="orders-form-container">
             <h3 className="orders-form-breadcrumb">Order Details</h3>
 
             <div className="orders-form-card">
-              {/* Row 1: Product + Suppliers */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Product Name *</label>
@@ -236,8 +236,8 @@ export default function OrdersPage() {
                     type="text"
                     className="orders-form-input"
                     placeholder="Enter product name"
-                    value={formData.product}
-                    onChange={(e) => setFormData({ ...formData, product: e.target.value })}
+                    value={formData.product_name}
+                    onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
                   />
                 </div>
                 <div className="orders-form-group">
@@ -246,13 +246,12 @@ export default function OrdersPage() {
                     type="text"
                     className="orders-form-input"
                     placeholder="Supplier name"
-                    value={formData.suppliers}
-                    onChange={(e) => setFormData({ ...formData, suppliers: e.target.value })}
+                    value={formData.supplier_name}
+                    onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Row 2: Product ID + Category */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Product ID</label>
@@ -260,8 +259,8 @@ export default function OrdersPage() {
                     type="text"
                     className="orders-form-input"
                     placeholder="#364738"
-                    value={formData.productId}
-                    onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                    value={formData.custom_product_id}
+                    onChange={(e) => setFormData({ ...formData, custom_product_id: e.target.value })}
                   />
                 </div>
                 <div className="orders-form-group">
@@ -276,22 +275,21 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Row 3: Price + Quantity */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Price</label>
                   <input
-                    type="text"
+                    type="number"
                     className="orders-form-input"
                     placeholder="$.00"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    value={formData.total_price}
+                    onChange={(e) => setFormData({ ...formData, total_price: e.target.value })}
                   />
                 </div>
                 <div className="orders-form-group">
                   <label className="orders-form-label">Quantity</label>
                   <input
-                    type="text"
+                    type="number"
                     className="orders-form-input"
                     placeholder="Quantity"
                     value={formData.quantity}
@@ -300,13 +298,12 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="orders-form-actions">
                 <button className="orders-btn orders-btn-secondary" onClick={handleCancelClick}>
                   Cancel
                 </button>
                 <button className="orders-btn orders-btn-primary" onClick={handleSaveClick}>
-                  Save
+                  Save Order
                 </button>
               </div>
             </div>
