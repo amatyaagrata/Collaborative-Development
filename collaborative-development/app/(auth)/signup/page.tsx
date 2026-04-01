@@ -16,6 +16,7 @@ export default function SignUp() {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
+    organizationName: "",
     password: "",
     confirmPassword: "",
     phoneNumber: "",
@@ -41,6 +42,10 @@ export default function SignUp() {
       toast.error("Username is required");
       return false;
     }
+    if (!formData.organizationName) {
+      toast.error("Organization name is required");
+      return false;
+    }
     if (formData.password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return false;
@@ -64,6 +69,9 @@ export default function SignUp() {
     setLoading(true);
 
     try {
+      // Store organization name in localStorage for demo
+      localStorage.setItem("organizationName", formData.organizationName);
+      
       // TEMPORARY: Remove supabase errors until connected
       /*
       const { error } = await supabase.auth.signUp({
@@ -72,6 +80,7 @@ export default function SignUp() {
         options: { 
           data: { 
             username: formData.username,
+            organization_name: formData.organizationName,
             phone_number: formData.phoneNumber,
           } 
         },
@@ -81,7 +90,7 @@ export default function SignUp() {
       */
       
       // Temporary success behavior
-      toast.success("Account created successfully (Supabase not connected)");
+      toast.success(`Account created for ${formData.organizationName}! Please log in.`);
       setTimeout(() => {
         router.push("/login");
       }, 1500);
@@ -143,7 +152,7 @@ export default function SignUp() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter you Email.."
+                placeholder="Enter your email.."
                 required
                 className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
               />
@@ -161,7 +170,25 @@ export default function SignUp() {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Enter your Name here"
+                placeholder="Enter your name here"
+                required
+                className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+              />
+            </div>
+
+            {/* Organization Name - NEW FIELD */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Organization Name *
+              </label>
+              <Input
+                name="organizationName"
+                value={formData.organizationName}
+                onChange={handleChange}
+                placeholder="Enter your organization/shop name"
                 required
                 className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
               />

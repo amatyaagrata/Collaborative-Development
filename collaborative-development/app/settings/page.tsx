@@ -35,7 +35,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="settings-field">
-              <label className="settings-label">E-main</label>
+              <label className="settings-label">E-mail</label>
               <input
                 type="email"
                 className="settings-input"
