@@ -8,15 +8,15 @@ interface TripCardProps {
   trip: {
     id: string;
     status: string;
-    pickup_address: string;
-    delivery_address: string;
     delivery_charge: number;
     assigned_at: string;
+    pickup_address?: string;
     orders: {
       order_number: string;
       customer_name: string;
       customer_phone: string;
       total_amount: number;
+      delivery_address: string;
       organizations: {
         name: string;
         address: string;
@@ -83,7 +83,7 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
               <MapPin size={16} /> Delivery Location
             </h4>
             <p><strong>{trip.orders.customer_name}</strong></p>
-            <p>{trip.delivery_address}</p>
+            <p>{trip.orders.delivery_address}</p>
             <p><Phone size={14} /> {trip.orders.customer_phone}</p>
           </div>
 

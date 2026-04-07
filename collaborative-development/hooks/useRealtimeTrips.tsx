@@ -39,5 +39,5 @@ export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: any) => void
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [onNewTrip, supabase]);
 }

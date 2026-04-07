@@ -12,7 +12,6 @@ import Image from "next/image";
 const logo = "/assets/logo.png";
 
 export default function Auth() {
-  const [isLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
@@ -24,6 +23,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
+<<<<<<< HEAD
     if (isLogin) {
       // Store user data in localStorage
       const userData = {
@@ -54,6 +54,14 @@ export default function Auth() {
       setTimeout(() => {
         router.push("/login");
       }, 1500);
+=======
+    checkUserRole(email);
+
+    if (showOrganizationField && !organizationName) {
+      toast.error("Organization name is required");
+      setLoading(false);
+      return;
+>>>>>>> 21bd8f86b709ffbb190388e8b295d381e9c8c2e2
     }
 
     setLoading(false);
@@ -133,6 +141,33 @@ export default function Auth() {
               />
             </div>
 
+<<<<<<< HEAD
+=======
+            {/* Organization Name Field - Conditional Rendering */}
+            {showOrganizationField && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Organization Name
+                </label>
+                <Input
+                  type="text"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  placeholder="Enter your organization name"
+                  required={showOrganizationField}
+                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  For organization accounts only. Admins, suppliers, and drivers don&apos;t need this.
+                </p>
+              </div>
+            )}
+
+            {/* Password Field */}
+>>>>>>> 21bd8f86b709ffbb190388e8b295d381e9c8c2e2
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,7 +237,7 @@ export default function Auth() {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
                 className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1"

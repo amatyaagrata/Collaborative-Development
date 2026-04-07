@@ -37,5 +37,5 @@ export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: any) => 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [onNewOrder, supabase]);
 }

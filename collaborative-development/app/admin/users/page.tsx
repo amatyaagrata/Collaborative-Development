@@ -15,6 +15,9 @@ export default function AdminUsersPage() {
   
   // Modal state
   const [selectedUser, setSelectedUser] = useState<Readonly<AdminActiveUser | AdminApplication> | null>(null);
+  
+  // Counter for mock IDs
+  const [nextId, setNextId] = useState<number>(Math.max(...adminActiveUsers.map(u => u.id)) + 1);
 
   // TODO: Replace with actual Supabase update calls in the future
   const handleRoleChange = (userId: number, newRole: string) => {
@@ -29,7 +32,7 @@ export default function AdminUsersPage() {
     
     // 2. Add to active users
     const newUser: AdminActiveUser = {
-      id: Date.now(), // Mock ID
+      id: nextId, // Mock ID
       name: app.organization,
       email: app.email,
       role: "User", // Default role
@@ -37,6 +40,7 @@ export default function AdminUsersPage() {
       subscription: "None",
     };
     setActiveUsers((prev) => [...prev, newUser]);
+    setNextId((prev) => prev + 1);
   };
 
   return (

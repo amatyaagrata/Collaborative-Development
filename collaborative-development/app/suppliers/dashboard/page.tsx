@@ -13,11 +13,23 @@ import { toast } from "sonner";
 
 interface SupplierOrder {
   id: string;
+  order_number: string;
   status: string;
-  order_number?: string;
-  supplier_id?: string;
+  created_at: string;
+  delivery_address: string;
+  total_amount: number;
+  organizations: {
+    name: string;
+    address: string;
+    phone: string;
+  };
+  order_items: Array<{
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+  }>;
+  supplier_id: string;
   items_count?: number;
-  [key: string]: unknown;
 }
 
 interface SupplierStats {
@@ -39,25 +51,6 @@ export default function SupplierDashboard() {
   const router = useRouter();
   const { sendNotification } = useNotifications();
 
-  async function fetchOrders() {
-    const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_items (quantity, product_name),
-        organizations (name, address, phone)
-      `)
-      .eq("supplier_id", userData.user?.id)
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setOrders(data as SupplierOrder[]);
-      calculateStats(data as SupplierOrder[]);
-    }
-    setLoading(false);
-  }
-
   function calculateStats(ordersData: SupplierOrder[]) {
     setStats({
       totalOrders: ordersData.length,
@@ -66,9 +59,9 @@ export default function SupplierDashboard() {
     });
   }
 
-  function updateStats() {
+  useEffect(() => {
     calculateStats(orders);
-  }
+  }, [orders]);
 
   function startEscalationTimer(order: SupplierOrder) {
     setTimeout(() => {
@@ -119,8 +112,27 @@ export default function SupplierDashboard() {
 
   // Fetch initial orders
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    const fetchData = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          order_items (quantity, product_name),
+          organizations (name, address, phone)
+        `)
+        .eq("supplier_id", userData.user?.id)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setOrders(data as SupplierOrder[]);
+        calculateStats(data as SupplierOrder[]);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [supabase]);
 
   // Real-time order subscription
   useRealtimeOrders({
@@ -142,95 +154,14 @@ export default function SupplierDashboard() {
       });
 
       // Add to orders list
-      setOrders(prev => [newOrder, ...prev]);
-      updateStats();
+      setOrders(prev => [newOrder as SupplierOrder, ...prev]);
       
       // Start escalation timer
-      startEscalationTimer(newOrder);
+      startEscalationTimer(newOrder as SupplierOrder);
     }
   });
 
-  async function fetchOrders() {
-    const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_items (quantity, product_name),
-        organizations (name, address, phone)
-      `)
-      .eq("supplier_id", userData.user?.id)
-      .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setOrders(data);
-      calculateStats(data);
-    }
-    setLoading(false);
-  }
-
-  function calculateStats(ordersData: any[]) {
-    setStats({
-      totalOrders: ordersData.length,
-      pendingOrders: ordersData.filter(o => o.status === "pending").length,
-      completedOrders: ordersData.filter(o => o.status === "delivered").length,
-    });
-  }
-
-  function updateStats() {
-    calculateStats(orders);
-  }
-
-  function startEscalationTimer(order: any) {
-    // Stage 1: After 2 minutes, send "See your dashboard immediately"
-    setTimeout(() => {
-      checkOrderStatus(order.id, order.supplier_id);
-    }, 2 * 60 * 1000);
-  }
-
-  async function checkOrderStatus(orderId: string, supplierId: string) {
-    const { data: order } = await supabase
-      .from("orders")
-      .select("status")
-      .eq("id", orderId)
-      .single();
-
-    if (order?.status === "pending") {
-      // Stage 2: Send alert message
-      toast.error("See your dashboard immediately!", {
-        duration: 10000,
-        style: { backgroundColor: "red", color: "white" }
-      });
-
-      await sendNotification({
-        userId: supplierId,
-        title: "URGENT: Orders Pending",
-        message: "See your dashboard immediately. Orders are waiting.",
-        type: "alert"
-      });
-
-      // Stage 3: After 5 more minutes, flag for admin
-      setTimeout(async () => {
-        const { data: updatedOrder } = await supabase
-          .from("orders")
-          .select("status")
-          .eq("id", orderId)
-          .single();
-
-        if (updatedOrder?.status === "pending") {
-          // Notify admin
-          await supabase.from("order_escalations").insert({
-            order_id: orderId,
-            supplier_id: supplierId,
-            admin_notified: true,
-            status: "escalated"
-          });
-
-          toast.error("Admin has been notified. They will contact you shortly.");
-        }
-      }, 5 * 60 * 1000);
-    }
-  }
 
   if (loading) {
     return <div className="loading-spinner">Loading dashboard...</div>;

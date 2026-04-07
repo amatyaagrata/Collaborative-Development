@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Package, Grid3x3, ShoppingCart,
-  Truck, FileText, Users, Settings, LogOut, User, ChevronDown, Store,
+  Truck, FileText, Users, Settings, LogOut, User, ChevronDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";

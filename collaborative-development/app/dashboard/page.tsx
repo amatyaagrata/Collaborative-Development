@@ -79,9 +79,6 @@ export default function Dashboard() {
   return (
     <AppLayout 
       title={`Dashboard - ${organizationName}`}
-      hideTransfers={true}
-      hideUsers={true}
-      hideReports={true}
     >
       <div className="dashboard-content">
         
