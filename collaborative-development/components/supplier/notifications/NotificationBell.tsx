@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, CheckCheck, X } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -24,7 +24,24 @@ export default function NotificationBell() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchNotifications();
+    const fetchData = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userData.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (data) {
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      }
+    };
+
+    fetchData();
 
     // Subscribe to real-time notifications
     const subscribeToNotifications = async () => {
@@ -67,24 +84,8 @@ export default function NotificationBell() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [supabase]);
 
-  async function fetchNotifications() {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
-
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userData.user.id)
-      .order("created_at", { ascending: false })
-      .limit(30);
-
-    if (data) {
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.is_read).length);
-    }
-  }
 
   async function markAsRead(notificationId: string) {
     await supabase

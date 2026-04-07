@@ -12,7 +12,6 @@ import Image from "next/image";
 const logo = "/assets/logo.png";
 
 export default function Auth() {
-  const [isLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
@@ -61,7 +60,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const role = checkUserRole(email);
+    checkUserRole(email);
 
     if (showOrganizationField && !organizationName) {
       toast.error("Organization name is required");
@@ -204,7 +203,7 @@ export default function Auth() {
                   className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  For organization accounts only. Admins, suppliers, and drivers don't need this.
+                  For organization accounts only. Admins, suppliers, and drivers don&apos;t need this.
                 </p>
               </div>
             )}
@@ -279,7 +278,7 @@ export default function Auth() {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
                 className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1"

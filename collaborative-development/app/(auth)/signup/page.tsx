@@ -492,7 +492,7 @@ export default function SignUp() {
               </svg>
               <div className="text-sm text-blue-800">
                 <p className="font-semibold mb-1">For Organizations:</p>
-                <p>If your organization requires admin approval, please click "Apply Here" below. Once approved, you can sign up using your organization name and email.</p>
+                <p>If your organization requires admin approval, please click &quot;Apply Here&quot; below. Once approved, you can sign up using your organization name and email.</p>
               </div>
             </div>
           </div>
