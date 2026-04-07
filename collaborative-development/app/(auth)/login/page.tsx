@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-// import { supabase } from "@/integrations/supabase/client"; // Uncomment when supabase is set up
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "sonner";
@@ -16,7 +16,6 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOrganizationField, setShowOrganizationField] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -62,65 +61,44 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    // Determine user role again for final validation
     const role = checkUserRole(email);
-    
-    // Validate organization name only for non-role users
+
     if (showOrganizationField && !organizationName) {
       toast.error("Organization name is required");
       setLoading(false);
       return;
     }
 
-    if (isLogin) {
-      // Store user data in localStorage
-      const userData = {
-        email: email,
-        organizationName: role === 'organization' ? organizationName : (role === 'admin' ? 'System Admin' : `${role.charAt(0).toUpperCase() + role.slice(1)} User`),
-        fullName: email.split('@')[0], 
-        loginTime: new Date().toISOString(),
-        role: role
-      };
-      
-      localStorage.setItem("userData", JSON.stringify(userData));
-      if (role === 'organization' && organizationName) {
-        localStorage.setItem("organizationName", organizationName);
-      } else {
-        localStorage.setItem("organizationName", userData.organizationName);
-      }
-      
-      const welcomeMessage = role === 'admin' 
-        ? `Welcome Admin!` 
-        : role === 'supplier' 
-        ? `Welcome Supplier!` 
-        : role === 'driver'
-        ? `Welcome Driver!`
-        : `Welcome to ${organizationName}!`;
-      
-      toast.success(welcomeMessage);
-      router.push("/dashboard");
-    } else {
-      // Sign up logic
-      const userData = {
-        email: email,
-        organizationName: role === 'organization' ? organizationName : `${role} Account`,
-        fullName: fullName || email.split('@')[0],
-        loginTime: new Date().toISOString(),
-        role: role
-      };
-      
-      localStorage.setItem("userData", JSON.stringify(userData));
-      if (role === 'organization' && organizationName) {
-        localStorage.setItem("organizationName", organizationName);
-      }
-      
-      toast.success("Account created! Please log in.");
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
+    if (!email || !password) {
+      toast.error("Please enter both email and password.");
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        toast.success("Login successful! Redirecting...");
+        router.push("/dashboard");
+      } else {
+        toast.error("Login failed. Please check your credentials.");
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Login failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper text based on detected role
