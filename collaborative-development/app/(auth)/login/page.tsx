@@ -16,101 +16,47 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showOrganizationField, setShowOrganizationField] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const router = useRouter();
-
-  // Check email domain or pattern to determine if organization field is needed
-  const checkUserRole = (emailValue: string) => {
-    const emailLower = emailValue.toLowerCase();
-    
-    // Define role-based patterns
-    const adminDomains = ['admin', 'administrator', 'superadmin'];
-    const supplierDomains = ['supplier', 'vendor', 'wholesaler'];
-    const driverDomains = ['driver', 'delivery', 'rider', 'courier'];
-    
-    // Check if email contains role indicators
-    if (adminDomains.some(domain => emailLower.includes(domain))) {
-      setUserRole('admin');
-      setShowOrganizationField(false);
-      return 'admin';
-    } else if (supplierDomains.some(domain => emailLower.includes(domain))) {
-      setUserRole('supplier');
-      setShowOrganizationField(false);
-      return 'supplier';
-    } else if (driverDomains.some(domain => emailLower.includes(domain))) {
-      setUserRole('driver');
-      setShowOrganizationField(false);
-      return 'driver';
-    } else {
-      setUserRole('organization');
-      setShowOrganizationField(true);
-      return 'organization';
-    }
-  };
-
-  // Handle email change and update role detection
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value;
-    setEmail(newEmail);
-    checkUserRole(newEmail);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const role = checkUserRole(email);
-
-    if (showOrganizationField && !organizationName) {
-      toast.error("Organization name is required");
-      setLoading(false);
-      return;
+    if (isLogin) {
+      // Store user data in localStorage
+      const userData = {
+        email: email,
+        organizationName: organizationName,
+        fullName: email.split('@')[0], 
+        loginTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem("userData", JSON.stringify(userData));
+      localStorage.setItem("organizationName", organizationName);
+      
+      toast.success(`Welcome to ${organizationName}!`);
+      router.push("/dashboard");
+    } else {
+      // Sign up logic
+      const userData = {
+        email: email,
+        organizationName: organizationName,
+        fullName: fullName || email.split('@')[0],
+        loginTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem("userData", JSON.stringify(userData));
+      localStorage.setItem("organizationName", organizationName);
+      
+      toast.success("Account created! Please log in.");
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
     }
 
-    if (!email || !password) {
-      toast.error("Please enter both email and password.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast.error(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data?.user) {
-        toast.success("Login successful! Redirecting...");
-        router.push("/dashboard");
-      } else {
-        toast.error("Login failed. Please check your credentials.");
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Login failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper text based on detected role
-  const getRoleHelperText = () => {
-    if (userRole === 'admin') {
-      return "✓ Admin account detected. No organization name needed.";
-    } else if (userRole === 'supplier') {
-      return "✓ Supplier account detected. No organization name needed.";
-    } else if (userRole === 'driver') {
-      return "✓ Driver account detected. No organization name needed.";
-    }
-    return "";
+    setLoading(false);
   };
 
   return (
@@ -145,22 +91,31 @@ export default function Auth() {
             </h1>
             
             <p className="text-gray-500 text-sm">
-              {showOrganizationField 
-                ? "Welcome back! Please sign in to your organization"
-                : userRole === 'admin'
-                ? "Welcome Admin! Sign in to manage the system"
-                : userRole === 'supplier'
-                ? "Welcome Supplier! Sign in to manage your inventory"
-                : userRole === 'driver'
-                ? "Welcome Driver! Sign in to view deliveries"
-                : "Welcome back! Please sign in"}
+              Welcome back! Please sign in to your organization
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             
-            {/* Email Field */}
+            {/* Organization Name Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Organization Name
+              </label>
+              <Input
+                type="text"
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
+                placeholder="Enter your organization name "
+                required
+                className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+              />
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,45 +126,13 @@ export default function Auth() {
               <Input
                 type="email"
                 value={email}
-                onChange={handleEmailChange}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email..."
                 required
                 className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
               />
-              {email && !showOrganizationField && (
-                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {getRoleHelperText()}
-                </p>
-              )}
             </div>
 
-            {/* Organization Name Field - Conditional Rendering */}
-            {showOrganizationField && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  Organization Name
-                </label>
-                <Input
-                  type="text"
-                  value={organizationName}
-                  onChange={(e) => setOrganizationName(e.target.value)}
-                  placeholder="Enter your organization name"
-                  required={showOrganizationField}
-                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  For organization accounts only. Admins, suppliers, and drivers don't need this.
-                </p>
-              </div>
-            )}
-
-            {/* Password Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
