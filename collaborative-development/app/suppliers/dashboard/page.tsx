@@ -11,10 +11,25 @@ import OrderCard from "@/components/supplier/orders/OrderCard";
 import StatsCards from "@/components/supplier/dashboard/StatsCards";
 import { toast } from "sonner";
 
+interface SupplierOrder {
+  id: string;
+  status: string;
+  order_number?: string;
+  supplier_id?: string;
+  items_count?: number;
+  [key: string]: unknown;
+}
+
+interface SupplierStats {
+  totalOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+}
+
 export default function SupplierDashboard() {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<SupplierStats>({
     totalOrders: 0,
     pendingOrders: 0,
     completedOrders: 0,
@@ -23,6 +38,84 @@ export default function SupplierDashboard() {
   const supabase = createClient();
   const router = useRouter();
   const { sendNotification } = useNotifications();
+
+  async function fetchOrders() {
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items (quantity, product_name),
+        organizations (name, address, phone)
+      `)
+      .eq("supplier_id", userData.user?.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setOrders(data as SupplierOrder[]);
+      calculateStats(data as SupplierOrder[]);
+    }
+    setLoading(false);
+  }
+
+  function calculateStats(ordersData: SupplierOrder[]) {
+    setStats({
+      totalOrders: ordersData.length,
+      pendingOrders: ordersData.filter(o => o.status === "pending").length,
+      completedOrders: ordersData.filter(o => o.status === "delivered").length,
+    });
+  }
+
+  function updateStats() {
+    calculateStats(orders);
+  }
+
+  function startEscalationTimer(order: SupplierOrder) {
+    setTimeout(() => {
+      checkOrderStatus(order.id, order.supplier_id as string);
+    }, 2 * 60 * 1000);
+  }
+
+  async function checkOrderStatus(orderId: string, supplierId: string) {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("status")
+      .eq("id", orderId)
+      .single();
+
+    if (order?.status === "pending") {
+      toast.error("See your dashboard immediately!", {
+        duration: 10000,
+        style: { backgroundColor: "red", color: "white" }
+      });
+
+      await sendNotification({
+        userId: supplierId,
+        title: "URGENT: Orders Pending",
+        message: "See your dashboard immediately. Orders are waiting.",
+        type: "alert"
+      });
+
+      setTimeout(async () => {
+        const { data: updatedOrder } = await supabase
+          .from("orders")
+          .select("status")
+          .eq("id", orderId)
+          .single();
+
+        if (updatedOrder?.status === "pending") {
+          await supabase.from("order_escalations").insert({
+            order_id: orderId,
+            supplier_id: supplierId,
+            admin_notified: true,
+            status: "escalated"
+          });
+
+          toast.error("Admin has been notified. They will contact you shortly.");
+        }
+      }, 5 * 60 * 1000);
+    }
+  }
 
   // Fetch initial orders
   useEffect(() => {

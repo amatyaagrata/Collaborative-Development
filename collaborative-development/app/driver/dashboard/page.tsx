@@ -9,9 +9,27 @@ import DriverLayout from "@/components/layout/DriverLayout";
 import TripCard from "@/components/driver/trips/TripCard";
 import { toast } from "sonner";
 
+interface Trip {
+  id: string;
+  status: string;
+  delivery_charge?: number;
+  assigned_at?: string;
+  completed_at?: string | null;
+  order_id?: string;
+  supplier_id?: string;
+  [key: string]: unknown;
+}
+
+interface TripStats {
+  totalTrips: number;
+  completedTrips: number;
+  totalEarnings: number;
+  pendingTrips: number;
+}
+
 export default function DriverDashboard() {
-  const [trips, setTrips] = useState([]);
-  const [stats, setStats] = useState({
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [stats, setStats] = useState<TripStats>({
     totalTrips: 0,
     completedTrips: 0,
     totalEarnings: 0,
@@ -21,6 +39,36 @@ export default function DriverDashboard() {
   
   const supabase = createClient();
   const router = useRouter();
+
+  async function fetchTrips() {
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("driver_assignments")
+      .select(`
+        *,
+        orders:order_id (
+          id,
+          order_number,
+          customer_name,
+          customer_phone,
+          delivery_address,
+          total_amount,
+          organizations (
+            name,
+            address,
+            phone
+          )
+        )
+      `)
+      .eq("driver_id", userData.user?.id)
+      .order("assigned_at", { ascending: false });
+
+    if (!error && data) {
+      setTrips(data as Trip[]);
+      calculateStats(data as Trip[]);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
     fetchTrips();
@@ -72,7 +120,7 @@ export default function DriverDashboard() {
     setLoading(false);
   }
 
-  function calculateStats(tripsData: any[]) {
+  function calculateStats(tripsData: Trip[]) {
     const completed = tripsData.filter(t => t.status === "delivered");
     const totalEarnings = completed.reduce((sum, trip) => sum + (trip.delivery_charge || 0), 0);
     
