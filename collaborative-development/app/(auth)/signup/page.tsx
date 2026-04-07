@@ -25,10 +25,31 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  
+  // Organization application modal state
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [applicationData, setApplicationData] = useState({
+    organizationName: "",
+    email: "",
+    phone: "",
+    address: "",
+    panNumber: "",
+    citizenshipNumber: "",
+    nationalIdNumber: "",
+    requirement: "",
+  });
+  const [applicationLoading, setApplicationLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleApplicationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setApplicationData({
+      ...applicationData,
       [e.target.name]: e.target.value,
     });
   };
@@ -61,6 +82,30 @@ export default function SignUp() {
     return true;
   };
 
+  const validateApplicationForm = () => {
+    if (!applicationData.organizationName) {
+      toast.error("Organization name is required");
+      return false;
+    }
+    if (!applicationData.email) {
+      toast.error("Email is required");
+      return false;
+    }
+    if (!applicationData.phone) {
+      toast.error("Phone number is required");
+      return false;
+    }
+    if (!applicationData.address) {
+      toast.error("Address is required");
+      return false;
+    }
+    if (!applicationData.requirement) {
+      toast.error("Please tell us what you need");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -70,6 +115,21 @@ export default function SignUp() {
 
     try {
       const supabase = createClient();
+      
+      // Check if user is trying to sign up with an organization that needs approval
+      const { data: existingApplication } = await supabase
+        .from('organization_applications')
+        .select('status')
+        .eq('email', formData.email)
+        .eq('organization_name', formData.organizationName)
+        .single();
+
+      if (existingApplication && existingApplication.status !== 'approved') {
+        toast.error("Your organization registration is pending admin approval. Please wait for approval or contact support.");
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -78,7 +138,8 @@ export default function SignUp() {
             username: formData.username,
             organization_name: formData.organizationName,
             phone_number: formData.phoneNumber,
-            full_name: formData.username, // Mirroring name
+            full_name: formData.username,
+            is_organization_approved: existingApplication?.status === 'approved' || false,
           } 
         },
       });
@@ -93,6 +154,75 @@ export default function SignUp() {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApplicationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateApplicationForm()) return;
+    
+    setApplicationLoading(true);
+
+    try {
+      const supabase = createClient();
+      
+      // Check if application already exists
+      const { data: existingApplication } = await supabase
+        .from('organization_applications')
+        .select('id, status')
+        .eq('email', applicationData.email)
+        .eq('organization_name', applicationData.organizationName)
+        .single();
+
+      if (existingApplication) {
+        if (existingApplication.status === 'pending') {
+          toast.error("You already have a pending application. Please wait for admin approval.");
+        } else if (existingApplication.status === 'approved') {
+          toast.success("Your organization is already approved! You can now sign up.");
+          setShowApplicationModal(false);
+        } else if (existingApplication.status === 'rejected') {
+          toast.error("Your previous application was rejected. Please contact support for more information.");
+        }
+        setApplicationLoading(false);
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('organization_applications')
+        .insert([
+          {
+            organization_name: applicationData.organizationName,
+            email: applicationData.email,
+            phone: applicationData.phone,
+            address: applicationData.address,
+            pan_number: applicationData.panNumber || null,
+            citizenship_number: applicationData.citizenshipNumber || null,
+            national_id_number: applicationData.nationalIdNumber || null,
+            requirement: applicationData.requirement,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          }
+        ]);
+      
+      if (error) throw error;
+      
+      toast.success("Application submitted successfully! Our admin will review and contact you. You will be able to sign up once approved.");
+      setShowApplicationModal(false);
+      setApplicationData({
+        organizationName: "",
+        email: "",
+        phone: "",
+        address: "",
+        panNumber: "",
+        citizenshipNumber: "",
+        nationalIdNumber: "",
+        requirement: "",
+      });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit application");
+    } finally {
+      setApplicationLoading(false);
     }
   };
 
@@ -187,6 +317,9 @@ export default function SignUp() {
                 required
                 className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Note: If your organization requires admin approval, please apply first using the link below.
+              </p>
             </div>
 
             {/* Password */}
@@ -351,8 +484,21 @@ export default function SignUp() {
             </button>
           </div>
 
-          {/* Login Link */}
-          <div className="mt-6 text-center">
+          {/* Info Box for Organization Registration */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-1">For Organizations:</p>
+                <p>If your organization requires admin approval, please click "Apply Here" below. Once approved, you can sign up using your organization name and email.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Login Link and Organization Application Link */}
+          <div className="mt-4 text-center space-y-2">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
               <Link
@@ -362,9 +508,220 @@ export default function SignUp() {
                 Log in
               </Link>
             </p>
+            <p className="text-sm text-gray-500">
+              New organization?{" "}
+              <button
+                onClick={() => setShowApplicationModal(true)}
+                className="text-indigo-600 font-semibold hover:text-indigo-700 hover:underline transition-all"
+              >
+                Apply Here
+              </button>
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Organization Application Modal */}
+      {showApplicationModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowApplicationModal(false)}
+            ></div>
+
+            {/* Modal Content */}
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex justify-between items-center">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  Register Your Organization
+                </h2>
+                <button
+                  onClick={() => setShowApplicationModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-6 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ <span className="font-semibold">Important:</span> After submitting this application, our admin will review your details. 
+                    You will receive an email notification once approved. Only then you can sign up using your organization name.
+                  </p>
+                </div>
+
+                <form onSubmit={handleApplicationSubmit} className="space-y-4">
+                  {/* Organization Name */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Organization Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      name="organizationName"
+                      value={applicationData.organizationName}
+                      onChange={handleApplicationChange}
+                      placeholder="Enter organization name"
+                      required
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      name="email"
+                      type="email"
+                      value={applicationData.email}
+                      onChange={handleApplicationChange}
+                      placeholder="contact@organization.com"
+                      required
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      name="phone"
+                      type="tel"
+                      value={applicationData.phone}
+                      onChange={handleApplicationChange}
+                      placeholder="+977-XXXXXXXXXX"
+                      required
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Address <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      name="address"
+                      value={applicationData.address}
+                      onChange={handleApplicationChange}
+                      placeholder="Full address"
+                      required
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* PAN Number */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      PAN Number
+                    </label>
+                    <Input
+                      name="panNumber"
+                      value={applicationData.panNumber}
+                      onChange={handleApplicationChange}
+                      placeholder="Enter PAN number (if available)"
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* Citizenship Number */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Citizenship Number
+                    </label>
+                    <Input
+                      name="citizenshipNumber"
+                      value={applicationData.citizenshipNumber}
+                      onChange={handleApplicationChange}
+                      placeholder="Enter citizenship number"
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* National ID Number */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      National ID Number
+                    </label>
+                    <Input
+                      name="nationalIdNumber"
+                      value={applicationData.nationalIdNumber}
+                      onChange={handleApplicationChange}
+                      placeholder="Enter national ID number"
+                      className="w-full px-4 py-2 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  {/* Requirement */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Requirement / What do you need? <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      name="requirement"
+                      value={applicationData.requirement}
+                      onChange={handleApplicationChange}
+                      placeholder="Please describe your requirements..."
+                      required
+                      rows={4}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 resize-none"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="button"
+                      onClick={() => setShowApplicationModal(false)}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-xl transition-all duration-300"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={applicationLoading}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300"
+                    >
+                      {applicationLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Submitting...
+                        </span>
+                      ) : (
+                        "Submit Application"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Already have an account?{" "}
+                    <Link
+                      href="/login"
+                      className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all"
+                      onClick={() => setShowApplicationModal(false)}
+                    >
+                      Sign In
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
