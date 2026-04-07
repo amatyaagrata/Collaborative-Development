@@ -1,23 +1,58 @@
 // src/app/supplier/orders/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SupplierLayout from "@/components/layout/SupplierLayout";
 import OrderCard from "@/components/supplier/orders/OrderCard";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 
+interface SupplierOrder {
+  id: string;
+  order_number: string;
+  status: string;
+  created_at: string;
+  delivery_address: string;
+  total_amount: number;
+  organizations: {
+    name: string;
+    address: string;
+    phone: string;
+  };
+  order_items: Array<{
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+  }>;
+}
+
 export default function SupplierOrders() {
-  const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
 
-  async function fetchOrders() {
+  const filteredOrders = useMemo(() => {
+    let filtered = [...orders];
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    if (searchQuery) {
+      filtered = filtered.filter(order =>
+        order.organizations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [orders, searchQuery, statusFilter]);
+
+  const fetchOrders = async () => {
     const { data: userData } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from("orders")
@@ -42,36 +77,14 @@ export default function SupplierOrders() {
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      setOrders(data);
-      setFilteredOrders(data);
+      setOrders(data as SupplierOrder[]);
     }
     setLoading(false);
-  }
-
-  function filterOrders() {
-    let filtered = [...orders];
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    if (searchQuery) {
-      filtered = filtered.filter(order =>
-        order.organizations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    setFilteredOrders(filtered);
-  }
+  };
 
   useEffect(() => {
     fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    filterOrders();
-  }, [searchQuery, statusFilter, orders]);
+  }, [supabase]);
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const { error } = await supabase
