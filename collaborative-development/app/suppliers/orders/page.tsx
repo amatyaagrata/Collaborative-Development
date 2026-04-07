@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SupplierLayout from "@/components/layout/SupplierLayout";
 import OrderCard from "@/components/supplier/orders/OrderCard";
-import { Search, Filter } from "lucide-react";
+import { Search } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState([]);
@@ -15,14 +16,6 @@ export default function SupplierOrders() {
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    filterOrders();
-  }, [searchQuery, statusFilter, orders]);
 
   async function fetchOrders() {
     const { data: userData } = await supabase.auth.getUser();
@@ -58,12 +51,10 @@ export default function SupplierOrders() {
   function filterOrders() {
     let filtered = [...orders];
 
-    // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(order => order.status === statusFilter);
     }
 
-    // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(order =>
         order.organizations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -73,6 +64,14 @@ export default function SupplierOrders() {
 
     setFilteredOrders(filtered);
   }
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  useEffect(() => {
+    filterOrders();
+  }, [searchQuery, statusFilter, orders]);
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const { error } = await supabase
