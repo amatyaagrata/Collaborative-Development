@@ -1,0 +1,232 @@
+/* ═══════════════════════════════════════════════════════════════
+   Admin Users Page Styles — GoGodam Inventory Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+.admin-users-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+
+/* ─── Tabs ───────────────────────────────────────────────────── */
+.admin-users-tabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-users-tab {
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: #8c8a94;
+}
+
+.admin-users-tab:hover {
+  color: #1e004b;
+}
+
+.admin-users-tab.active {
+  color: var(--primary, #6008f8);
+  border-color: var(--primary, #6008f8);
+  background: #ffffff;
+}
+
+/* ─── Table Card ─────────────────────────────────────────────── */
+.admin-users-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+}
+
+.admin-users-table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+/* ─── Header ─────────────────────────────────────────────────── */
+.admin-users-table th {
+  text-align: left;
+  padding: 18px 24px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8c8a94;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #f0edf5;
+}
+
+/* ─── Rows ───────────────────────────────────────────────────── */
+.admin-users-table td {
+  padding: 18px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #5a5766;
+  border-bottom: 1px solid #f0edf5;
+}
+
+.admin-users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-users-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.admin-users-table tbody tr:hover {
+  background-color: #faf9fd;
+}
+
+.admin-users-column-bold {
+  color: #1e004b;
+  font-weight: 600;
+}
+
+/* ─── Role Dropdown styling ──────────────────────────────────── */
+.admin-users-role-select {
+  padding: 6px 36px 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e004b;
+  background-color: #f7f6f9;
+  border: 1px solid #ece8f4;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201.5L6%206.5L11%201.5%22%20stroke%3D%22%238C8A94%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.admin-users-role-select:hover {
+  border-color: #d8d3e6;
+  background-color: #f0edf5;
+}
+
+/* ─── Actions Button ─────────────────────────────────────────── */
+.admin-users-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e004b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.admin-users-action-btn:hover {
+  color: var(--primary, #6008f8);
+}
+
+.admin-users-action-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Modal Mockup ───────────────────────────────────────────── */
+.admin-users-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 0, 75, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: adminUsersFadeIn 0.2s ease forwards;
+}
+
+.admin-users-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(30, 0, 75, 0.15);
+  transform: translateY(20px);
+  animation: adminUsersFadeInUp 0.3s ease forwards;
+}
+
+.admin-users-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ece8f4;
+  padding-bottom: 16px;
+}
+
+.admin-users-modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e004b;
+}
+
+.admin-users-modal-close {
+  background: none;
+  border: none;
+  color: #8c8a94;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-users-modal-close:hover {
+  background: #f0edf5;
+  color: #1e004b;
+}
+
+.admin-users-modal-body p {
+  font-size: 14px;
+  color: #5a5766;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.admin-users-modal-body strong {
+  color: #1e004b;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+@keyframes adminUsersFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes adminUsersFadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-users-table th,
+  .admin-users-table td {
+    padding: 14px 16px;
+  }
+}

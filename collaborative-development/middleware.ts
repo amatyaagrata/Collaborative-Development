@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
     "/categories",
     "/suppliers",
     "/users",
+    "/admin",
   ].some((path) => request.nextUrl.pathname.startsWith(path));
 
   if (isProtectedRoute && !user) {

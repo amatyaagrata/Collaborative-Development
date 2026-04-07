@@ -1,0 +1,338 @@
+/* ═══════════════════════════════════════════════════════════════
+   Admin Dashboard Styles — GoGodam Inventory Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Activity Section ───────────────────────────────────────── */
+.admin-activity-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary, #6008f8);
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Activity Card (wrapping container) ─────────────────────── */
+.admin-activity-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 14px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+}
+
+/* ─── Stat Cards Grid ────────────────────────────────────────── */
+.admin-stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.admin-stat-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: adminFadeInUp 0.5s ease forwards;
+  opacity: 0;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.admin-stat-card:hover {
+  box-shadow: 0 8px 25px rgba(96, 8, 248, 0.15);
+  transform: translateY(-4px) scale(1.04);
+  z-index: 10;
+  position: relative;
+}
+
+.admin-stat-card-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8c8a94;
+  letter-spacing: 0.01em;
+}
+
+.admin-stat-card-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1e004b;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* ─── Charts Row ─────────────────────────────────────────────── */
+.admin-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* ─── Chart Card ─────────────────────────────────────────────── */
+.admin-chart-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 14px;
+  padding: 22px 26px;
+  animation: adminFadeInUp 0.5s ease forwards;
+  opacity: 0;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+}
+
+.admin-chart-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e004b;
+  margin-bottom: 16px;
+}
+
+/* ─── Product Summary (Donut Chart) ──────────────────────────── */
+.admin-product-summary-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.admin-donut-chart-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+
+.admin-donut-center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-donut-center-label span {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary, #6008f8);
+}
+
+.admin-product-summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-summary-stat {
+  text-align: center;
+}
+
+.admin-summary-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e004b;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.admin-summary-stat-label {
+  font-size: 11px;
+  color: #8c8a94;
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+
+/* ─── Trending Products Table ────────────────────────────────── */
+.admin-trending-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-trending-header {
+  padding: 18px 26px;
+  border-bottom: 1px solid #ece8f4;
+}
+
+.admin-trending-header .admin-chart-card-title {
+  margin-bottom: 0;
+}
+
+.admin-trending-table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-trending-table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.admin-trending-table thead tr {
+  border-bottom: 1px solid #ece8f4;
+}
+
+.admin-trending-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #5a5766;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-trending-table td {
+  padding: 12px 14px;
+  color: #1e004b;
+  border-bottom: 1px solid #f5f3f8;
+}
+
+.admin-trending-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-trending-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.admin-trending-table tbody tr:hover {
+  background: #faf9fd;
+}
+
+.admin-product-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ece8f4;
+  border: 2px solid #d8d3e6;
+}
+
+.admin-text-muted {
+  color: #8c8a94;
+}
+
+.admin-font-medium {
+  font-weight: 500;
+}
+
+.admin-empty-state {
+  text-align: center;
+  padding: 24px 14px !important;
+  color: #8c8a94;
+}
+
+/* ─── Sales & Purchase Chart ─────────────────────────────────── */
+.admin-sales-chart-card {
+  margin-bottom: 0;
+}
+
+.admin-sales-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.admin-sales-chart-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.admin-sales-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(270, 70%, 45%);
+  flex-shrink: 0;
+}
+
+.admin-sales-legend-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e004b;
+}
+
+.admin-sales-chart-subtitle {
+  font-size: 12px;
+  color: #8c8a94;
+  font-weight: 400;
+}
+
+.admin-period-badge {
+  font-size: 12px;
+  border: 1px solid #ece8f4;
+  border-radius: 20px;
+  padding: 5px 14px;
+  color: var(--primary, #6008f8);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  background: #ffffff;
+}
+
+.admin-period-badge:hover {
+  background: #f8f6ff;
+  border-color: var(--primary, #6008f8);
+}
+
+.admin-sales-chart-container {
+  width: 100%;
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes adminFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .admin-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-stat-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-product-summary-content {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .admin-product-summary-stats {
+    flex-direction: row;
+    gap: 32px;
+  }
+
+  .admin-activity-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-stat-card {
+    padding: 16px 20px;
+  }
+
+  .admin-stat-card-value {
+    font-size: 22px;
+  }
+}
