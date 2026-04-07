@@ -86,16 +86,51 @@ export default function ProductPage() {
     setViewMode("list");
   };
 
+  // Function to handle stock change with validation
+  const handleStockChange = (newStockValue: number, originalStock?: number) => {
+    // Prevent decreasing stock in edit mode
+    if (formMode === "edit" && originalStock !== undefined && newStockValue < originalStock) {
+      toast.error(`Stock cannot be decreased! Current stock: ${originalStock}`);
+      return false;
+    }
+    
+    // Ensure stock is not negative
+    if (newStockValue < 0) {
+      toast.error("Stock cannot be negative!");
+      return false;
+    }
+    
+    setFormData({ ...formData, stock: newStockValue.toString() });
+    return true;
+  };
+
   const handleSaveClick = async () => {
     if (!formData.name) {
       toast.error("Please fill in the required Product Name.");
       return;
     }
 
+    const currentStock = parseInt(formData.stock, 10) || 0;
+    
+    // For edit mode, check if stock is being decreased
+    if (formMode === "edit" && editingId !== null) {
+      const originalProduct = products.find(p => p.id === editingId);
+      if (originalProduct && currentStock < originalProduct.stock) {
+        toast.error(`Stock cannot be decreased! Current stock: ${originalProduct.stock}, Attempted: ${currentStock}`);
+        return;
+      }
+    }
+
+    // Validate stock is not negative
+    if (currentStock < 0) {
+      toast.error("Stock cannot be negative!");
+      return;
+    }
+
     const payload = {
       name: formData.name,
       price: parseFloat(formData.price) || 0,
-      stock: parseInt(formData.stock, 10) || 0,
+      stock: currentStock,
     };
 
     if (formMode === "add") {
@@ -191,7 +226,7 @@ export default function ProductPage() {
                         <tr key={product.id}>
                           <td>
                             <input type="checkbox" className="product-checkbox" />
-                          </td>
+                           </td>
                           <td style={{ fontWeight: 600 }}>{product.name}</td>
                           <td>{product.category || "General"}</td>
                           <td>Rs. {product.price.toLocaleString()}</td>
@@ -244,6 +279,7 @@ export default function ProductPage() {
                     placeholder="1000"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    min="0"
                   />
                 </div>
               </div>
@@ -256,7 +292,18 @@ export default function ProductPage() {
                     className="product-form-input"
                     placeholder="50"
                     value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (!isNaN(value)) {
+                        const originalProduct = formMode === "edit" && editingId !== null
+                          ? products.find(p => p.id === editingId)
+                          : null;
+                        handleStockChange(value, originalProduct?.stock);
+                      } else {
+                        setFormData({ ...formData, stock: "0" });
+                      }
+                    }}
+                    min="0"
                   />
                 </div>
               </div>
