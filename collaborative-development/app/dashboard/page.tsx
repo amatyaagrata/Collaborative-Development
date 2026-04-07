@@ -28,7 +28,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function loadDashboard() {
-      // Fetch user profile securely
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -40,13 +39,8 @@ export default function Dashboard() {
         setOrganizationName(user.user_metadata?.organization_name || "GoGodam Default");
       }
 
-      // 1. Total Products
       const { count: productsCount } = await supabase.from("products").select("*", { count: "exact", head: true });
-      
-      // 2. Total Orders
       const { count: ordersCount } = await supabase.from("orders").select("*", { count: "exact", head: true });
-
-      // 3. Inventory Value Aggregation
       const { data: productsData } = await supabase.from("products").select("price, stock");
       const inventoryValue = productsData?.reduce((acc, item) => acc + (item.price * item.stock), 0) || 0;
 
@@ -54,7 +48,7 @@ export default function Dashboard() {
         inventoryValue: inventoryValue,
         totalStocks: productsCount || 0,
         newOrders: ordersCount || 0,
-        delivered: 0 // Waiting for order status logic
+        delivered: 0
       });
 
       setSummary({
@@ -83,7 +77,12 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout title={`Dashboard - ${organizationName}`}>
+    <AppLayout 
+      title={`Dashboard - ${organizationName}`}
+      hideTransfers={true}
+      hideUsers={true}
+      hideReports={true}
+    >
       <div className="dashboard-content">
         
         {/* Top Bar with Organization Badge and User Menu */}
