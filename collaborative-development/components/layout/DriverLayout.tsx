@@ -3,11 +3,15 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Truck, Home, User, Bell } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Truck, Home, User, Bell, LogOut } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function DriverLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
 
   const navItems = [
     { href: "/driver/dashboard", label: "Dashboard", icon: Home },
@@ -15,6 +19,13 @@ export default function DriverLayout({ children }: { children: ReactNode }) {
     { href: "/driver/notifications", label: "Notifications", icon: Bell },
     { href: "/driver/profile", label: "Profile", icon: User },
   ];
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.clear();
+    toast.success("Logged out successfully");
+    router.push("/login");
+  };
 
   return (
     <div className="driver-layout">
@@ -39,6 +50,12 @@ export default function DriverLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+        <div className="sidebar-footer">
+          <button onClick={handleLogout} className="nav-item logout-btn">
+            <LogOut size={20} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       <main className="main-content">
