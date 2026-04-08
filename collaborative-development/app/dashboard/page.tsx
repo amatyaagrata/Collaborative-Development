@@ -81,7 +81,7 @@ export default function Dashboard() {
       }
     }
     loadDashboard();
-  }, [supabase, products, orders, productsLoading, ordersLoading]);
+  }, [products, orders, productsLoading, ordersLoading]); // supabase is a singleton — stable reference
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -153,6 +153,7 @@ export default function Dashboard() {
           <TrendingProductsTable products={products.slice(0, 4)} />
         </div>
 
+        {/* TODO: Replace hardcoded mock data with real sales/purchase data from Supabase */}
         <SalesPurchaseChart data={[
           { name: "Mon", Sales: 10200, Purchase: 8400 },
           { name: "Tue", Sales: 8800, Purchase: 7200 },
