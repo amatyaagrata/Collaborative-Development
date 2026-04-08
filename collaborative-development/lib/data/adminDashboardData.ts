@@ -5,16 +5,17 @@
 
 // ─── Dashboard Stats ────────────────────────────────────────────
 export const adminStats = {
-  inventoryRevenue: "Rs. 2,54,890",
-  activeUsers: 22,
-  inactiveUsers: 9,
-  applicationCount: 13,
+  inventoryValue: "Rs. 2,54,890",
+  totalStocks: "2,684",
+  newOrders: "769",
+  delivered: "367",
 };
 
 // ─── Product Summary ────────────────────────────────────────────
 export const adminProductSummary = {
   quantityInHand: 1500,
   toBeReceived: 500,
+  percentage: 90, // Match the visual in the image
 };
 
 // ─── Trending Products ──────────────────────────────────────────
@@ -60,12 +61,13 @@ export interface AdminActiveUser {
   role: string;
   organization: string;
   subscription: string;
+  status: string;
 }
 
 export const adminActiveUsers: AdminActiveUser[] = [
-  { id: 1, name: "Test Supplier", email: "supplier@gogodam.com", role: "Supplier", organization: "Supplier Org A", subscription: "None" },
-  { id: 2, name: "Test Driver", email: "driver@gogodam.com", role: "Driver", organization: "—", subscription: "None" },
-  { id: 3, name: "Normal User", email: "user@example.com", role: "User", organization: "—", subscription: "None" },
+  { id: 1, name: "Test Supplier", email: "supplier@gogodam.com", role: "Supplier", organization: "Supplier Org A", subscription: "None", status: "Active" },
+  { id: 2, name: "Test Driver", email: "driver@gogodam.com", role: "Driver", organization: "—", subscription: "None", status: "Active" },
+  { id: 3, name: "Normal User", email: "user@example.com", role: "User", organization: "—", subscription: "None", status: "Active" },
 ];
 
 export interface AdminApplication {

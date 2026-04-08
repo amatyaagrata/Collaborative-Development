@@ -13,20 +13,17 @@ import {
   adminProductSummary,
   adminTrendingProducts,
   adminSalesData,
-  adminApplications,
 } from "@/lib/data/adminDashboardData";
 import "./dashboard.css";
 
-const PIE_COLORS = ["hsl(270, 70%, 45%)", "hsl(260, 20%, 92%)"];
+const PIE_COLORS = ["hsl(255, 78%, 60%)", "hsl(255, 60%, 94%)"];
 
 export default function AdminDashboardPage() {
-  const { quantityInHand, toBeReceived } = adminProductSummary;
-  const total = quantityInHand + toBeReceived;
-  const percentage = total > 0 ? Math.round((quantityInHand / total) * 100) : 0;
+  const { quantityInHand, toBeReceived, percentage } = adminProductSummary;
 
   const pieData = [
-    { name: "In Hand", value: quantityInHand },
-    { name: "To Receive", value: toBeReceived },
+    { name: "In Hand", value: percentage },
+    { name: "Remaining", value: 100 - percentage },
   ];
 
   return (
@@ -38,23 +35,23 @@ export default function AdminDashboardPage() {
           <h2 className="admin-activity-header">Activity</h2>
           <div className="admin-stat-cards-grid">
             <AdminStatCard
-              label="Inventory Revenue"
-              value={adminStats.inventoryRevenue}
+              label="Inventory Value"
+              value={adminStats.inventoryValue}
               delay={0}
             />
             <AdminStatCard
-              label="Active Users"
-              value={adminStats.activeUsers.toString()}
+              label="Total Stocks"
+              value={adminStats.totalStocks}
               delay={50}
             />
             <AdminStatCard
-              label="Inactive Users"
-              value={adminStats.inactiveUsers.toString()}
+              label="New Orders"
+              value={adminStats.newOrders}
               delay={100}
             />
             <AdminStatCard
-              label="Application Count"
-              value={adminApplications.length.toString()}
+              label="Delivered"
+              value={adminStats.delivered}
               delay={150}
             />
           </div>
@@ -108,7 +105,7 @@ export default function AdminDashboardPage() {
           {/* Trending Products Table */}
           <div className="admin-chart-card admin-trending-card" style={{ animationDelay: "250ms" }}>
             <div className="admin-trending-header">
-              <h3 className="admin-chart-card-title">Trending Product</h3>
+              <h3 className="admin-chart-card-title">Tranding Product</h3>
             </div>
             <div className="admin-trending-table-wrapper">
               <table className="admin-trending-table">
@@ -151,45 +148,46 @@ export default function AdminDashboardPage() {
           <div className="admin-sales-chart-header">
             <div>
               <h3 className="admin-chart-card-title">Sales &amp; Purchase</h3>
-              <div className="admin-sales-chart-legend-row">
-                <span className="admin-sales-legend-dot"></span>
-                <span className="admin-sales-legend-label">Sales</span>
-                <span className="admin-sales-chart-subtitle">
+              <div className="admin-sales-chart-legend-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: '#525252' }}>Sales</span>
+                <span style={{ fontSize: '13px', color: '#888' }}>
                   Total sales and purchases statistics on week
                 </span>
               </div>
             </div>
-            <span className="admin-period-badge">Week ▾</span>
+            <div className="admin-period-badge" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+              <span>Week</span>
+              <span style={{ fontSize: '10px' }}>▼</span>
+            </div>
           </div>
 
-          <div className="admin-sales-chart-container">
+          <div className="admin-sales-chart-container" style={{ marginTop: '30px' }}>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={adminSalesData} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(260, 15%, 90%)" />
+              <BarChart data={adminSalesData} barGap={12}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: "hsl(250, 10%, 45%)" }}
+                  tick={{ fontSize: 12, fill: "#888" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "hsl(250, 10%, 45%)" }}
+                  tick={{ fontSize: 12, fill: "#888" }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(value) => `₹${value.toLocaleString()}`}
+                  tickFormatter={(value) => `₹${value}`}
                 />
                 <Tooltip
-                  formatter={(value) => [`₹${Number(value).toLocaleString()}`]}
+                  cursor={{ fill: 'transparent' }}
                   contentStyle={{
                     borderRadius: "8px",
-                    border: "1px solid hsl(260, 15%, 90%)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    border: "none",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                     fontSize: "13px",
                   }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Sales" fill="hsl(270, 70%, 45%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Purchase" fill="hsl(260, 20%, 85%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Sales" fill="hsl(255, 78%, 60%)" radius={[2, 2, 0, 0]} barSize={12} />
+                <Bar dataKey="Purchase" fill="hsl(255, 60%, 90%)" radius={[2, 2, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </div>
