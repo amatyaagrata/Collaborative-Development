@@ -1,32 +1,16 @@
 // src/hooks/useRealtimeOrders.ts
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { SupplierOrder } from "@/types/models";
 
-interface Order {
-  id: string;
-  order_number: string;
-  status: string;
-  created_at: string;
-  delivery_address: string;
-  total_amount: number;
-  supplier_id: string;
-  items_count?: number;
-  order_items: Array<{
-    id: string;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    total_price: number;
-  }>;
-  organizations: {
-    name: string;
-    address: string;
-    phone: string;
-  };
-}
-
-export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: Order) => void }) {
+export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: SupplierOrder) => void }) {
   const supabase = createClient();
+  const callbackRef = useRef(onNewOrder);
+
+  // Keep callback ref current without causing re-subscribes
+  useEffect(() => {
+    callbackRef.current = onNewOrder;
+  }, [onNewOrder]);
 
   useEffect(() => {
     const channel = supabase
@@ -51,7 +35,7 @@ export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: Order) =
             .single();
 
           if (fullOrder) {
-            onNewOrder(fullOrder);
+            callbackRef.current(fullOrder as SupplierOrder);
           }
         }
       )
@@ -60,5 +44,5 @@ export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: Order) =
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [onNewOrder, supabase]);
+  }, []); // supabase is a singleton — stable reference; callback uses ref
 }

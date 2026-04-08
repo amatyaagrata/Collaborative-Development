@@ -1,33 +1,16 @@
 // src/hooks/useRealtimeTrips.ts
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-interface Trip {
-  id: string;
-  status: string;
-  pickup_address?: string;
-  delivery_charge: number;
-  assigned_at: string;
-  completed_at?: string | null;
-  order_id?: string;
-  supplier_id?: string;
-  orders: {
-    id: string;
-    order_number: string;
-    customer_name: string;
-    customer_phone: string;
-    total_amount: number;
-    delivery_address: string;
-    organizations: {
-      name: string;
-      address: string;
-      phone: string;
-    };
-  };
-}
+import type { Trip } from "@/types/models";
 
 export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: Trip) => void }) {
   const supabase = createClient();
+  const callbackRef = useRef(onNewTrip);
+
+  // Keep callback ref current without causing re-subscribes
+  useEffect(() => {
+    callbackRef.current = onNewTrip;
+  }, [onNewTrip]);
 
   useEffect(() => {
     const channel = supabase
@@ -54,7 +37,7 @@ export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: Trip) => voi
             .single();
 
           if (fullTrip) {
-            onNewTrip(fullTrip);
+            callbackRef.current(fullTrip as Trip);
           }
         }
       )
@@ -63,5 +46,5 @@ export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: Trip) => voi
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [onNewTrip, supabase]);
+  }, []); // supabase is a singleton — stable reference; callback uses ref
 }
