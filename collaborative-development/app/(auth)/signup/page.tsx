@@ -27,7 +27,6 @@ export default function SignUp() {
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    role: "inventory_manager", // Default role
   });
   const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
@@ -140,11 +139,7 @@ export default function SignUp() {
     }
   };
 
-  // Get selected role description
-  const getSelectedRoleDescription = () => {
-    const selectedRoleObj = roles.find(r => r.value === formData.role);
-    return selectedRoleObj?.description || "";
-  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4 py-8 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -183,7 +178,7 @@ export default function SignUp() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Role Selector */}
+            {/* Role Selector Toggle */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,38 +264,6 @@ export default function SignUp() {
               />
             </div>
 
-            {/* Role Dropdown */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Role *
-              </label>
-              <div className="relative">
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 appearance-none bg-white"
-                  required
-                >
-                  {roles.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {getSelectedRoleDescription()}
-              </p>
-            </div>
 
             {/* Password */}
             <div className="space-y-2">

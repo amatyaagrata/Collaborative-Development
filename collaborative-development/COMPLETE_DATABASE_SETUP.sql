@@ -29,6 +29,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================
+-- DROP SECRETS & BROKEN TRIGGERS (Cleans up auth.users)
+-- ============================================================
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users CASCADE;
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP TRIGGER IF EXISTS on_user_created ON auth.users CASCADE;
+DROP FUNCTION IF EXISTS public.create_profile_for_new_user() CASCADE;
+
+-- ============================================================
 -- DROP ALL EXISTING TABLES (safe drop in reverse dependency order)
 -- ============================================================
 DROP TABLE IF EXISTS notifications CASCADE;

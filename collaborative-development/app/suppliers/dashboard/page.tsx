@@ -31,14 +31,7 @@ export default function SupplierDashboard() {
 
   const stats = useMemo(() => computeStats(orders), [orders]);
 
-  function startEscalationTimer(order: SupplierOrder) {
-    const timer1 = setTimeout(() => {
-      checkOrderStatus(order.id, order.supplier_id as string);
-    }, 2 * 60 * 1000);
-    escalationTimers.current.push(timer1);
-  }
-
-  async function checkOrderStatus(orderId: string, supplierId: string) {
+  const checkOrderStatus = useCallback(async (orderId: string, supplierId: string) => {
     const { data: order } = await supabase
       .from("orders")
       .select("status")
@@ -78,7 +71,14 @@ export default function SupplierDashboard() {
       }, 5 * 60 * 1000);
       escalationTimers.current.push(timer2);
     }
-  }
+  }, [supabase, sendNotification]);
+
+  const startEscalationTimer = useCallback((order: SupplierOrder) => {
+    const timer1 = setTimeout(() => {
+      checkOrderStatus(order.id, order.supplier_id as string);
+    }, 2 * 60 * 1000);
+    escalationTimers.current.push(timer1);
+  }, [checkOrderStatus]);
 
   // Fetch initial orders
   useEffect(() => {
@@ -101,12 +101,13 @@ export default function SupplierDashboard() {
     };
 
     fetchData();
-  }, []); // supabase is a singleton — stable reference
+  }, [supabase]); // supabase is a singleton — stable reference
 
   // Clean up escalation timers on unmount
   useEffect(() => {
+    const timers = escalationTimers.current;
     return () => {
-      escalationTimers.current.forEach(timer => clearTimeout(timer));
+      timers.forEach(timer => clearTimeout(timer));
     };
   }, []);
 
@@ -133,7 +134,7 @@ export default function SupplierDashboard() {
     
     // Start escalation timer
     startEscalationTimer(newOrder);
-  }, [router, sendNotification]);
+  }, [router, sendNotification, startEscalationTimer]);
 
   // Real-time order subscription
   useRealtimeOrders({
