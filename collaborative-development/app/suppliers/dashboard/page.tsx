@@ -1,7 +1,7 @@
 // src/app/supplier/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
@@ -10,33 +10,7 @@ import SupplierLayout from "@/components/layout/SupplierLayout";
 import OrderCard from "@/components/supplier/orders/OrderCard";
 import StatsCards from "@/components/supplier/dashboard/StatsCards";
 import { toast } from "sonner";
-
-interface SupplierOrder {
-  id: string;
-  order_number: string;
-  status: string;
-  created_at: string;
-  delivery_address: string;
-  total_amount: number;
-  organizations: {
-    name: string;
-    address: string;
-    phone: string;
-  };
-  order_items: Array<{
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-  }>;
-  supplier_id: string;
-  items_count?: number;
-}
-
-interface SupplierStats {
-  totalOrders: number;
-  pendingOrders: number;
-  completedOrders: number;
-}
+import type { SupplierOrder, SupplierStats } from "@/types/models";
 
 export default function SupplierDashboard() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -45,6 +19,7 @@ export default function SupplierDashboard() {
   const supabase = createClient();
   const router = useRouter();
   const { sendNotification } = useNotifications();
+  const escalationTimers = useRef<NodeJS.Timeout[]>([]);
 
   const computeStats = (ordersData: SupplierOrder[]): SupplierStats => {
     return {
@@ -57,9 +32,10 @@ export default function SupplierDashboard() {
   const stats = useMemo(() => computeStats(orders), [orders]);
 
   function startEscalationTimer(order: SupplierOrder) {
-    setTimeout(() => {
+    const timer1 = setTimeout(() => {
       checkOrderStatus(order.id, order.supplier_id as string);
     }, 2 * 60 * 1000);
+    escalationTimers.current.push(timer1);
   }
 
   async function checkOrderStatus(orderId: string, supplierId: string) {
@@ -82,7 +58,7 @@ export default function SupplierDashboard() {
         type: "alert"
       });
 
-      setTimeout(async () => {
+      const timer2 = setTimeout(async () => {
         const { data: updatedOrder } = await supabase
           .from("orders")
           .select("status")
@@ -100,6 +76,7 @@ export default function SupplierDashboard() {
           toast.error("Admin has been notified. They will contact you shortly.");
         }
       }, 5 * 60 * 1000);
+      escalationTimers.current.push(timer2);
     }
   }
 
@@ -111,7 +88,7 @@ export default function SupplierDashboard() {
         .from("orders")
         .select(`
           *,
-          order_items (quantity, product_name),
+          order_items (quantity, product_name, unit_price),
           organizations (name, address, phone)
         `)
         .eq("supplier_id", userData.user?.id)
@@ -124,36 +101,44 @@ export default function SupplierDashboard() {
     };
 
     fetchData();
-  }, [supabase]);
+  }, []); // supabase is a singleton — stable reference
+
+  // Clean up escalation timers on unmount
+  useEffect(() => {
+    return () => {
+      escalationTimers.current.forEach(timer => clearTimeout(timer));
+    };
+  }, []);
+
+  // Memoize the callback to prevent infinite realtime subscription loops
+  const handleNewOrder = useCallback((newOrder: SupplierOrder) => {
+    // Stage 1: Show notification
+    toast.info("You have received new orders. Please check your dashboard.", {
+      duration: 5000,
+      action: {
+        label: "View",
+        onClick: () => router.push(`/suppliers/orders`)
+      }
+    });
+
+    // Save notification to database
+    sendNotification({
+      title: "New Order Received",
+      message: `Order #${newOrder.order_number} - ${newOrder.items_count || 0} items`,
+      type: "order"
+    });
+
+    // Add to orders list
+    setOrders(prev => [newOrder, ...prev]);
+    
+    // Start escalation timer
+    startEscalationTimer(newOrder);
+  }, [router, sendNotification]);
 
   // Real-time order subscription
   useRealtimeOrders({
-    onNewOrder: (newOrder) => {
-      // Stage 1: Show notification
-      toast.info("You have received new orders. Please check your dashboard.", {
-        duration: 5000,
-        action: {
-          label: "View",
-          onClick: () => router.push(`/supplier/orders/${newOrder.id}`)
-        }
-      });
-
-      // Save notification to database
-      sendNotification({
-        title: "New Order Received",
-        message: `Order #${newOrder.order_number} - ${newOrder.items_count} items`,
-        type: "order"
-      });
-
-      // Add to orders list
-      setOrders(prev => [newOrder as SupplierOrder, ...prev]);
-      
-      // Start escalation timer
-      startEscalationTimer(newOrder as SupplierOrder);
-    }
+    onNewOrder: handleNewOrder
   });
-
-
 
   if (loading) {
     return <div className="loading-spinner">Loading dashboard...</div>;
@@ -172,7 +157,7 @@ export default function SupplierDashboard() {
         <div className="orders-section">
           <div className="section-header">
             <h2>Recent Orders</h2>
-            <button onClick={() => router.push("/supplier/orders")}>
+            <button onClick={() => router.push("/suppliers/orders")}>
               View All Orders →
             </button>
           </div>
@@ -182,7 +167,7 @@ export default function SupplierDashboard() {
               <OrderCard 
                 key={order.id} 
                 order={order}
-                onView={() => router.push(`/supplier/orders/${order.id}`)}
+                onView={() => router.push(`/suppliers/orders`)}
               />
             ))}
           </div>
