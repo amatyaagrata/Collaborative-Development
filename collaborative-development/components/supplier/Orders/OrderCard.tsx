@@ -87,12 +87,12 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
                 </tr>
               </thead>
               <tbody>
-                {order.order_items.map((item, idx) => (
+                {(order.order_items || []).map((item, idx) => (
                   <tr key={idx}>
                     <td>{item.product_name}</td>
                     <td>{item.quantity}</td>
-                    <td>Rs. {item.unit_price.toLocaleString()}</td>
-                    <td>Rs. {(item.quantity * item.unit_price).toLocaleString()}</td>
+                    <td>Rs. {(item.unit_price || 0).toLocaleString()}</td>
+                    <td>Rs. {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
