@@ -1,7 +1,7 @@
 // src/app/supplier/orders/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SupplierLayout from "@/components/layout/SupplierLayout";
 import OrderCard from "@/components/supplier/orders/OrderCard";
@@ -52,7 +52,7 @@ export default function SupplierOrders() {
     return filtered;
   }, [orders, searchQuery, statusFilter]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async (): Promise<SupplierOrder[]> => {
     const { data: userData } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from("orders")
@@ -76,15 +76,21 @@ export default function SupplierOrders() {
       .eq("supplier_id", userData.user?.id)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setOrders(data as SupplierOrder[]);
+    if (error) {
+      console.error("Error fetching orders:", error);
+      return [];
     }
-    setLoading(false);
-  };
+    return data as SupplierOrder[];
+  }, [supabase]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [supabase]);
+    const loadOrders = async () => {
+      const data = await fetchOrders();
+      setOrders(data);
+      setLoading(false);
+    };
+    loadOrders();
+  }, [fetchOrders]);
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const { error } = await supabase
@@ -94,7 +100,8 @@ export default function SupplierOrders() {
 
     if (!error) {
       toast.success(`Order status updated to ${newStatus}`);
-      fetchOrders();
+      const updatedOrders = await fetchOrders();
+      setOrders(updatedOrders);
     }
   }
 

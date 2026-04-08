@@ -1,7 +1,7 @@
 // src/app/driver/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeTrips } from "@/hooks/useRealtimeTrips";
@@ -41,30 +41,26 @@ interface TripStats {
 
 export default function DriverDashboard() {
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [stats, setStats] = useState<TripStats>({
-    totalTrips: 0,
-    completedTrips: 0,
-    totalEarnings: 0,
-    pendingTrips: 0,
-  });
   const [loading, setLoading] = useState(true);
   
   const supabase = createClient();
   const router = useRouter();
 
-  function calculateStats(tripsData: Trip[]) {
+  const computeStats = (tripsData: Trip[]): TripStats => {
     const completed = tripsData.filter(t => t.status === "delivered");
     const totalEarnings = completed.reduce((sum, trip) => sum + (trip.delivery_charge || 0), 0);
     
-    setStats({
+    return {
       totalTrips: tripsData.length,
       completedTrips: completed.length,
       totalEarnings: totalEarnings,
       pendingTrips: tripsData.filter(t => t.status === "assigned" || t.status === "accepted").length,
-    });
-  }
+    };
+  };
 
-  const fetchTrips = useCallback(async () => {
+  const stats = useMemo(() => computeStats(trips), [trips]);
+
+  const fetchTrips = useCallback(async (): Promise<Trip[]> => {
     const { data: userData } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from("driver_assignments")
@@ -88,14 +84,18 @@ export default function DriverDashboard() {
       .order("assigned_at", { ascending: false });
 
     if (!error && data) {
-      setTrips(data as Trip[]);
-      calculateStats(data as Trip[]);
+      return data as Trip[];
     }
-    setLoading(false);
+    return [];
   }, [supabase]);
 
   useEffect(() => {
-    fetchTrips();
+    const loadTrips = async () => {
+      const data = await fetchTrips();
+      setTrips(data);
+      setLoading(false);
+    };
+    loadTrips();
   }, [fetchTrips]);
 
   // Real-time trip assignment subscription
@@ -113,10 +113,6 @@ export default function DriverDashboard() {
     }
   });
 
-  useEffect(() => {
-    calculateStats(trips);
-  }, [trips]);
-
   async function updateTripStatus(tripId: string, status: string) {
     const { error } = await supabase
       .from("driver_assignments")
@@ -128,7 +124,8 @@ export default function DriverDashboard() {
 
     if (!error) {
       toast.success(`Trip status updated to ${status}`);
-      fetchTrips();
+      const updatedTrips = await fetchTrips();
+      setTrips(updatedTrips);
     }
   }
 

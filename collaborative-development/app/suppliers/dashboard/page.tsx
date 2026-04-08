@@ -1,7 +1,7 @@
 // src/app/supplier/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
@@ -41,27 +41,20 @@ interface SupplierStats {
 export default function SupplierDashboard() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<SupplierStats>({
-    totalOrders: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-  });
   
   const supabase = createClient();
   const router = useRouter();
   const { sendNotification } = useNotifications();
 
-  function calculateStats(ordersData: SupplierOrder[]) {
-    setStats({
+  const computeStats = (ordersData: SupplierOrder[]): SupplierStats => {
+    return {
       totalOrders: ordersData.length,
       pendingOrders: ordersData.filter(o => o.status === "pending").length,
       completedOrders: ordersData.filter(o => o.status === "delivered").length,
-    });
-  }
+    };
+  };
 
-  useEffect(() => {
-    calculateStats(orders);
-  }, [orders]);
+  const stats = useMemo(() => computeStats(orders), [orders]);
 
   function startEscalationTimer(order: SupplierOrder) {
     setTimeout(() => {
@@ -126,7 +119,6 @@ export default function SupplierDashboard() {
 
       if (!error && data) {
         setOrders(data as SupplierOrder[]);
-        calculateStats(data as SupplierOrder[]);
       }
       setLoading(false);
     };

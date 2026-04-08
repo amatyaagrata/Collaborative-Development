@@ -2,7 +2,30 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: any) => void }) {
+interface Order {
+  id: string;
+  order_number: string;
+  status: string;
+  created_at: string;
+  delivery_address: string;
+  total_amount: number;
+  supplier_id: string;
+  items_count?: number;
+  order_items: Array<{
+    id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+  }>;
+  organizations: {
+    name: string;
+    address: string;
+    phone: string;
+  };
+}
+
+export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: Order) => void }) {
   const supabase = createClient();
 
   useEffect(() => {

@@ -11,22 +11,10 @@ import Image from "next/image";
 
 const logo = "/assets/logo.png";
 
-// Role options
-const roles = [
-  { value: "admin", label: "Admin", description: "Full system access" },
-  { value: "inventory_manager", label: "Inventory Manager", description: "Manage products and stock" },
-  { value: "supplier", label: "Supplier", description: "Supply products to inventory" },
-  { value: "transporter", label: "Transporter", description: "Handle deliveries and logistics" },
-];
-
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [organizationName, setOrganizationName] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("inventory_manager"); // Add role state
   const [loading, setLoading] = useState(false);
-  const [isLogin, setIsLogin] = useState(true);
   const router = useRouter();
   const supabase = createClient();
 
@@ -34,98 +22,54 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    if (isLogin) {
-      // Login logic with Supabase
+    try {
+      console.log("[LOGIN] Starting login with email:", email);
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        toast.error(error.message);
+        console.error("[LOGIN] Auth signin error:", error);
+        if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("not found")) {
+          toast.error("Account not found. Please sign up first or check your email.");
+        } else {
+          toast.error(error.message);
+        }
         setLoading(false);
         return;
       }
 
-      // Get user data after login
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Store user data in localStorage
-      const userData = {
-        email: email,
-        organizationName: user?.user_metadata?.organization_name || organizationName,
-        fullName: user?.user_metadata?.full_name || email.split('@')[0],
-        role: user?.user_metadata?.role || "inventory_manager",
-        loginTime: new Date().toISOString()
-      };
-      
-      localStorage.setItem("userData", JSON.stringify(userData));
-      localStorage.setItem("organizationName", user?.user_metadata?.organization_name || organizationName);
-      
-      toast.success(`Welcome back!`);
-      router.push("/dashboard");
-    } else {
-      // Sign up logic with role
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName || email.split('@')[0],
-            organization_name: organizationName,
-            role: role,
-          }
-        }
-      });
+      console.log("[LOGIN] Auth signin successful, fetching user role...");
 
-      if (error) {
-        toast.error(error.message);
+      // Get user role and redirect accordingly
+      const roleResponse = await fetch("/api/auth/user-role");
+      const roleData = await roleResponse.json();
+
+      console.log("[LOGIN] Role data received:", roleData);
+
+      if (!roleResponse.ok) {
+        console.error("[LOGIN] Failed to fetch role:", roleData.error);
+        toast.error("Failed to load user profile. Please try again.");
         setLoading(false);
         return;
       }
 
-      // Store role in user_roles table
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert([
-            {
-              user_id: user.id,
-              role: role,
-              organization_name: organizationName,
-            }
-          ]);
+      const { role, redirect } = roleData;
+      console.log("[LOGIN] User role:", role, "Redirecting to:", redirect);
 
-        if (roleError) {
-          console.error("Error saving role:", roleError);
-        }
-      }
-
-      const userData = {
-        email: email,
-        organizationName: organizationName,
-        fullName: fullName || email.split('@')[0],
-        role: role,
-        loginTime: new Date().toISOString()
-      };
+      toast.success(`Welcome back! You are logged in as ${role}`);
       
-      localStorage.setItem("userData", JSON.stringify(userData));
-      localStorage.setItem("organizationName", organizationName);
-      
-      toast.success("Account created! Please check your email to verify your account.");
+      // Redirect to role-specific dashboard
       setTimeout(() => {
-        router.push("/login");
-      }, 1500);
+        router.push(redirect);
+      }, 500);
+    } catch (error: unknown) {
+      console.error("[LOGIN] Unexpected error:", error);
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
+      setLoading(false);
     }
-
-    setLoading(false);
-  };
-
-  // Get selected role description
-  const getSelectedRoleDescription = () => {
-    const selectedRole = roles.find(r => r.value === role);
-    return selectedRole?.description || "";
   };
 
   return (
@@ -160,86 +104,12 @@ export default function Auth() {
             </h1>
             
             <p className="text-gray-500 text-sm">
-              {isLogin ? "Welcome back! Please sign in to your account" : "Create your account to get started"}
+              Welcome back! Please sign in to your account
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            
-            {/* Full Name Field - Only on Signup */}
-            {!isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Full Name
-                </label>
-                <Input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
-                />
-              </div>
-            )}
-
-            {/* Organization Name Field - Only on Signup */}
-            {!isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  Organization Name *
-                </label>
-                <Input
-                  type="text"
-                  value={organizationName}
-                  onChange={(e) => setOrganizationName(e.target.value)}
-                  placeholder="Enter your organization name"
-                  required={!isLogin}
-                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
-                />
-              </div>
-            )}
-
-            {/* Role Dropdown - Only on Signup */}
-            {!isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                  Role *
-                </label>
-                <div className="relative">
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 appearance-none bg-white"
-                    required
-                  >
-                    {roles.map((roleOption) => (
-                      <option key={roleOption.value} value={roleOption.value}>
-                        {roleOption.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {getSelectedRoleDescription()}
-                </p>
-              </div>
-            )}
-
             {/* Email Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -275,27 +145,20 @@ export default function Auth() {
                 minLength={6}
                 className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
               />
-              {!isLogin && (
-                <p className="text-xs text-gray-500">Password must be at least 6 characters</p>
-              )}
             </div>
 
-            {/* Forgot Password Link - Only on Login */}
-            {isLogin && (
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={() => toast.info("Password reset link sent to your email")}
-                  className="text-xs text-purple-600 hover:text-purple-700 font-medium transition-colors"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-            )}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => toast.info("Password reset link sent to your email")}
+                className="text-xs text-purple-600 hover:text-purple-700 font-medium transition-colors"
+              >
+                Forgot Password?
+              </button>
+            </div>
 
-            {/* Submit Button */}
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl mt-4"
               disabled={loading}
             >
@@ -308,7 +171,7 @@ export default function Auth() {
                   Processing...
                 </span>
               ) : (
-                isLogin ? "Sign In" : "Sign Up"
+                "Sign In"
               )}
             </Button>
           </form>
@@ -340,22 +203,12 @@ export default function Auth() {
             </button>
           </div>
 
-          {/* Toggle between Login and Signup */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setOrganizationName("");
-                  setFullName("");
-                  setRole("inventory_manager");
-                }}
-                className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1"
-              >
-                {isLogin ? "Sign Up" : "Sign In"}
-              </button>
+              Don't have an account?
+              <Link href="/signup" className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1">
+                Sign Up
+              </Link>
             </p>
           </div>
 

@@ -6,7 +6,7 @@ import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend,
+  Tooltip,
 } from "recharts";
 import {
   adminStats,

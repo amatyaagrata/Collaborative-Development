@@ -2,7 +2,31 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: any) => void }) {
+interface Trip {
+  id: string;
+  status: string;
+  pickup_address?: string;
+  delivery_charge: number;
+  assigned_at: string;
+  completed_at?: string | null;
+  order_id?: string;
+  supplier_id?: string;
+  orders: {
+    id: string;
+    order_number: string;
+    customer_name: string;
+    customer_phone: string;
+    total_amount: number;
+    delivery_address: string;
+    organizations: {
+      name: string;
+      address: string;
+      phone: string;
+    };
+  };
+}
+
+export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: Trip) => void }) {
   const supabase = createClient();
 
   useEffect(() => {
