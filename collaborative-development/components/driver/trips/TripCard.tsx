@@ -53,28 +53,28 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
     <div className="trip-card">
       <div className="trip-card-header" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="trip-info">
-          <span className="order-number">Order #{trip.orders.order_number}</span>
+          <span className="order-number">Order #{trip.orders?.order_number || "N/A"}</span>
           <span className={`trip-status ${statusColors[trip.status as keyof typeof statusColors]}`}>
             {statusText[trip.status as keyof typeof statusText]}
           </span>
         </div>
         <div className="trip-meta">
           <span className="delivery-charge">
-            <DollarSign size={14} /> Rs. {trip.delivery_charge.toLocaleString()}
+            <DollarSign size={14} /> Rs. {trip.delivery_charge?.toLocaleString() || "0"}
           </span>
         </div>
       </div>
 
-      {isExpanded && (
+      {isExpanded && trip.orders && (
         <div className="trip-card-details">
           {/* Pickup Location */}
           <div className="detail-section">
             <h4>
               <MapPin size={16} /> Pickup Location
             </h4>
-            <p><strong>{trip.orders.organizations.name}</strong></p>
-            <p>{trip.pickup_address || trip.orders.organizations.address}</p>
-            <p><Phone size={14} /> {trip.orders.organizations.phone}</p>
+            <p><strong>{trip.orders.organizations?.name || "Unknown"}</strong></p>
+            <p>{trip.pickup_address || trip.orders.organizations?.address || "No address"}</p>
+            <p><Phone size={14} /> {trip.orders.organizations?.phone || "N/A"}</p>
           </div>
 
           {/* Delivery Location */}
@@ -82,9 +82,9 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
             <h4>
               <MapPin size={16} /> Delivery Location
             </h4>
-            <p><strong>{trip.orders.customer_name}</strong></p>
-            <p>{trip.orders.delivery_address}</p>
-            <p><Phone size={14} /> {trip.orders.customer_phone}</p>
+            <p><strong>{trip.orders.customer_name || "Unknown"}</strong></p>
+            <p>{trip.orders.delivery_address || "No address"}</p>
+            <p><Phone size={14} /> {trip.orders.customer_phone || "N/A"}</p>
           </div>
 
           {/* Order Summary */}
@@ -92,9 +92,9 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
             <h4>
               <Package size={16} /> Order Summary
             </h4>
-            <p>Total Order Value: Rs. {trip.orders.total_amount.toLocaleString()}</p>
-            <p>Delivery Charge: Rs. {trip.delivery_charge.toLocaleString()}</p>
-            <p>Total Earnings: Rs. {(trip.delivery_charge).toLocaleString()}</p>
+            <p>Total Order Value: Rs. {trip.orders.total_amount?.toLocaleString() || "0"}</p>
+            <p>Delivery Charge: Rs. {trip.delivery_charge?.toLocaleString() || "0"}</p>
+            <p>Total Earnings: Rs. {(trip.delivery_charge || 0).toLocaleString()}</p>
           </div>
 
           {/* Action Buttons */}
