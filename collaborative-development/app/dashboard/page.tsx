@@ -95,19 +95,7 @@ export default function Dashboard() {
           </div>
 
           <div className="user-menu-container">
-            <div 
-              className="user-menu-trigger" 
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <div className="user-avatar">
-                <User size={20} />
-              </div>
-              <div className="user-info">
-                <span className="user-name">{getDisplayName()}</span>
-                <span className="user-email">{userData.email}</span>
-              </div>
-              <ChevronDown size={18} className={`chevron-icon ${showUserMenu ? 'rotated' : ''}`} />
-            </div>
+           
 
             {showUserMenu && (
               <div className="user-dropdown">
@@ -117,7 +105,7 @@ export default function Dashboard() {
                   </div>
                   <div className="dropdown-info">
                     <div className="dropdown-name">{getDisplayName()}</div>
-                    <div className="dropdown-email">{userData.email}</div>
+                    {/* Removed duplicate email from here */}
                   </div>
                 </div>
                 <div className="dropdown-divider"></div>
