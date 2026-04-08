@@ -7,25 +7,8 @@ import SupplierLayout from "@/components/layout/SupplierLayout";
 import OrderCard from "@/components/supplier/orders/OrderCard";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
+import type { SupplierOrder } from "@/types/models";
 
-interface SupplierOrder {
-  id: string;
-  order_number: string;
-  status: string;
-  created_at: string;
-  delivery_address: string;
-  total_amount: number;
-  organizations: {
-    name: string;
-    address: string;
-    phone: string;
-  };
-  order_items: Array<{
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-  }>;
-}
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -81,7 +64,7 @@ export default function SupplierOrders() {
       return [];
     }
     return data as SupplierOrder[];
-  }, [supabase]);
+  }, []); // supabase is a singleton — stable reference
 
   useEffect(() => {
     const loadOrders = async () => {
