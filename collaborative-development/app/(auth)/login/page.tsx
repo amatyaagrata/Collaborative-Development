@@ -17,14 +17,33 @@ export default function Auth() {
   const [organizationName, setOrganizationName] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true); // Add this state
   const router = useRouter();
+  const supabase = createClient();
+
+  const checkUserRole = async (email: string) => {
+    // Your role checking logic here
+    // This should check if the user is an admin, supplier, driver, etc.
+    return false; // Return true if organization field should be shown
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-<<<<<<< HEAD
     if (isLogin) {
+      // Login logic with Supabase
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
       // Store user data in localStorage
       const userData = {
         email: email,
@@ -36,10 +55,27 @@ export default function Auth() {
       localStorage.setItem("userData", JSON.stringify(userData));
       localStorage.setItem("organizationName", organizationName);
       
-      toast.success(`Welcome to ${organizationName}!`);
+      toast.success(`Welcome back!`);
       router.push("/dashboard");
     } else {
       // Sign up logic
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName || email.split('@')[0],
+            organization_name: organizationName,
+          }
+        }
+      });
+
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
       const userData = {
         email: email,
         organizationName: organizationName,
@@ -50,22 +86,17 @@ export default function Auth() {
       localStorage.setItem("userData", JSON.stringify(userData));
       localStorage.setItem("organizationName", organizationName);
       
-      toast.success("Account created! Please log in.");
+      toast.success("Account created! Please check your email to verify your account.");
       setTimeout(() => {
         router.push("/login");
       }, 1500);
-=======
-    checkUserRole(email);
-
-    if (showOrganizationField && !organizationName) {
-      toast.error("Organization name is required");
-      setLoading(false);
-      return;
->>>>>>> 21bd8f86b709ffbb190388e8b295d381e9c8c2e2
     }
 
     setLoading(false);
   };
+
+  // Determine if organization field should be shown
+  const showOrganizationField = !isLogin; // Show on signup only, or based on role check
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4 relative overflow-hidden">
@@ -99,50 +130,32 @@ export default function Auth() {
             </h1>
             
             <p className="text-gray-500 text-sm">
-              Welcome back! Please sign in to your organization
+              {isLogin ? "Welcome back! Please sign in to your account" : "Create your account to get started"}
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             
-            {/* Organization Name Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                Organization Name
-              </label>
-              <Input
-                type="text"
-                value={organizationName}
-                onChange={(e) => setOrganizationName(e.target.value)}
-                placeholder="Enter your organization name "
-                required
-                className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
-              />
-            </div>
+            {/* Full Name Field - Only on Signup */}
+            {!isLogin && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Full Name
+                </label>
+                <Input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                />
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Email Address
-              </label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email..."
-                required
-                className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
-              />
-            </div>
-
-<<<<<<< HEAD
-=======
             {/* Organization Name Field - Conditional Rendering */}
             {showOrganizationField && (
               <div className="space-y-2">
@@ -161,13 +174,30 @@ export default function Auth() {
                   className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  For organization accounts only. Admins, suppliers, and drivers don&apos;t need this.
+                  Required for organization account creation
                 </p>
               </div>
             )}
 
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email Address
+              </label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email..."
+                required
+                className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+              />
+            </div>
+
             {/* Password Field */}
->>>>>>> 21bd8f86b709ffbb190388e8b295d381e9c8c2e2
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,16 +216,18 @@ export default function Auth() {
               />
             </div>
 
-            {/* Forgot Password Link */}
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => toast.info("Password reset link sent to your email")}
-                className="text-xs text-purple-600 hover:text-purple-700 font-medium transition-colors"
-              >
-                Forgot Password?
-              </button>
-            </div>
+            {/* Forgot Password Link - Only on Login */}
+            {isLogin && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => toast.info("Password reset link sent to your email")}
+                  className="text-xs text-purple-600 hover:text-purple-700 font-medium transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
 
             {/* Submit Button */}
             <Button 
@@ -203,7 +235,7 @@ export default function Auth() {
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
               disabled={loading}
             >
-              {loading ? "Processing..." : "Sign In"}
+              {loading ? "Processing..." : (isLogin ? "Sign In" : "Sign Up")}
             </Button>
           </form>
 
@@ -234,16 +266,21 @@ export default function Auth() {
             </button>
           </div>
 
-          {/* Sign Up Link */}
+          {/* Toggle between Login and Signup */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/signup"
+              {isLogin ? "Don't have an account?" : "Already have an account?"}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setOrganizationName(""); // Reset fields when toggling
+                  setFullName("");
+                }}
                 className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1"
               >
-                Sign Up
-              </Link>
+                {isLogin ? "Sign Up" : "Sign In"}
+              </button>
             </p>
           </div>
 

@@ -104,7 +104,7 @@ export function AppLayout({ title, children }: AppLayoutProps) {
         <header className="app-header">
           <h1 className="app-header-title">{title}</h1>
           
-          {/* Gmail-style User Menu (replaces the old Logout link) */}
+          {/* User Menu with Sign Out integrated */}
           <div className="user-menu-container">
             <div 
               className="user-menu-trigger" 
@@ -115,23 +115,12 @@ export function AppLayout({ title, children }: AppLayoutProps) {
               </div>
               <div className="user-info">
                 <span className="user-name">{getDisplayName()}</span>
-                <span className="user-email">{userEmail}</span>
               </div>
               <ChevronDown size={18} className={`chevron-icon ${showUserMenu ? 'rotated' : ''}`} />
             </div>
 
             {showUserMenu && (
               <div className="user-dropdown">
-                <div className="dropdown-header">
-                  <div className="dropdown-avatar">
-                    <User size={20} />
-                  </div>
-                  <div className="dropdown-info">
-                    <div className="dropdown-name">{getDisplayName()}</div>
-                    <div className="dropdown-email">{userEmail}</div>
-                  </div>
-                </div>
-                <div className="dropdown-divider"></div>
                 <button onClick={handleLogout} className="dropdown-item">
                   <LogOut size={18} />
                   <span>Sign out</span>
@@ -188,11 +177,6 @@ export function AppLayout({ title, children }: AppLayoutProps) {
           color: #0a2540;
         }
         
-        .user-email {
-          font-size: 0.75rem;
-          color: #64748b;
-        }
-        
         .chevron-icon {
           color: #64748b;
           transition: transform 0.2s;
@@ -206,50 +190,13 @@ export function AppLayout({ title, children }: AppLayoutProps) {
           position: absolute;
           top: calc(100% + 8px);
           right: 0;
-          width: 280px;
+          width: 200px;
           background: white;
           border-radius: 16px;
           box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
           border: 1px solid #e2e8f0;
           z-index: 1000;
           overflow: hidden;
-        }
-        
-        .dropdown-header {
-          padding: 16px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        
-        .dropdown-avatar {
-          width: 44px;
-          height: 44px;
-          background: linear-gradient(135deg, #1e5f74, #0f3b48);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-        }
-        
-        .dropdown-info {
-          flex: 1;
-        }
-        
-        .dropdown-name {
-          font-weight: 600;
-          color: #0a2540;
-        }
-        
-        .dropdown-email {
-          font-size: 0.8rem;
-          color: #64748b;
-        }
-        
-        .dropdown-divider {
-          height: 1px;
-          background: #e2e8f0;
         }
         
         .dropdown-item {
