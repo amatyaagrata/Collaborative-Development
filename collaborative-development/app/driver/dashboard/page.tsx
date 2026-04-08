@@ -8,36 +8,8 @@ import { useRealtimeTrips } from "@/hooks/useRealtimeTrips";
 import DriverLayout from "@/components/layout/DriverLayout";
 import TripCard from "@/components/driver/trips/TripCard";
 import { toast } from "sonner";
+import type { Trip, TripStats } from "@/types/models";
 
-interface Trip {
-  id: string;
-  status: string;
-  pickup_address?: string;
-  delivery_charge: number;
-  assigned_at: string;
-  completed_at?: string | null;
-  order_id?: string;
-  supplier_id?: string;
-  orders: {
-    order_number: string;
-    customer_name: string;
-    customer_phone: string;
-    total_amount: number;
-    delivery_address: string;
-    organizations: {
-      name: string;
-      address: string;
-      phone: string;
-    };
-  };
-}
-
-interface TripStats {
-  totalTrips: number;
-  completedTrips: number;
-  totalEarnings: number;
-  pendingTrips: number;
-}
 
 export default function DriverDashboard() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -87,7 +59,7 @@ export default function DriverDashboard() {
       return data as Trip[];
     }
     return [];
-  }, [supabase]);
+  }, []); // supabase is a singleton — stable reference
 
   useEffect(() => {
     const loadTrips = async () => {
@@ -179,6 +151,7 @@ export default function DriverDashboard() {
                   trip={trip}
                   onAccept={() => updateTripStatus(trip.id, "accepted")}
                   onReject={() => updateTripStatus(trip.id, "rejected")}
+                  onComplete={() => updateTripStatus(trip.id, "picked_up")}
                   showActions={true}
                 />
               ))}
