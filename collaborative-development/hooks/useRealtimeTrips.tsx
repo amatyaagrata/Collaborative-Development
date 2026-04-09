@@ -46,5 +46,5 @@ export function useRealtimeTrips({ onNewTrip }: { onNewTrip: (trip: Trip) => voi
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // supabase is a singleton — stable reference; callback uses ref
+  }, [supabase]);
 }

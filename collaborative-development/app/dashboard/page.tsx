@@ -1,44 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { ProductSummaryChart } from "@/components/dashboard/ProductSummaryChart";
 import { TrendingProductsTable } from "@/components/dashboard/TrendingProductsTable";
-import { SalesPurchaseChart } from "@/components/dashboard/SalesPurchaseChart";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, User, Store } from "lucide-react";
+import { LogOut, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useProducts } from "@/lib/supabase/hooks/useProducts";
 import { useOrders } from "@/lib/supabase/hooks/useOrders";
-import { useUsers } from "@/lib/supabase/hooks/useUsers";
 import "./dashboard.css";
+
+const ProductSummaryChart = dynamic(
+  () =>
+    import("@/components/dashboard/ProductSummaryChart").then(
+      (mod) => mod.ProductSummaryChart
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="chart-card">Loading chart...</div>,
+  }
+);
+
+const SalesPurchaseChart = dynamic(
+  () =>
+    import("@/components/dashboard/SalesPurchaseChart").then(
+      (mod) => mod.SalesPurchaseChart
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="chart-card sales-chart-card">Loading chart...</div>,
+  }
+);
 
 export default function Dashboard() {
   const router = useRouter();
   const supabase = createClient();
   const { data: products, loading: productsLoading } = useProducts();
   const { data: orders, loading: ordersLoading } = useOrders();
-  const { data: users, loading: usersLoading } = useUsers();
 
   const [organizationName, setOrganizationName] = useState("Loading...");
   const [userData, setUserData] = useState({
     email: "",
     fullName: "",
     loginTime: ""
-  });
-
-  const [stats, setStats] = useState({
-    inventoryValue: 0,
-    totalStocks: 0,
-    newOrders: 0,
-    delivered: 0
-  });
-
-  const [summary, setSummary] = useState({
-    quantityInHand: 0,
-    toBeReceived: 0
   });
 
   useEffect(() => {
@@ -54,34 +61,45 @@ export default function Dashboard() {
         setOrganizationName(user.user_metadata?.organization_name || "GoGodam Default");
       }
 
-      // Calculate stats from actual data
-      if (!productsLoading && !ordersLoading) {
-        const inventoryValue = products.reduce((acc, product) => acc + (product.price * product.stock), 0);
-        const totalStocks = products.reduce((acc, product) => acc + product.stock, 0);
-        const newOrders = orders.filter(order => order.status === 'pending' || order.status === 'confirmed').length;
-        const delivered = orders.filter(order => order.status === 'delivered').length;
-
-        setStats({
-          inventoryValue,
-          totalStocks,
-          newOrders,
-          delivered
-        });
-
-        // Calculate summary
-        const quantityInHand = totalStocks;
-        const toBeReceived = orders
-          .filter(order => order.status !== 'delivered' && order.status !== 'cancelled')
-          .reduce((acc, order) => acc + (order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0), 0);
-
-        setSummary({
-          quantityInHand,
-          toBeReceived
-        });
-      }
     }
     loadDashboard();
-  }, [products, orders, productsLoading, ordersLoading]); // supabase is a singleton — stable reference
+  }, [supabase]);
+
+  const stats = useMemo(() => {
+    const inventoryValue = products.reduce(
+      (acc, product) => acc + product.price * product.stock,
+      0
+    );
+    const totalStocks = products.reduce((acc, product) => acc + product.stock, 0);
+    const newOrders = orders.filter(
+      (order) => order.status === "pending" || order.status === "confirmed"
+    ).length;
+    const delivered = orders.filter((order) => order.status === "delivered").length;
+
+    return {
+      inventoryValue,
+      totalStocks,
+      newOrders,
+      delivered,
+    };
+  }, [orders, products]);
+
+  const summary = useMemo(() => {
+    const quantityInHand = stats.totalStocks;
+    const toBeReceived = orders
+      .filter((order) => order.status !== "delivered" && order.status !== "cancelled")
+      .reduce(
+        (acc, order) =>
+          acc +
+          (order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0),
+        0
+      );
+
+    return {
+      quantityInHand,
+      toBeReceived,
+    };
+  }, [orders, stats.totalStocks]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -90,7 +108,7 @@ export default function Dashboard() {
     router.push("/login");
   };
 
-  if (productsLoading || ordersLoading || usersLoading) {
+  if (productsLoading || ordersLoading) {
     return (
       <AppLayout title="Dashboard">
         <div className="loading-spinner">Loading dashboard...</div>

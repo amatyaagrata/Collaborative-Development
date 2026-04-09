@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import "./AppLayout.css";
 
 interface AppLayoutProps {
   title: string;

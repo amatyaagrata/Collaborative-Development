@@ -23,7 +23,16 @@ interface Product {
   name: string;
   price: number;
   stock: number;
-  category?: string;
+  categories?: {
+    name?: string;
+  }[] | {
+    name?: string;
+  } | null;
+}
+
+function getCategoryName(product: Product): string {
+  if (Array.isArray(product.categories)) return product.categories[0]?.name || "";
+  return product.categories?.name || "";
 }
 
 export default function OrdersPage() {
@@ -60,7 +69,10 @@ export default function OrdersPage() {
 
   const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
-    const { data, error } = await supabase.from("products").select("id, name, price, stock, category").order("name", { ascending: true });
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, price, stock, categories:category_id(name)")
+      .order("name", { ascending: true });
     if (error) {
       toast.error("Failed to load products: " + error.message);
     } else {
@@ -104,7 +116,7 @@ export default function OrdersPage() {
         ...formData,
         selected_product_id: productId,
         product_name: selectedProduct.name,
-        category: selectedProduct.category || "",
+        category: getCategoryName(selectedProduct),
         total_price: selectedProduct.price.toString(),
         // Don't auto-fill quantity - let user specify how many they want to order
       });
@@ -177,11 +189,17 @@ export default function OrdersPage() {
       category: formData.category,
       total_price: total_price || 0,
       quantity: quantity || 0,
+      total_amount: (total_price || 0) * (quantity || 0),
     };
 
     if (formMode === "add") {
+      const insertPayload = {
+        ...payload,
+        order_number: `ORD-${Date.now()}`,
+        status: "pending",
+      };
       // First, create the order
-      const { data: orderData, error: orderError } = await supabase.from("orders").insert([payload]).select();
+      const { data: orderData, error: orderError } = await supabase.from("orders").insert([insertPayload]).select();
       
       if (orderError) {
         toast.error("Failed to add order: " + orderError.message);

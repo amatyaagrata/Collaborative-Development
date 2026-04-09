@@ -16,10 +16,13 @@ export interface SupplierOrder {
   };
   order_items: Array<{
     id?: string;
-    product_name: string;
+    product_name?: string;
     quantity: number;
     unit_price: number;
     total_price?: number;
+    products?: {
+      name?: string;
+    };
   }>;
 }
 

@@ -31,7 +31,7 @@ export default function SupplierDashboard() {
 
   const stats = useMemo(() => computeStats(orders), [orders]);
 
-  const checkOrderStatus = useCallback(async (orderId: string, supplierId: string) => {
+  const checkOrderStatus = useCallback(async (orderId: string) => {
     const { data: order } = await supabase
       .from("orders")
       .select("status")
@@ -45,7 +45,6 @@ export default function SupplierDashboard() {
       });
 
       await sendNotification({
-        userId: supplierId,
         title: "URGENT: Orders Pending",
         message: "See your dashboard immediately. Orders are waiting.",
         type: "alert"
@@ -59,14 +58,8 @@ export default function SupplierDashboard() {
           .single();
 
         if (updatedOrder?.status === "pending") {
-          await supabase.from("order_escalations").insert({
-            order_id: orderId,
-            supplier_id: supplierId,
-            admin_notified: true,
-            status: "escalated"
-          });
-
-          toast.error("Admin has been notified. They will contact you shortly.");
+          // Fallback escalation behavior when a dedicated escalation table is not present.
+          toast.error("Order is still pending. Please take action as soon as possible.");
         }
       }, 5 * 60 * 1000);
       escalationTimers.current.push(timer2);
@@ -75,7 +68,7 @@ export default function SupplierDashboard() {
 
   const startEscalationTimer = useCallback((order: SupplierOrder) => {
     const timer1 = setTimeout(() => {
-      checkOrderStatus(order.id, order.supplier_id as string);
+      checkOrderStatus(order.id);
     }, 2 * 60 * 1000);
     escalationTimers.current.push(timer1);
   }, [checkOrderStatus]);
@@ -88,7 +81,13 @@ export default function SupplierDashboard() {
         .from("orders")
         .select(`
           *,
-          order_items (quantity, product_name, unit_price),
+          order_items (
+            quantity,
+            unit_price,
+            products:product_id (
+              name
+            )
+          ),
           organizations (name, address, phone)
         `)
         .eq("supplier_id", userData.user?.id)

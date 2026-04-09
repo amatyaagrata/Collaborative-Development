@@ -17,9 +17,12 @@ interface OrderCardProps {
       phone: string;
     };
     order_items: Array<{
-      product_name: string;
+      product_name?: string;
       quantity: number;
       unit_price: number;
+      products?: {
+        name?: string;
+      };
     }>;
   };
   onView?: () => void;
@@ -34,11 +37,19 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
     pending: "badge-warning",
     confirmed: "badge-info",
     preparing: "badge-primary",
-    ready: "badge-success",
+    ready_for_delivery: "badge-success",
+    out_for_delivery: "badge-success",
     delivered: "badge-secondary",
   };
 
-  const statusSteps = ["pending", "confirmed", "preparing", "ready", "delivered"];
+  const statusSteps = [
+    "pending",
+    "confirmed",
+    "preparing",
+    "ready_for_delivery",
+    "out_for_delivery",
+    "delivered",
+  ];
   const currentStepIndex = statusSteps.indexOf(order.status);
 
   return (
@@ -89,7 +100,7 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
               <tbody>
                 {(order.order_items || []).map((item, idx) => (
                   <tr key={idx}>
-                    <td>{item.product_name}</td>
+                    <td>{item.product_name || item.products?.name || "Unknown Product"}</td>
                     <td>{item.quantity}</td>
                     <td>Rs. {(item.unit_price || 0).toLocaleString()}</td>
                     <td>Rs. {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString()}</td>

@@ -11,15 +11,25 @@ interface Product {
   id: string; // UUID from Supabase
   name: string;
   category_id?: string | null;
+  categories?: {
+    name?: string;
+  }[] | {
+    name?: string;
+  } | null;
   supplier_id?: string | null;
   price: number;
   stock: number;
   created_at: string;
   // Local UI mock fields for compatibility
   productId?: string;
-  category?: string;
+  category_name?: string;
   stockAlert?: number;
   details?: string;
+}
+
+function getCategoryName(product: Product): string {
+  if (Array.isArray(product.categories)) return product.categories[0]?.name || "";
+  return product.categories?.name || product.category_name || "General";
 }
 
 export default function ProductPage() {
@@ -43,7 +53,10 @@ export default function ProductPage() {
   });
 
   const fetchProducts = useCallback(async () => {
-    const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("products")
+      .select("*, categories:category_id (name)")
+      .order("created_at", { ascending: false });
     if (error) {
       toast.error("Failed to fetch products: " + error.message);
     } else {
@@ -58,7 +71,7 @@ export default function ProductPage() {
 
   const filteredProducts = products.filter((p) =>
     p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.category || "").toLowerCase().includes(searchQuery.toLowerCase())
+    getCategoryName(p).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddClick = () => {
@@ -73,7 +86,7 @@ export default function ProductPage() {
     setFormData({
       name: product.name,
       productId: product.productId || "",
-      category: product.category || "General",
+      category: getCategoryName(product),
       price: product.price.toString(),
       stock: product.stock.toString(),
       stockAlert: (product.stockAlert || 10).toString(),
@@ -228,7 +241,7 @@ export default function ProductPage() {
                             <input type="checkbox" className="product-checkbox" />
                            </td>
                           <td style={{ fontWeight: 600 }}>{product.name}</td>
-                          <td>{product.category || "General"}</td>
+                          <td>{getCategoryName(product)}</td>
                           <td>Rs. {product.price.toLocaleString()}</td>
                           <td>
                             <span className={product.stock > 10 ? "stock-normal" : "stock-low"}>

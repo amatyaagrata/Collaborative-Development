@@ -44,5 +44,5 @@ export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: Supplier
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // supabase is a singleton — stable reference; callback uses ref
+  }, [supabase]);
 }

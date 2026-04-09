@@ -36,17 +36,17 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
   const statusColors = {
     assigned: "badge-warning",
     accepted: "badge-info",
-    picked_up: "badge-primary",
+    in_transit: "badge-primary",
     delivered: "badge-success",
-    rejected: "badge-danger",
+    cancelled: "badge-danger",
   };
 
   const statusText = {
     assigned: "Pending Acceptance",
     accepted: "Accepted - Awaiting Pickup",
-    picked_up: "Picked Up - In Transit",
+    in_transit: "In Transit",
     delivered: "Delivered",
-    rejected: "Rejected",
+    cancelled: "Cancelled",
   };
 
   return (
@@ -117,7 +117,7 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
             </div>
           )}
 
-          {showActions && trip.status === "picked_up" && (
+          {showActions && trip.status === "in_transit" && (
             <div className="action-buttons">
               <button className="complete-btn" onClick={onComplete}>
                 Mark as Delivered

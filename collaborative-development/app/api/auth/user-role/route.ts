@@ -2,18 +2,54 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+const ALLOWED_ROLES = ["admin", "supplier", "transporter", "inventory manager"] as const;
+
+function normalizeRole(role?: string) {
+  return ALLOWED_ROLES.includes((role ?? "") as (typeof ALLOWED_ROLES)[number])
+    ? (role as (typeof ALLOWED_ROLES)[number])
+    : "inventory manager";
+}
+
+function getRoleRedirect(role: string) {
+  switch (role) {
+    case "admin":
+      return "/admin/dashboard";
+    case "supplier":
+      return "/suppliers/dashboard";
+    case "transporter":
+      return "/driver/dashboard";
+    default:
+      return "/dashboard";
+  }
+}
+
 /**
  * GET /api/auth/user-role
  * Fetches the current user's role and returns the correct dashboard redirect
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     console.log("[GET-ROLE] Request received");
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        {
+          error:
+            "Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and either NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.",
+        },
+        { status: 500 }
+      );
+    }
     
     const cookieStore = await cookies();
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabaseUrl,
+      supabaseKey,
       {
         cookies: {
           getAll() {
@@ -48,37 +84,12 @@ export async function GET(request: Request) {
       .eq("user_id", user.id)
       .single();
 
-    if (roleError) {
-      console.error("[GET-ROLE] Error fetching role:", roleError);
-      // If role doesn't exist, default to inventory manager
-      return NextResponse.json({
-        role: "inventory manager",
-        redirect: "/dashboard",
-      });
-    }
+    if (roleError) console.error("[GET-ROLE] Error fetching role from user_roles:", roleError);
 
-    console.log("[GET-ROLE] User role:", roleData?.role);
-
-    // Determine redirect based on role
-    const role = roleData?.role || "inventory manager";
-    let redirect = "/dashboard";
-
-    switch (role) {
-      case "admin":
-        redirect = "/admin/dashboard";
-        break;
-      case "supplier":
-        redirect = "/suppliers/dashboard";
-        break;
-      case "transporter":
-        redirect = "/driver/dashboard";
-        break;
-      case "inventory manager":
-        redirect = "/dashboard";
-        break;
-      default:
-        redirect = "/dashboard";
-    }
+    const metadataRoleRaw = user.user_metadata?.role;
+    const metadataRole = typeof metadataRoleRaw === "string" ? normalizeRole(metadataRoleRaw) : undefined;
+    const role = normalizeRole(roleData?.role ?? metadataRole);
+    const redirect = getRoleRedirect(role);
 
     console.log("[GET-ROLE] Returning role and redirect:", { role, redirect });
 

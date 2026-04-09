@@ -59,7 +59,7 @@ export default function DriverDashboard() {
       return data as Trip[];
     }
     return [];
-  }, []); // supabase is a singleton — stable reference
+  }, [supabase]);
 
   useEffect(() => {
     const loadTrips = async () => {
@@ -102,7 +102,7 @@ export default function DriverDashboard() {
   }
 
   const pendingTrips = trips.filter(t => t.status === "assigned" || t.status === "accepted");
-  const activeTrips = trips.filter(t => t.status === "picked_up");
+  const activeTrips = trips.filter(t => t.status === "in_transit");
   const completedTrips = trips.filter(t => t.status === "delivered");
 
   if (loading) {
@@ -150,8 +150,8 @@ export default function DriverDashboard() {
                   key={trip.id}
                   trip={trip}
                   onAccept={() => updateTripStatus(trip.id, "accepted")}
-                  onReject={() => updateTripStatus(trip.id, "rejected")}
-                  onComplete={() => updateTripStatus(trip.id, "picked_up")}
+                  onReject={() => updateTripStatus(trip.id, "cancelled")}
+                  onComplete={() => updateTripStatus(trip.id, "in_transit")}
                   showActions={true}
                 />
               ))}

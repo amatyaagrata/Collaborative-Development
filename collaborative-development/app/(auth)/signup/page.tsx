@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "sonner";
@@ -77,26 +76,6 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      console.log("[CLIENT] Starting signup...");
-      const supabase = createClient();
-      console.log("[CLIENT] Calling Supabase auth.signUp...");
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (error) {
-        console.error("[CLIENT] Auth signup error:", error);
-        throw new Error(`Auth signup failed: ${error.message}`);
-      }
-
-      const userId = data.user?.id;
-      console.log("[CLIENT] Auth signup successful, user ID:", userId);
-
-      if (!userId) {
-        throw new Error("Signup succeeded but no user ID was returned.");
-      }
-
       console.log("[CLIENT] Calling /api/auth/signup endpoint...");
       const response = await fetch("/api/auth/signup", {
         method: "POST",
@@ -104,8 +83,8 @@ export default function SignUp() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          auth_user_id: userId,
           email: formData.email,
+          password: formData.password,
           name: formData.username,
           role: selectedRole,
           phone: formData.phoneNumber,
@@ -120,11 +99,17 @@ export default function SignUp() {
       if (!response.ok) {
         const errorMsg = responseData.error || `Profile creation failed: ${response.statusText}`;
         console.error("[CLIENT] API error:", errorMsg, responseData.details);
+        if (typeof errorMsg === "string" && errorMsg.toLowerCase().includes("rate limit")) {
+          throw new Error("Too many signup attempts. Please wait a few minutes and try again.");
+        }
         throw new Error(errorMsg);
       }
 
       const { role } = responseData;
       console.log("[CLIENT] Signup completed successfully with role:", role);
+      if (Array.isArray(responseData.warnings) && responseData.warnings.length > 0) {
+        toast.warning(responseData.warnings.join(" "));
+      }
       
       toast.success(`Account created as ${role}! Please check your email and log in.`);
       

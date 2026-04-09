@@ -43,10 +43,12 @@ export default function SupplierOrders() {
         *,
         order_items (
           id,
-          product_name,
           quantity,
           unit_price,
-          total_price
+          total_price,
+          products:product_id (
+            name
+          )
         ),
         organizations (
           id,
@@ -64,7 +66,7 @@ export default function SupplierOrders() {
       return [];
     }
     return data as SupplierOrder[];
-  }, []); // supabase is a singleton — stable reference
+  }, [supabase]);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -113,7 +115,7 @@ export default function SupplierOrders() {
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="preparing">Preparing</option>
-              <option value="ready">Ready for Pickup</option>
+              <option value="ready_for_delivery">Ready for Pickup</option>
               <option value="delivered">Delivered</option>
             </select>
           </div>

@@ -421,6 +421,216 @@ CREATE POLICY "Anyone can view suppliers" ON suppliers
 CREATE POLICY "Anyone can view organizations" ON organizations
   FOR SELECT USING (true);
 
+CREATE POLICY "Authenticated users can view orders" ON orders
+  FOR SELECT TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can view order items" ON order_items
+  FOR SELECT TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
+-- ============================================================
+-- RLS POLICIES - INVENTORY MANAGER / ADMIN WRITE ACCESS
+-- ============================================================
+-- Allow authenticated admin and inventory manager users to manage catalog + orders.
+-- Role is resolved from user_roles table keyed by auth.uid().
+
+CREATE POLICY "Inventory roles can insert products" ON products
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can update products" ON products
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can delete products" ON products
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can insert categories" ON categories
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can update categories" ON categories
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can delete categories" ON categories
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can insert orders" ON orders
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can update orders" ON orders
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can delete orders" ON orders
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can insert order items" ON order_items
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can update order items" ON order_items
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+CREATE POLICY "Inventory roles can delete order items" ON order_items
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.role IN ('admin', 'inventory manager')
+    )
+  );
+
+-- ============================================================
+-- RLS POLICIES - AUTHENTICATED FALLBACK FOR ORDER FLOW
+-- ============================================================
+-- Keeps order creation functional even when user_roles row is missing.
+-- You can tighten/remove these once role bootstrap is guaranteed.
+
+CREATE POLICY "Authenticated users can insert orders" ON orders
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can update orders" ON orders
+  FOR UPDATE TO authenticated
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can delete orders" ON orders
+  FOR DELETE TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can insert order items" ON order_items
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can update order items" ON order_items
+  FOR UPDATE TO authenticated
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can delete order items" ON order_items
+  FOR DELETE TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
 -- ============================================================
 -- SUCCESS - Database setup complete!
 -- ============================================================
