@@ -5,35 +5,37 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NotificationBell from "@/components/supplier/notifications/NotificationBell";
-import { Package, ShoppingBag, Bell, User, Home } from "lucide-react";
+import { Package, ShoppingBag, Settings, Home } from "lucide-react";
+import styles from "./PortalLayout.module.css";
 
 export default function SupplierLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/supplier/dashboard", label: "Dashboard", icon: Home },
-    { href: "/supplier/orders", label: "Orders", icon: ShoppingBag },
-    { href: "/supplier/products", label: "Products", icon: Package },
-    { href: "/supplier/notifications", label: "Notifications", icon: Bell },
-    { href: "/supplier/profile", label: "Profile", icon: User },
+    { href: "/suppliers/dashboard", label: "Dashboard", icon: Home },
+    { href: "/suppliers/orders", label: "Orders", icon: ShoppingBag },
+    { href: "/product", label: "Products", icon: Package },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
+  const currentItem = navItems.find((item) => pathname.startsWith(item.href));
+
   return (
-    <div className="supplier-layout">
-      <aside className="sidebar">
-        <div className="logo">
-          <h2>GoGodam</h2>
-          <span>Supplier Portal</span>
+    <div className={styles.portalShell}>
+      <aside className={styles.sidebar}>
+        <div className={styles.brand}>
+          <h2 className={styles.brandTitle}>GoGodam</h2>
+          <span className={styles.brandSubtitle}>Supplier Portal</span>
         </div>
-        <nav className="nav-menu">
+        <nav className={styles.nav}>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`nav-item ${isActive ? "active" : ""}`}
+                className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
               >
                 <Icon size={20} />
                 <span>{item.label}</span>
@@ -43,12 +45,15 @@ export default function SupplierLayout({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <main className="main-content">
-        <header className="top-header">
-          <h1>{navItems.find(item => item.href === pathname)?.label || "Dashboard"}</h1>
+      <main className={styles.main}>
+        <header className={styles.topbar}>
+          <div>
+            <h1 className={styles.topbarTitle}>{currentItem?.label || "Dashboard"}</h1>
+            <div className={styles.topbarMeta}>Manage orders, products, and supplier activity.</div>
+          </div>
           <NotificationBell />
         </header>
-        <div className="content-wrapper">
+        <div className={styles.content}>
           {children}
         </div>
       </main>

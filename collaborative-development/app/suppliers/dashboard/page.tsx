@@ -11,6 +11,7 @@ import OrderCard from "@/components/supplier/orders/OrderCard";
 import StatsCards from "@/components/supplier/dashboard/StatsCards";
 import { toast } from "sonner";
 import type { SupplierOrder, SupplierStats } from "@/types/models";
+import styles from "@/components/layout/PortalLayout.module.css";
 
 export default function SupplierDashboard() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -146,23 +147,27 @@ export default function SupplierDashboard() {
 
   return (
     <SupplierLayout>
-      <div className="supplier-dashboard">
-        <div className="dashboard-header">
-          <h1>Supplier Dashboard</h1>
-          <p>Manage your orders and inventory</p>
+      <div className={styles.pageStack}>
+        <div className={styles.heroCard}>
+          <h1 className={styles.heroTitle}>Supplier Dashboard</h1>
+          <p className={styles.heroText}>Manage your incoming orders, monitor fulfillment, and stay on top of supplier activity.</p>
         </div>
 
         <StatsCards stats={stats} />
 
-        <div className="orders-section">
-          <div className="section-header">
-            <h2>Recent Orders</h2>
-            <button onClick={() => router.push("/suppliers/orders")}>
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Recent Orders</h2>
+            <button
+              className={styles.ghostButton}
+              onClick={() => router.push("/suppliers/orders")}
+              type="button"
+            >
               View All Orders →
             </button>
           </div>
 
-          <div className="orders-grid">
+          <div className={styles.cardList}>
             {orders.slice(0, 5).map((order) => (
               <OrderCard 
                 key={order.id} 

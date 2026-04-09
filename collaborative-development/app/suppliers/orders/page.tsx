@@ -8,6 +8,7 @@ import OrderCard from "@/components/supplier/orders/OrderCard";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 import type { SupplierOrder } from "@/types/models";
+import styles from "@/components/layout/PortalLayout.module.css";
 
 
 export default function SupplierOrders() {
@@ -92,14 +93,16 @@ export default function SupplierOrders() {
 
   return (
     <SupplierLayout>
-      <div className="supplier-orders">
-        <div className="orders-header">
-          <h1>My Orders</h1>
+      <div className={styles.pageStack}>
+        <div className={styles.heroCard}>
+          <h1 className={styles.heroTitle}>My Orders</h1>
+          <p className={styles.heroText}>Search, filter, and update the status of every supplier order in one place.</p>
           
-          <div className="filters-bar">
-            <div className="search-wrapper">
+          <div className={styles.filters}>
+            <div className={styles.searchBox}>
               <Search size={18} />
               <input
+                className={styles.searchInput}
                 type="text"
                 placeholder="Search by organization or order number..."
                 value={searchQuery}
@@ -108,6 +111,7 @@ export default function SupplierOrders() {
             </div>
 
             <select 
+              className={styles.select}
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -122,13 +126,13 @@ export default function SupplierOrders() {
         </div>
 
         {loading ? (
-          <div className="loading">Loading orders...</div>
+          <div className={styles.loadingState}>Loading orders...</div>
         ) : filteredOrders.length === 0 ? (
-          <div className="empty-state">
+          <div className={styles.emptyState}>
             <p>No orders found</p>
           </div>
         ) : (
-          <div className="orders-list">
+          <div className={styles.cardList}>
             {filteredOrders.map((order) => (
               <OrderCard
                 key={order.id}

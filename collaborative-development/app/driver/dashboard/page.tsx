@@ -9,6 +9,7 @@ import DriverLayout from "@/components/layout/DriverLayout";
 import TripCard from "@/components/driver/trips/TripCard";
 import { toast } from "sonner";
 import type { Trip, TripStats } from "@/types/models";
+import styles from "@/components/layout/PortalLayout.module.css";
 
 
 export default function DriverDashboard() {
@@ -111,40 +112,39 @@ export default function DriverDashboard() {
 
   return (
     <DriverLayout>
-      <div className="driver-dashboard">
-        <div className="dashboard-header">
-          <h1>Driver Dashboard</h1>
-          <p>Manage your deliveries and track earnings</p>
+      <div className={styles.pageStack}>
+        <div className={styles.heroCard}>
+          <h1 className={styles.heroTitle}>Transporter Dashboard</h1>
+          <p className={styles.heroText}>Track assigned deliveries, confirm pickups, and keep a clear view of your earnings.</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <h3>Total Trips</h3>
-            <p className="stat-value">{stats.totalTrips}</p>
+        <div className={styles.statsGrid}>
+          <div className={styles.metricCard}>
+            <h3 className={styles.metricLabel}>Total Trips</h3>
+            <p className={styles.metricValue}>{stats.totalTrips}</p>
           </div>
-          <div className="stat-card">
-            <h3>Completed</h3>
-            <p className="stat-value">{stats.completedTrips}</p>
+          <div className={styles.metricCard}>
+            <h3 className={styles.metricLabel}>Completed</h3>
+            <p className={styles.metricValue}>{stats.completedTrips}</p>
           </div>
-          <div className="stat-card">
-            <h3>Pending</h3>
-            <p className="stat-value">{stats.pendingTrips}</p>
+          <div className={styles.metricCard}>
+            <h3 className={styles.metricLabel}>Pending</h3>
+            <p className={styles.metricValue}>{stats.pendingTrips}</p>
           </div>
-          <div className="stat-card">
-            <h3>Total Earnings</h3>
-            <p className="stat-value">Rs. {stats.totalEarnings.toLocaleString()}</p>
+          <div className={styles.metricCard}>
+            <h3 className={styles.metricLabel}>Total Earnings</h3>
+            <p className={styles.metricValue}>Rs. {stats.totalEarnings.toLocaleString()}</p>
           </div>
         </div>
 
         {/* Pending Trips Section */}
         {pendingTrips.length > 0 && (
-          <div className="trips-section">
-            <div className="section-header">
-              <h2>Pending Trips</h2>
-              <span className="count">{pendingTrips.length} trips</span>
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Pending Trips</h2>
+              <span className={styles.topbarMeta}>{pendingTrips.length} trips</span>
             </div>
-            <div className="trips-list">
+            <div className={styles.cardList}>
               {pendingTrips.map((trip) => (
                 <TripCard
                   key={trip.id}
@@ -161,11 +161,11 @@ export default function DriverDashboard() {
 
         {/* Active Trips Section */}
         {activeTrips.length > 0 && (
-          <div className="trips-section">
-            <div className="section-header">
-              <h2>Active Trips</h2>
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Active Trips</h2>
             </div>
-            <div className="trips-list">
+            <div className={styles.cardList}>
               {activeTrips.map((trip) => (
                 <TripCard
                   key={trip.id}
@@ -180,14 +180,18 @@ export default function DriverDashboard() {
 
         {/* Recent Completed Trips */}
         {completedTrips.length > 0 && (
-          <div className="trips-section">
-            <div className="section-header">
-              <h2>Recent Deliveries</h2>
-              <button onClick={() => router.push("/driver/trips")}>
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Recent Deliveries</h2>
+              <button
+                className={styles.ghostButton}
+                onClick={() => router.push("/driver/trips")}
+                type="button"
+              >
                 View All →
               </button>
             </div>
-            <div className="trips-list">
+            <div className={styles.cardList}>
               {completedTrips.slice(0, 3).map((trip) => (
                 <TripCard key={trip.id} trip={trip} showActions={false} />
               ))}

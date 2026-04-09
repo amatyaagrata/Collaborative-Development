@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import styles from "@/components/layout/PortalLayout.module.css";
 
 interface OrderCardProps {
   order: {
@@ -53,42 +54,39 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
   const currentStepIndex = statusSteps.indexOf(order.status);
 
   return (
-    <div className="order-card">
-      <div className="order-card-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="order-info">
-          <span className="order-number">Order #{order.order_number}</span>
-          <span className={`order-status ${statusColors[order.status as keyof typeof statusColors]}`}>
+    <div className={styles.orderCard}>
+      <div className={styles.cardHeader} onClick={() => setIsExpanded(!isExpanded)}>
+        <div className={styles.cardInfo}>
+          <span className={styles.entityNumber}>Order #{order.order_number}</span>
+          <span className={`${styles.statusBadge} ${styles[statusColors[order.status as keyof typeof statusColors]]}`}>
             {order.status.toUpperCase()}
           </span>
         </div>
-        <div className="order-meta">
-          <span className="order-date">
+        <div className={styles.cardMeta}>
+          <span>
             {new Date(order.created_at).toLocaleString()}
           </span>
-          <span className="order-amount">Rs. {order.total_amount.toLocaleString()}</span>
+          <span>Rs. {order.total_amount.toLocaleString()}</span>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="order-card-details">
-          {/* Organization Details */}
-          <div className="detail-section">
-            <h4>Organization Details</h4>
-            <p><strong>Name:</strong> {order.organizations?.name}</p>
-            <p><strong>Address:</strong> {order.organizations?.address}</p>
-            <p><strong>Phone:</strong> {order.organizations?.phone}</p>
+        <div className={styles.cardDetails}>
+          <div className={styles.detailBlock}>
+            <h4 className={styles.detailTitle}>Organization Details</h4>
+            <p className={styles.detailText}><strong>Name:</strong> {order.organizations?.name}</p>
+            <p className={styles.detailText}><strong>Address:</strong> {order.organizations?.address}</p>
+            <p className={styles.detailText}><strong>Phone:</strong> {order.organizations?.phone}</p>
           </div>
 
-          {/* Delivery Address */}
-          <div className="detail-section">
-            <h4>Delivery Address</h4>
-            <p>{order.delivery_address}</p>
+          <div className={styles.detailBlock}>
+            <h4 className={styles.detailTitle}>Delivery Address</h4>
+            <p className={styles.detailText}>{order.delivery_address}</p>
           </div>
 
-          {/* Order Items */}
-          <div className="detail-section">
-            <h4>Order Items</h4>
-            <table className="items-table">
+          <div className={styles.detailBlock}>
+            <h4 className={styles.detailTitle}>Order Items</h4>
+            <table className={styles.dataTable}>
               <thead>
                 <tr>
                   <th>Item Name</th>
@@ -110,15 +108,14 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
             </table>
           </div>
 
-          {/* Status Update Actions */}
           {showActions && onStatusChange && (
-            <div className="detail-section">
-              <h4>Update Status</h4>
-              <div className="status-buttons">
+            <div className={styles.detailBlock}>
+              <h4 className={styles.detailTitle}>Update Status</h4>
+              <div className={styles.statusGrid}>
                 {statusSteps.map((step, idx) => (
                   <button
                     key={step}
-                    className={`status-btn ${idx <= currentStepIndex ? "completed" : ""} ${order.status === step ? "active" : ""}`}
+                    className={`${styles.statusStep} ${idx <= currentStepIndex ? styles.statusStepCompleted : ""} ${order.status === step ? styles.statusStepActive : ""}`}
                     onClick={() => onStatusChange(step)}
                     disabled={idx < currentStepIndex}
                   >
@@ -129,8 +126,8 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
             </div>
           )}
 
-          <div className="card-actions">
-            <button className="view-details-btn" onClick={onView}>
+          <div className={styles.actionRow}>
+            <button className={styles.actionButton} onClick={onView} type="button">
               View Full Details
             </button>
           </div>

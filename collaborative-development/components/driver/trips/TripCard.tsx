@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { MapPin, Phone, Package, DollarSign } from "lucide-react";
+import styles from "@/components/layout/PortalLayout.module.css";
 
 interface TripCardProps {
   trip: {
@@ -50,76 +51,72 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
   };
 
   return (
-    <div className="trip-card">
-      <div className="trip-card-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="trip-info">
-          <span className="order-number">Order #{trip.orders?.order_number || "N/A"}</span>
-          <span className={`trip-status ${statusColors[trip.status as keyof typeof statusColors]}`}>
+    <div className={styles.tripCard}>
+      <div className={styles.cardHeader} onClick={() => setIsExpanded(!isExpanded)}>
+        <div className={styles.cardInfo}>
+          <span className={styles.entityNumber}>Order #{trip.orders?.order_number || "N/A"}</span>
+          <span className={`${styles.statusBadge} ${styles[statusColors[trip.status as keyof typeof statusColors]]}`}>
             {statusText[trip.status as keyof typeof statusText]}
           </span>
         </div>
-        <div className="trip-meta">
-          <span className="delivery-charge">
+        <div className={styles.cardMeta}>
+          <span>
             <DollarSign size={14} /> Rs. {trip.delivery_charge?.toLocaleString() || "0"}
           </span>
         </div>
       </div>
 
       {isExpanded && trip.orders && (
-        <div className="trip-card-details">
-          {/* Pickup Location */}
-          <div className="detail-section">
-            <h4>
+        <div className={styles.cardDetails}>
+          <div className={styles.detailBlock}>
+            <h4 className={styles.detailTitle}>
               <MapPin size={16} /> Pickup Location
             </h4>
-            <p><strong>{trip.orders.organizations?.name || "Unknown"}</strong></p>
-            <p>{trip.pickup_address || trip.orders.organizations?.address || "No address"}</p>
-            <p><Phone size={14} /> {trip.orders.organizations?.phone || "N/A"}</p>
+            <p className={styles.detailText}><strong>{trip.orders.organizations?.name || "Unknown"}</strong></p>
+            <p className={styles.detailText}>{trip.pickup_address || trip.orders.organizations?.address || "No address"}</p>
+            <p className={styles.detailText}><Phone size={14} /> {trip.orders.organizations?.phone || "N/A"}</p>
           </div>
 
-          {/* Delivery Location */}
-          <div className="detail-section">
-            <h4>
+          <div className={styles.detailBlock}>
+            <h4 className={styles.detailTitle}>
               <MapPin size={16} /> Delivery Location
             </h4>
-            <p><strong>{trip.orders.customer_name || "Unknown"}</strong></p>
-            <p>{trip.orders.delivery_address || "No address"}</p>
-            <p><Phone size={14} /> {trip.orders.customer_phone || "N/A"}</p>
+            <p className={styles.detailText}><strong>{trip.orders.customer_name || "Unknown"}</strong></p>
+            <p className={styles.detailText}>{trip.orders.delivery_address || "No address"}</p>
+            <p className={styles.detailText}><Phone size={14} /> {trip.orders.customer_phone || "N/A"}</p>
           </div>
 
-          {/* Order Summary */}
-          <div className="detail-section">
-            <h4>
+          <div className={styles.detailBlock}>
+            <h4 className={styles.detailTitle}>
               <Package size={16} /> Order Summary
             </h4>
-            <p>Total Order Value: Rs. {trip.orders.total_amount?.toLocaleString() || "0"}</p>
-            <p>Delivery Charge: Rs. {trip.delivery_charge?.toLocaleString() || "0"}</p>
-            <p>Total Earnings: Rs. {(trip.delivery_charge || 0).toLocaleString()}</p>
+            <p className={styles.detailText}>Total Order Value: Rs. {trip.orders.total_amount?.toLocaleString() || "0"}</p>
+            <p className={styles.detailText}>Delivery Charge: Rs. {trip.delivery_charge?.toLocaleString() || "0"}</p>
+            <p className={styles.detailText}>Total Earnings: Rs. {(trip.delivery_charge || 0).toLocaleString()}</p>
           </div>
 
-          {/* Action Buttons */}
           {showActions && trip.status === "assigned" && (
-            <div className="action-buttons">
-              <button className="accept-btn" onClick={onAccept}>
+            <div className={styles.actionRow}>
+              <button className={styles.successButton} onClick={onAccept} type="button">
                 Accept Trip
               </button>
-              <button className="reject-btn" onClick={onReject}>
+              <button className={styles.dangerButton} onClick={onReject} type="button">
                 Reject
               </button>
             </div>
           )}
 
           {showActions && trip.status === "accepted" && (
-            <div className="action-buttons">
-              <button className="pickup-btn" onClick={onComplete}>
+            <div className={styles.actionRow}>
+              <button className={styles.secondaryButton} onClick={onComplete} type="button">
                 Confirm Pickup
               </button>
             </div>
           )}
 
           {showActions && trip.status === "in_transit" && (
-            <div className="action-buttons">
-              <button className="complete-btn" onClick={onComplete}>
+            <div className={styles.actionRow}>
+              <button className={styles.actionButton} onClick={onComplete} type="button">
                 Mark as Delivered
               </button>
             </div>
