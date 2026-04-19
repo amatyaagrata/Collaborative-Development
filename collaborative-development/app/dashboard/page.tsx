@@ -140,18 +140,11 @@ export default function Dashboard() {
               <span className="org-badge-name">{organizationName}</span>
             </div>
           </div>
-
-          <div className="user-menu-container">
-            <button onClick={handleLogout} className="logout-btn">
-              <LogOut size={18} />
-              <span>Sign out</span>
-            </button>
-          </div>
         </div>
 
         {/* Welcome Section */}
         <div className="welcome-section">
-          <h1 className="welcome-title">Welcome back, {getDisplayName()}! 👋</h1>
+          <h1 className="welcome-title">Welcome back, {getDisplayName()}! 🙌🏻</h1>
           <p className="welcome-subtitle">
             You&apos;re logged in to <strong className="org-highlight">{organizationName}</strong>
           </p>
