@@ -210,9 +210,9 @@ export default function Home() {
                 placeholder="Email address" 
                 className="flex-1 bg-transparent px-4 py-2 text-zinc-900 outline-none w-full text-base"
               />
-              <button className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap">
+              <Link href="/signup" className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap flex items-center justify-center">
                 Sign Up
-              </button>
+              </Link>
             </div>
           </div>
           <div className="flex-shrink-0 mb-4 lg:mb-0">
