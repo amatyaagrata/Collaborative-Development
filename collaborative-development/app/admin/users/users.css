@@ -212,6 +212,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Spin animation for loaders ─────────────────────────────── */
+@keyframes adminSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: adminSpin 1s linear infinite;
+}
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .admin-users-table th,
