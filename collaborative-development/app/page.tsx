@@ -167,7 +167,7 @@ export default function Home() {
           <span className="text-primary mr-4">Join</span>
           <span className="text-[#1e004b]">us</span>
         </h2>
-        
+
         <div className="flex flex-col items-center gap-8 z-10">
           <Link
             href="/signup"
@@ -181,15 +181,15 @@ export default function Home() {
 
       {/* Footer Branding & Links */}
       <footer className="bg-[#1e004b] text-white pt-20 px-6 md:px-12 flex flex-col items-center relative overflow-hidden w-full">
-        
+
         {/* Top Section: Newsletter & Logo */}
         <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center lg:items-end justify-between gap-12 mb-16 z-10">
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left gap-6 w-full lg:w-1/2">
             <h3 className="text-2xl md:text-3xl font-bold tracking-tight">Get Exclusive Offers and GoGodam News</h3>
             <div className="flex w-full max-w-md bg-white rounded-full p-1 shadow-md">
-              <input 
-                type="email" 
-                placeholder="Email address" 
+              <input
+                type="email"
+                placeholder="Email address"
                 className="flex-1 bg-transparent px-4 py-2 text-zinc-900 outline-none w-full text-base"
               />
               <button className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap">
@@ -251,7 +251,7 @@ export default function Home() {
           </div>
           <p className="text-xs md:text-sm font-medium opacity-60">© 2026 - GoGodam</p>
         </div>
-        
+
         {/* Massive Text at the very bottom edge */}
         <div className="w-full text-center select-none pointer-events-none mt-4 -mb-4 z-0">
           <h1 className="text-[18vw] font-bold tracking-tighter leading-none">
