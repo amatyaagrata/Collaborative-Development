@@ -5,12 +5,15 @@ import { AppLayout } from "@/components/AppLayout";
 import { Pencil, Trash2, Plus, Search, Circle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
+/* Interface defining the structure of a product category */
 interface Category {
   id: string;
   name: string;
 }
 
+/* Interface defining the structure of a product record including optional category relation */
 interface Product {
   id: string; 
   name: string;
@@ -22,15 +25,30 @@ interface Product {
 
 export default function ProductPage() {
   const supabase = createClient();
+  const router = useRouter();
 
+  /* State to toggle between the main product list and the add edit form */
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
+  
+  /* State for the search input value used to filter the product table */
   const [searchQuery, setSearchQuery] = useState("");
+  
+  /* State for the main product data array fetched from the database */
   const [products, setProducts] = useState<Product[]>([]);
+  
+  /* State for the list of categories used to populate the form dropdown */
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  
+  /* State to determine if the form is currently adding a new item or editing an existing one */
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
+  
+  /* State to track the ID of the specific product being edited */
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  /* State to track which products are currently selected via checkboxes */
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  /* State object representing the current values in the form fields */
   const [formData, setFormData] = useState({
     name: "",
     category_id: "", 
@@ -38,7 +56,7 @@ export default function ProductPage() {
     stock: ""
   });
 
-  /* Fetch products with category names and fetch the full category list for the dropdown */
+  /* Asynchronous function to fetch data from Supabase tables */
   const fetchData = async () => {
     const { data: prodData } = await supabase
       .from("products")
@@ -53,9 +71,16 @@ export default function ProductPage() {
     if (catData) setAvailableCategories(catData);
   };
 
+  /* Effect hook to trigger the initial data fetch when the component mounts */
   useEffect(() => { fetchData(); }, []);
 
-  /* Process search filters and generate display IDs like #0001 */
+  /* Function to sign the user out and redirect them to the login screen */
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
+  /* Memoized logic to filter products based on search query and format display IDs */
   const processedProducts = useMemo(() => {
     return products
       .map((p, index) => ({ 
@@ -70,7 +95,7 @@ export default function ProductPage() {
       });
   }, [products, searchQuery]);
 
-  /* Handle adding new products or updating existing ones */
+  /* Logic to either insert a new product or update an existing one in the database */
   const handleSave = async () => {
     const payload = {
       name: formData.name,
@@ -96,13 +121,22 @@ export default function ProductPage() {
   };
 
   return (
-    <AppLayout title="Product">
+    <AppLayout title="">
+      {/* Container for the page title and the logout button positioned on the right */}
+      <div style={headerSection}>
+        <h2 style={pageTitle}>Product</h2>
+        <button onClick={handleLogout} style={logoutButtonStyle}>Logout</button>
+      </div>
+
       <div style={containerStyle}>
         {viewMode === "list" ? (
           <>
+            {/* Control row containing the subsection title and the filter plus add buttons */}
             <div style={topActionsRow}>
-              <h3 style={titleStyle}>All product</h3>
+              <h3 style={listTitleStyle}>All product</h3>
               <div style={rightGroup}>
+                <button style={filterButtonStyle}>Filter</button>
+                
                 <button onClick={() => { 
                   setFormMode("add"); 
                   setFormData({name:"", category_id:"", price:"", stock:""}); 
@@ -113,15 +147,17 @@ export default function ProductPage() {
               </div>
             </div>
 
+            {/* Input area for searching products by name or category */}
             <div style={searchWrapper}>
               <Search size={18} style={searchIcon} />
-              <input style={searchInput} placeholder="Search product..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <input style={searchInput} placeholder="Search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
 
+            {/* Table layout for displaying product details and management actions */}
             <table style={tableStyle}>
               <thead>
                 <tr style={headerRowStyle}>
-                  <th style={thStyle}><Circle size={18} color="#D1D5DB" /></th>
+                  <th style={thStyle}><Circle size={18} color="#000" /></th>
                   <th style={thStyle}>Product</th>
                   <th style={thStyle}>Product Id</th>
                   <th style={thStyle}>Category</th>
@@ -133,21 +169,20 @@ export default function ProductPage() {
               <tbody>
                 {processedProducts.map((p) => {
                   const isSelected = selectedIds.includes(p.id);
-                  /* Apply red color if stock is strictly less than 3 */
                   const isLowStock = p.stock < 3;
                   
                   return (
                     <tr key={p.id} style={rowStyle}>
                       <td style={tdStyle} onClick={() => setSelectedIds(prev => isSelected ? prev.filter(i=>i!==p.id) : [...prev, p.id])}>
                         <div style={{ cursor: "pointer" }}>
-                          {isSelected ? <CheckCircle2 size={20} fill="#6B21FF" color="white" /> : <Circle size={20} color="#D1D5DB" />}
+                          {isSelected ? <CheckCircle2 size={20} fill="#6B21FF" color="white" /> : <Circle size={20} color="#000" />}
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, fontWeight: "600" }}>{p.name}</td>
+                      <td style={tdStyle}>{p.name}</td>
                       <td style={tdStyle}>{p.displayId}</td>
                       <td style={tdStyle}>{p.catName}</td>
                       <td style={tdStyle}>${p.price}</td>
-                      <td style={{ ...tdStyle, color: isLowStock ? "red" : "black", fontWeight: isLowStock ? "bold" : "normal" }}>
+                      <td style={{ ...tdStyle, color: isLowStock ? "red" : "black" }}>
                         {p.stock}
                       </td>
                       <td style={tdStyle}>
@@ -167,6 +202,7 @@ export default function ProductPage() {
             </table>
           </>
         ) : (
+          /* Card container for the product creation and editing form */
           <div style={formCard}>
             <h2 style={formTitle}>{formMode === "add" ? "New Product" : "Edit Product"}</h2>
             <div style={formGrid}>
@@ -190,6 +226,7 @@ export default function ProductPage() {
                 <input style={formInput} type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} />
               </div>
             </div>
+            {/* Row for action buttons to confirm or cancel form input */}
             <div style={formActions}>
               <button style={cancelButtonStyle} onClick={() => setViewMode("list")}>Cancel</button>
               <button style={saveButtonStyle} onClick={handleSave}>Save</button>
@@ -201,27 +238,38 @@ export default function ProductPage() {
   );
 }
 
-/* UI Styles mapped to your specific design screenshots */
-const containerStyle: React.CSSProperties = { background: "white", padding: "30px", borderRadius: "12px" };
-const titleStyle: React.CSSProperties = { color: "#4A1D96", fontWeight: "600", fontSize: "18px" };
+/* Style declarations for layout and visual components */
+
+const headerSection: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "25px", padding: "0 10px" };
+const pageTitle: React.CSSProperties = { fontSize: "24px", fontWeight: "700", color: "#3B1E7B" };
+const logoutButtonStyle: React.CSSProperties = { background: "none", border: "none", color: "#3B1E7B", fontWeight: "600", fontSize: "16px", cursor: "pointer", paddingRight: "15px" };
+
+const containerStyle: React.CSSProperties = { background: "white", padding: "30px", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" };
+const listTitleStyle: React.CSSProperties = { color: "#3B1E7B", fontWeight: "600", fontSize: "14px" };
 const topActionsRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "25px" };
-const rightGroup: React.CSSProperties = { display: "flex", gap: "12px" };
-const addButtonStyle: React.CSSProperties = { background: "#6B21FF", color: "white", padding: "6px 20px", borderRadius: "20px", display: "flex", alignItems: "center", gap: "5px", fontWeight: "500", cursor: "pointer", border: "none" };
-const searchWrapper: React.CSSProperties = { position: "relative", marginBottom: "25px", maxWidth: "400px" };
-const searchInput: React.CSSProperties = { width: "100%", padding: "10px 40px", borderRadius: "8px", border: "1px solid #F3F4F6", outline: "none" };
-const searchIcon: React.CSSProperties = { position: "absolute", left: "12px", top: "12px", color: "#9CA3AF" };
+const rightGroup: React.CSSProperties = { display: "flex", gap: "15px" };
+
+const filterButtonStyle: React.CSSProperties = { border: "1px solid #6B21FF", color: "#6B21FF", background: "white", padding: "6px 30px", borderRadius: "10px", fontWeight: "600", cursor: "pointer" };
+const addButtonStyle: React.CSSProperties = { background: "#6B21FF", color: "white", padding: "6px 20px", borderRadius: "10px", display: "flex", alignItems: "center", gap: "5px", fontWeight: "600", cursor: "pointer", border: "none" };
+
+const searchWrapper: React.CSSProperties = { position: "relative", marginBottom: "25px", maxWidth: "300px" };
+const searchInput: React.CSSProperties = { width: "100%", padding: "8px 12px 8px 35px", borderRadius: "8px", border: "1px solid #E5E7EB", outline: "none", fontSize: "14px" };
+const searchIcon: React.CSSProperties = { position: "absolute", left: "10px", top: "10px", color: "#9CA3AF" };
+
 const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse" };
 const headerRowStyle: React.CSSProperties = { borderBottom: "1px solid #F3F4F6" };
 const rowStyle: React.CSSProperties = { borderBottom: "1px solid #F3F4F6" };
-const thStyle: React.CSSProperties = { textAlign: "left", padding: "15px 10px", fontSize: "14px", fontWeight: "600" };
-const tdStyle: React.CSSProperties = { padding: "15px 10px", fontSize: "14px", color: "#374151" };
-const actionIconGroup: React.CSSProperties = { display: "flex", gap: "15px" };
+const thStyle: React.CSSProperties = { textAlign: "left", padding: "15px 10px", fontSize: "13px", fontWeight: "600", color: "#000" };
+const tdStyle: React.CSSProperties = { padding: "15px 10px", fontSize: "13px", color: "#000" };
+
+const actionIconGroup: React.CSSProperties = { display: "flex", gap: "12px" };
 const iconStyle: React.CSSProperties = { cursor: "pointer", color: "#374151" };
+
 const formCard: React.CSSProperties = { background: "#F9FAFB", padding: "30px", borderRadius: "15px" };
-const formTitle: React.CSSProperties = { fontSize: "22px", fontWeight: "700", color: "#4A1D96", marginBottom: "20px" };
+const formTitle: React.CSSProperties = { fontSize: "22px", fontWeight: "700", color: "#3B1E7B", marginBottom: "20px" };
 const formGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px" };
 const formColumn: React.CSSProperties = { display: "flex", flexDirection: "column", gap: "8px" };
-const formLabel: React.CSSProperties = { fontSize: "13px", fontWeight: "600", color: "#4A1D96" };
+const formLabel: React.CSSProperties = { fontSize: "13px", fontWeight: "600", color: "#3B1E7B" };
 const formInput: React.CSSProperties = { padding: "12px", borderRadius: "8px", border: "1px solid #E5E7EB", background: "white" };
 const formActions: React.CSSProperties = { display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "30px" };
 const saveButtonStyle: React.CSSProperties = { background: "#6B21FF", color: "white", padding: "10px 45px", borderRadius: "8px", border: "none", fontWeight: "600", cursor: "pointer" };
