@@ -8,6 +8,9 @@
   --secondary: #f8f6ff;
   --accent: #ffb800;
   --dark-bg: #1e004b;
+  --font-sans-stack: "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono-stack: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  --font-script-stack: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
 }
 
 @theme inline {
@@ -18,7 +21,8 @@
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
   --color-dark-bg: var(--dark-bg);
-  --font-sans: 'Outfit', var(--font-geist-sans);
+  --font-sans: var(--font-sans-stack);
+  --font-mono: var(--font-mono-stack);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,7 +35,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans-stack);
+}
+
+.font-caveat {
+  font-family: var(--font-script-stack);
 }
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
@@ -60,12 +68,10 @@ body {
 }
 
 .icon-force-size {
-  width: 280px !important;
-  height: 280px !important;
+  width: 250px !important;
+  height: 250px !important;
   max-width: none !important;
-  min-width: 280px !important;
-  min-height: 280px !important;
-  object-fit: none;
-  object-position: center;
-  overflow: hidden;
+  object-fit: contain;
+  transform: scale(5);
+  image-rendering: pixelated;
 }

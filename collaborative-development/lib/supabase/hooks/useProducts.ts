@@ -1,22 +1,41 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getProducts } from "@/lib/supabase/actions/productActions";
+
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  stock: number;
+  min_stock_level: number;
+  category_id?: string;
+  supplier_id?: string;
+  created_at: string;
+  updated_at: string;
+  suppliers?: {
+    id: string;
+    name: string;
+    contact_email: string;
+    contact_phone?: string;
+  };
+  categories?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
+}
 
 export function useProducts() {
-  const [data, setData] = useState<Record<string, unknown>[]>([]);
+  const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        const { data: products, error } = await supabase
-          .from("products")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        setData(products || []);
+        const products = await getProducts();
+        setData(products as Product[] || []);
       } catch (err: unknown) {
         if (err instanceof Error) setError(err.message);
         else setError(String(err));
@@ -25,7 +44,20 @@ export function useProducts() {
       }
     }
     fetchData();
-  }, [supabase]);
+  }, []);
 
-  return { data, loading, error };
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      const products = await getProducts();
+      setData(products as Product[] || []);
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { data, loading, error, refetch };
 }

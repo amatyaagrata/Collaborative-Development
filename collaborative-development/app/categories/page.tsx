@@ -8,9 +8,10 @@ import { toast } from "sonner";
 import "./categories.css";
 
 interface Category {
-  id: string; // Changed to UUID
+  id: string;
   name: string;
   description: string | null;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -26,6 +27,7 @@ export default function CategoriesPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    is_active: true,
   });
 
   const fetchCategories = useCallback(async () => {
@@ -44,7 +46,7 @@ export default function CategoriesPage() {
 
   const handleAddClick = () => {
     setFormMode("add");
-    setFormData({ name: "", description: "" });
+    setFormData({ name: "", description: "", is_active: true });
     setViewMode("form");
   };
 
@@ -54,6 +56,7 @@ export default function CategoriesPage() {
     setFormData({
       name: category.name,
       description: category.description || "",
+      is_active: category.is_active ?? true,
     });
     setViewMode("form");
   };
@@ -71,6 +74,7 @@ export default function CategoriesPage() {
     const payload = {
       name: formData.name,
       description: formData.description || null,
+      is_active: formData.is_active,
     };
 
     if (formMode === "add") {
@@ -148,8 +152,8 @@ export default function CategoriesPage() {
                           <td style={{ fontWeight: 600, color: "#000000" }}>{cat.name}</td>
                           <td style={{ color: "#000000" }}>{cat.description || "N/A"}</td>
                           <td>
-                            <span className="category-status-badge category-status-active">
-                              Active
+                            <span className={`category-status-badge ${cat.is_active !== false ? "category-status-active" : "category-status-inactive"}`}>
+                              {cat.is_active !== false ? "Active" : "Inactive"}
                             </span>
                           </td>
                           <td style={{ color: "#000000" }}>
@@ -200,6 +204,19 @@ export default function CategoriesPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
+              </div>
+
+              <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "10px" }}>
+                <input
+                  type="checkbox"
+                  id="category-active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+                <label htmlFor="category-active" className="form-label" style={{ marginBottom: 0, cursor: "pointer" }}>
+                  Active Status (Visible in inventory manager)
+                </label>
               </div>
 
               <div className="form-actions-row">

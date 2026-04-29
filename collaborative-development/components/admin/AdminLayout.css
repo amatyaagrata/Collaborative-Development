@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════
+   Admin Layout Styles — GoGodam Inventory Management System
+   Scoped styles for the admin sidebar, header, and content area.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Admin Layout (Sidebar + Main) ──────────────────────────── */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #1a1a2e;
+}
+
+/* ─── Admin Sidebar ──────────────────────────────────────────── */
+.admin-sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #2d0066 0%, #1e004b 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+.admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0px;
+  padding: 24px 20px 36px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.admin-sidebar-brand:hover {
+  opacity: 0.85;
+}
+
+.admin-sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: -4px;
+}
+
+.admin-sidebar-brand-text {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  transform: translateY(-3px);
+}
+
+/* ─── Admin Navigation ───────────────────────────────────────── */
+.admin-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 14px;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-nav-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.admin-nav-item:hover {
+  color: #ffffff;
+}
+
+.admin-nav-item:hover::before {
+  opacity: 1;
+}
+
+.admin-nav-item.active {
+  background: var(--primary, #6008f8);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(96, 8, 248, 0.4);
+}
+
+.admin-nav-item.active::before {
+  opacity: 0;
+}
+
+.admin-nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ─── Admin Main Content Area ────────────────────────────────── */
+.admin-main {
+  flex: 1;
+  margin-left: 220px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 36px;
+  border-bottom: 1px solid #f0edf5;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.admin-header-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e004b;
+  letter-spacing: -0.01em;
+}
+
+.admin-header-logout {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary, #6008f8);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.admin-header-logout:hover {
+  background: #f8f6ff;
+  color: #4d00cc;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 28px 36px 44px;
+  background: #faf9fd;
+  overflow-y: auto;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    width: 72px;
+    overflow: hidden;
+  }
+
+  .admin-sidebar-brand-text,
+  .admin-nav-item span {
+    display: none;
+  }
+
+  .admin-sidebar-brand {
+    justify-content: center;
+    padding: 24px 12px 32px;
+  }
+
+  .admin-nav-item {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .admin-main {
+    margin-left: 72px;
+  }
+
+  .admin-content {
+    padding: 16px;
+  }
+
+  .admin-header {
+    padding: 14px 20px;
+  }
+
+  .admin-header-title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-content {
+    padding: 12px;
+  }
+}

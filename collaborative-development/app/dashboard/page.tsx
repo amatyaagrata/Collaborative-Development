@@ -1,21 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { ProductSummaryChart } from "@/components/dashboard/ProductSummaryChart";
 import { TrendingProductsTable } from "@/components/dashboard/TrendingProductsTable";
-import { SalesPurchaseChart } from "@/components/dashboard/SalesPurchaseChart";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, User, ChevronDown, Store } from "lucide-react";
+import { LogOut, Store } from "lucide-react";
 import { toast } from "sonner";
+import { useProducts } from "@/lib/supabase/hooks/useProducts";
+import { useOrders } from "@/lib/supabase/hooks/useOrders";
 import "./dashboard.css";
+
+const ProductSummaryChart = dynamic(
+  () =>
+    import("@/components/dashboard/ProductSummaryChart").then(
+      (mod) => mod.ProductSummaryChart
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="chart-card">Loading chart...</div>,
+  }
+);
+
+const SalesPurchaseChart = dynamic(
+  () =>
+    import("@/components/dashboard/SalesPurchaseChart").then(
+      (mod) => mod.SalesPurchaseChart
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="chart-card sales-chart-card">Loading chart...</div>,
+  }
+);
 
 export default function Dashboard() {
   const router = useRouter();
   const supabase = createClient();
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { data: products, loading: productsLoading } = useProducts();
+  const { data: orders, loading: ordersLoading } = useOrders();
+
   const [organizationName, setOrganizationName] = useState("Loading...");
   const [userData, setUserData] = useState({
     email: "",
@@ -23,14 +48,10 @@ export default function Dashboard() {
     loginTime: ""
   });
 
-  const [stats, setStats] = useState({ inventoryValue: 0, totalStocks: 0, newOrders: 0, delivered: 0 });
-  const [summary, setSummary] = useState({ quantityInHand: 0, toBeReceived: 0 });
-
   useEffect(() => {
     async function loadDashboard() {
-      // Fetch user profile securely
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         setUserData({
           email: user.email || "user@example.com",
@@ -40,40 +61,60 @@ export default function Dashboard() {
         setOrganizationName(user.user_metadata?.organization_name || "GoGodam Default");
       }
 
-      // 1. Total Products
-      const { count: productsCount } = await supabase.from("products").select("*", { count: "exact", head: true });
-      
-      // 2. Total Orders
-      const { count: ordersCount } = await supabase.from("orders").select("*", { count: "exact", head: true });
-
-      // 3. Inventory Value Aggregation
-      const { data: productsData } = await supabase.from("products").select("price, stock");
-      const inventoryValue = productsData?.reduce((acc, item) => acc + (item.price * item.stock), 0) || 0;
-
-      setStats({
-        inventoryValue: inventoryValue,
-        totalStocks: productsCount || 0,
-        newOrders: ordersCount || 0,
-        delivered: 0 // Waiting for order status logic
-      });
-
-      setSummary({
-        quantityInHand: productsCount || 0,
-        toBeReceived: ordersCount || 0
-      });
     }
-    
     loadDashboard();
   }, [supabase]);
 
+  const stats = useMemo(() => {
+    const inventoryValue = products.reduce(
+      (acc, product) => acc + product.price * product.stock,
+      0
+    );
+    const totalStocks = products.reduce((acc, product) => acc + product.stock, 0);
+    const newOrders = orders.filter(
+      (order) => order.status === "pending" || order.status === "confirmed"
+    ).length;
+    const delivered = orders.filter((order) => order.status === "delivered").length;
+
+    return {
+      inventoryValue,
+      totalStocks,
+      newOrders,
+      delivered,
+    };
+  }, [orders, products]);
+
+  const summary = useMemo(() => {
+    const quantityInHand = stats.totalStocks;
+    const toBeReceived = orders
+      .filter((order) => order.status !== "delivered" && order.status !== "cancelled")
+      .reduce(
+        (acc, order) =>
+          acc +
+          (order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0),
+        0
+      );
+
+    return {
+      quantityInHand,
+      toBeReceived,
+    };
+  }, [orders, stats.totalStocks]);
+
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Logout failed.");
-      return;
-    }
+    await supabase.auth.signOut();
+    localStorage.clear();
+    toast.success("Logged out successfully");
     router.push("/login");
   };
+
+  if (productsLoading || ordersLoading) {
+    return (
+      <AppLayout title="Dashboard">
+        <div className="loading-spinner">Loading dashboard...</div>
+      </AppLayout>
+    );
+  }
 
   const getDisplayName = () => {
     if (userData.fullName && userData.fullName !== "User") {
@@ -83,9 +124,11 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout title={`Dashboard - ${organizationName}`}>
+    <AppLayout
+      title={`Dashboard - ${organizationName}`}
+    >
       <div className="dashboard-content">
-        
+
         {/* Top Bar with Organization Badge and User Menu */}
         <div className="dashboard-top-bar">
           <div className="organization-badge">
@@ -97,46 +140,11 @@ export default function Dashboard() {
               <span className="org-badge-name">{organizationName}</span>
             </div>
           </div>
-
-          <div className="user-menu-container">
-            <div 
-              className="user-menu-trigger" 
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <div className="user-avatar">
-                <User size={20} />
-              </div>
-              <div className="user-info">
-                <span className="user-name">{getDisplayName()}</span>
-                <span className="user-email">{userData.email}</span>
-              </div>
-              <ChevronDown size={18} className={`chevron-icon ${showUserMenu ? 'rotated' : ''}`} />
-            </div>
-
-            {showUserMenu && (
-              <div className="user-dropdown">
-                <div className="dropdown-header">
-                  <div className="dropdown-avatar">
-                    <User size={20} />
-                  </div>
-                  <div className="dropdown-info">
-                    <div className="dropdown-name">{getDisplayName()}</div>
-                    <div className="dropdown-email">{userData.email}</div>
-                  </div>
-                </div>
-                <div className="dropdown-divider"></div>
-                <button onClick={handleLogout} className="dropdown-item">
-                  <LogOut size={18} />
-                  <span>Sign out</span>
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Welcome Section */}
         <div className="welcome-section">
-          <h1 className="welcome-title">Welcome back, {getDisplayName()}! 👋</h1>
+          <h1 className="welcome-title">Welcome back, {getDisplayName()}! 🙌🏻</h1>
           <p className="welcome-subtitle">
             You&apos;re logged in to <strong className="org-highlight">{organizationName}</strong>
           </p>
@@ -153,10 +161,19 @@ export default function Dashboard() {
 
         <div className="charts-row">
           <ProductSummaryChart quantityInHand={summary.quantityInHand} toBeReceived={summary.toBeReceived} />
-          <TrendingProductsTable products={[]} />
+          <TrendingProductsTable products={products.slice(0, 4)} />
         </div>
 
-        <SalesPurchaseChart data={[]} />
+        {/* TODO: Replace hardcoded mock data with real sales/purchase data from Supabase */}
+        <SalesPurchaseChart data={[
+          { name: "Mon", Sales: 10200, Purchase: 8400 },
+          { name: "Tue", Sales: 8800, Purchase: 7200 },
+          { name: "Wed", Sales: 12400, Purchase: 9600 },
+          { name: "Thu", Sales: 9600, Purchase: 10800 },
+          { name: "Fri", Sales: 11200, Purchase: 8000 },
+          { name: "Sat", Sales: 7400, Purchase: 6200 },
+          { name: "Sun", Sales: 6800, Purchase: 5400 },
+        ]} />
       </div>
     </AppLayout>
   );

@@ -4,14 +4,46 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function getProducts() {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("products").select("*");
+  const { data, error } = await supabase
+    .from("products")
+    .select(`
+      *,
+      suppliers:supplier_id (
+        id,
+        name,
+        contact_email,
+        contact_phone
+      ),
+      categories:category_id (
+        id,
+        name,
+        description
+      )
+    `);
   if (error) throw error;
   return data;
 }
 
 export async function getProductById(id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
+  const { data, error } = await supabase
+    .from("products")
+    .select(`
+      *,
+      suppliers:supplier_id (
+        id,
+        name,
+        contact_email,
+        contact_phone
+      ),
+      categories:category_id (
+        id,
+        name,
+        description
+      )
+    `)
+    .eq("id", id)
+    .single();
   if (error) throw error;
   return data;
 }

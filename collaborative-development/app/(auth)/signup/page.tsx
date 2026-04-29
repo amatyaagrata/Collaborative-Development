@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "sonner";
@@ -10,6 +9,13 @@ import Image from "next/image";
 import Link from "next/link";
 
 const logo = "/assets/logo.png";
+
+const roles = [
+  { value: "admin", label: "Admin", description: "Full system access" },
+  { value: "supplier", label: "Supplier", description: "Supply products to inventory" },
+  { value: "transporter", label: "Transporter", description: "Manage transportation" },
+  { value: "inventory manager", label: "Inventory Manager", description: "Manage products and stock" },
+];
 
 export default function SignUp() {
   const router = useRouter();
@@ -21,12 +27,13 @@ export default function SignUp() {
     confirmPassword: "",
     phoneNumber: "",
   });
+  const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -63,38 +70,60 @@ export default function SignUp() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: { 
-          data: { 
-            username: formData.username,
-            organization_name: formData.organizationName,
-            phone_number: formData.phoneNumber,
-            full_name: formData.username, // Mirroring name
-          } 
+      console.log("[CLIENT] Calling /api/auth/signup endpoint...");
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          name: formData.username,
+          role: selectedRole,
+          phone: formData.phoneNumber,
+          organization_name: formData.organizationName,
+        }),
       });
+
+      console.log("[CLIENT] API response status:", response.status);
+      const responseData = await response.json();
+      console.log("[CLIENT] API response data:", responseData);
+
+      if (!response.ok) {
+        const errorMsg = responseData.error || `Profile creation failed: ${response.statusText}`;
+        console.error("[CLIENT] API error:", errorMsg, responseData.details);
+        if (typeof errorMsg === "string" && errorMsg.toLowerCase().includes("rate limit")) {
+          throw new Error("Too many signup attempts. Please wait a few minutes and try again.");
+        }
+        throw new Error(errorMsg);
+      }
+
+      const { role } = responseData;
+      console.log("[CLIENT] Signup completed successfully with role:", role);
+      if (Array.isArray(responseData.warnings) && responseData.warnings.length > 0) {
+        toast.warning(responseData.warnings.join(" "));
+      }
       
-      if (error) throw error;
+      toast.success(`Account created as ${role}! Please check your email and log in.`);
       
-      toast.success(`Account created for ${formData.organizationName}! Please log in.`);
       setTimeout(() => {
         router.push("/login");
       }, 1500);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
+      console.error("[CLIENT] Signup error caught:", error);
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4 py-8 relative overflow-hidden">
@@ -134,6 +163,37 @@ export default function SignUp() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Role Selector Toggle */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Select Role *
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {roles.map((role) => (
+                  <button
+                    key={role.value}
+                    type="button"
+                    onClick={() => setSelectedRole(role.value)}
+                    className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                      selectedRole === role.value
+                        ? "border-purple-600 bg-purple-50 text-purple-700"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {role.label}
+                  </button>
+                ))}
+              </div>
+              {roles.find(r => r.value === selectedRole) && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {roles.find(r => r.value === selectedRole)?.description}
+                </p>
+              )}
+            </div>
+
             {/* Email */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -171,7 +231,7 @@ export default function SignUp() {
               />
             </div>
 
-            {/* Organization Name - NEW FIELD */}
+            {/* Organization Name */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,6 +248,7 @@ export default function SignUp() {
                 className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
               />
             </div>
+
 
             {/* Password */}
             <div className="space-y-2">
@@ -351,8 +412,21 @@ export default function SignUp() {
             </button>
           </div>
 
+          {/* Info Box for Organization Registration */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-1">Welcome to our platform!</p>
+                <p>Please fill out the form above to create your account. You can sign up with any organization name.</p>
+              </div>
+            </div>
+          </div>
+
           {/* Login Link */}
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
               <Link
@@ -367,4 +441,4 @@ export default function SignUp() {
       </div>
     </div>
   );
-} 
+}

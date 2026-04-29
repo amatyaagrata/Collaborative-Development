@@ -16,26 +16,60 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      console.log("[LOGIN] Starting login with email:", email);
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        console.error("[LOGIN] Auth signin error:", error);
+        if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("not found")) {
+          toast.error("Account not found. Please sign up first or check your email.");
+        } else {
+          toast.error(error.message);
+        }
+        setLoading(false);
+        return;
+      }
+
+      console.log("[LOGIN] Auth signin successful, fetching user role...");
+
+      // Get user role and redirect accordingly
+      const roleResponse = await fetch("/api/auth/user-role");
+      const roleData = await roleResponse.json();
+
+      console.log("[LOGIN] Role data received:", roleData);
+
+      if (!roleResponse.ok) {
+        console.error("[LOGIN] Failed to fetch role:", roleData.error);
+        toast.error("Failed to load user profile. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const { role, redirect } = roleData;
+      console.log("[LOGIN] User role:", role, "Redirecting to:", redirect);
+
+      toast.success(`Welcome back! You are logged in as ${role}`);
+      
+      // Redirect to role-specific dashboard
+      setTimeout(() => {
+        router.push(redirect);
+      }, 500);
+    } catch (error: unknown) {
+      console.error("[LOGIN] Unexpected error:", error);
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
       setLoading(false);
-      return;
     }
-
-    toast.success(`Welcome back!`);
-    router.push("/dashboard");
-    router.refresh();
   };
 
   return (
@@ -53,7 +87,7 @@ export default function Auth() {
           
           {/* Logo and Title */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 p-0.5">
+            <Link href="/" className="relative h-16 w-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 p-0.5 transition-transform hover:scale-110 duration-300">
               <div className="relative h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                 <Image 
                   src={logo} 
@@ -63,28 +97,26 @@ export default function Auth() {
                   className="object-contain"
                 />
               </div>
-            </div>
+            </Link>
             
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
               GoGodam
             </h1>
             
             <p className="text-gray-500 text-sm">
-              Welcome back! Please sign in to your organization
+              Welcome back! Please sign in to your account
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            
-            {/* Organization Identity automatically handled on backend after login */}
-
+            {/* Email Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                Email Address
+                Email Address *
               </label>
               <Input
                 type="email"
@@ -96,12 +128,13 @@ export default function Auth() {
               />
             </div>
 
+            {/* Password Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Password
+                Password *
               </label>
               <Input
                 type="password"
@@ -114,7 +147,6 @@ export default function Auth() {
               />
             </div>
 
-            {/* Forgot Password Link */}
             <div className="text-right">
               <button
                 type="button"
@@ -125,13 +157,22 @@ export default function Auth() {
               </button>
             </div>
 
-            {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl mt-4"
               disabled={loading}
             >
-              {loading ? "Processing..." : "Sign In"}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
@@ -162,14 +203,10 @@ export default function Auth() {
             </button>
           </div>
 
-          {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/signup"
-                className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1"
-              >
+              Don&apos;t have an account?
+              <Link href="/signup" className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all ml-1">
                 Sign Up
               </Link>
             </p>

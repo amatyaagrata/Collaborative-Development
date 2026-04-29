@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════════════
+   Admin Settings Page Styles — GoGodam Inventory Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+.admin-settings-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+
+/* ─── Settings Card ──────────────────────────────────────────── */
+.admin-settings-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 16px;
+  padding: 48px 48px 40px;
+  animation: adminSettingsFadeIn 0.5s ease forwards;
+  opacity: 0;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.admin-settings-card:hover {
+  box-shadow: 0 4px 24px rgba(96, 8, 248, 0.08);
+}
+
+/* ─── Form Grid ──────────────────────────────────────────────── */
+.admin-settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 40px;
+  margin-bottom: 20px;
+}
+
+/* ─── Section Divider ────────────────────────────────────────── */
+.admin-settings-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: #ece8f4;
+  margin: 8px 0;
+}
+
+/* ─── Field Group ────────────────────────────────────────────── */
+.admin-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-settings-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e004b;
+  letter-spacing: -0.01em;
+}
+
+.admin-settings-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1e004b;
+  background: #ffffff;
+  border: 1.5px solid #e0dce8;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.admin-settings-input::placeholder {
+  color: #b5b0c3;
+  font-weight: 400;
+}
+
+.admin-settings-input:hover {
+  border-color: #c8c0d8;
+}
+
+.admin-settings-input:focus {
+  border-color: var(--primary, #6008f8);
+  box-shadow: 0 0 0 3px rgba(96, 8, 248, 0.1);
+}
+
+/* ─── Apply Button ───────────────────────────────────────────── */
+.admin-settings-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+}
+
+.admin-settings-apply-btn {
+  padding: 12px 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--primary, #6008f8);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.01em;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(96, 8, 248, 0.35);
+}
+
+.admin-settings-apply-btn:hover {
+  background: #4d00cc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(96, 8, 248, 0.45);
+}
+
+.admin-settings-apply-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(96, 8, 248, 0.3);
+}
+
+.admin-settings-apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Toast-like success message ─────────────────────────────── */
+.admin-settings-success {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #16a34a;
+  animation: adminSettingsFadeIn 0.3s ease;
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes adminSettingsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-settings-card {
+    padding: 32px 24px 28px;
+    border-radius: 12px;
+  }
+
+  .admin-settings-form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .admin-settings-apply-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-settings-card {
+    padding: 24px 16px 24px;
+  }
+}

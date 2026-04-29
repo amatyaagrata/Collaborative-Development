@@ -1,0 +1,48 @@
+/* ═══════════════════════════════════════════════════════════════
+   Admin Tracking Page Styles — GoGodam Inventory Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+.admin-tracking-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+
+.admin-tracking-card {
+  background: #ffffff;
+  border: 1px solid #ece8f4;
+  border-radius: 16px;
+  padding: 48px;
+  min-height: 500px;
+  animation: adminTrackingFadeIn 0.5s ease forwards;
+  opacity: 0;
+  box-shadow: 0 2px 12px rgba(96, 8, 248, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-tracking-placeholder {
+  text-align: center;
+  color: #b5b0c3;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+@keyframes adminTrackingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-tracking-card {
+    padding: 24px;
+    min-height: 300px;
+  }
+}

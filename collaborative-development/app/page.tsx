@@ -132,22 +132,40 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-12 lg:gap-20">
           <div className="flex flex-col items-center space-y-10 group">
             <div className="flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png" alt="Sales" className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+              <Image
+                src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png"
+                alt="Sales"
+                width={280}
+                height={280}
+                className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
+                sizes="(max-width: 768px) 220px, 280px"
+              />
             </div>
             <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Sales</p>
           </div>
           <div className="flex flex-col items-center space-y-10 group">
             <div className="flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png" alt="Tracking" className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+              <Image
+                src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png"
+                alt="Tracking"
+                width={280}
+                height={280}
+                className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
+                sizes="(max-width: 768px) 220px, 280px"
+              />
             </div>
             <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Tracking</p>
           </div>
           <div className="flex flex-col items-center space-y-10 group">
             <div className="flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png" alt="Inventory" className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+              <Image
+                src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png"
+                alt="Inventory"
+                width={280}
+                height={280}
+                className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
+                sizes="(max-width: 768px) 220px, 280px"
+              />
             </div>
             <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Inventory</p>
           </div>
@@ -192,9 +210,9 @@ export default function Home() {
                 placeholder="Email address"
                 className="flex-1 bg-transparent px-4 py-2 text-zinc-900 outline-none w-full text-base"
               />
-              <button className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap">
+              <Link href="/signup" className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap flex items-center justify-center">
                 Sign Up
-              </button>
+              </Link>
             </div>
           </div>
           <div className="flex-shrink-0 mb-4 lg:mb-0">

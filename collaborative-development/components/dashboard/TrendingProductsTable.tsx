@@ -1,17 +1,17 @@
 "use client";
 
 import React from "react";
-import type { TrendingProduct } from "@/lib/data/dashboardData";
+import type { Product } from "@/lib/supabase/hooks/useProducts";
 
 interface TrendingProductsTableProps {
-  products: TrendingProduct[];
+  products: Product[];
 }
 
 export function TrendingProductsTable({ products }: TrendingProductsTableProps) {
   return (
     <div className="chart-card trending-card" style={{ animationDelay: "250ms" }}>
       <div className="trending-header">
-        <h3 className="chart-card-title">Trending Product</h3>
+        <h3 className="chart-card-title">Trending Products</h3>
       </div>
       <div className="trending-table-wrapper">
         <table className="trending-table">
@@ -19,23 +19,23 @@ export function TrendingProductsTable({ products }: TrendingProductsTableProps) 
             <tr>
               <th></th>
               <th>Product</th>
-              <th>Suppliers</th>
-              <th>Product Id</th>
+              <th>Supplier</th>
+              <th>SKU</th>
               <th>Category</th>
               <th>Price</th>
-              <th>Quantity</th>
+              <th>Stock</th>
             </tr>
           </thead>
           <tbody>
-            {products.map((item) => (
-              <tr key={item.id}>
+            {products.map((product) => (
+              <tr key={product.id}>
                 <td><div className="product-avatar"></div></td>
-                <td className="font-medium">{item.product}</td>
-                <td>{item.suppliers}</td>
-                <td className="text-muted">{item.productId}</td>
-                <td>{item.category}</td>
-                <td>{item.price}</td>
-                <td>{item.quantity}</td>
+                <td className="font-medium">{product.name}</td>
+                <td>{product.suppliers?.name || 'Unknown'}</td>
+                <td className="text-muted">{product.id.slice(0, 8)}</td>
+                <td>{product.categories?.name || 'Uncategorized'}</td>
+                <td>Rs. {product.price.toLocaleString()}</td>
+                <td>{product.stock}</td>
               </tr>
             ))}
             {products.length === 0 && (

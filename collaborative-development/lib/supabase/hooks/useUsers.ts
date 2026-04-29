@@ -1,22 +1,27 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getUsers } from "@/lib/supabase/actions/userActions";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'supplier' | 'driver' | 'customer';
+  phone?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export function useUsers() {
-  const [data, setData] = useState<Record<string, unknown>[]>([]);
+  const [data, setData] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        const { data: users, error } = await supabase
-          .from("users")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        setData(users || []);
+        const users = await getUsers();
+        setData(users as User[] || []);
       } catch (err: unknown) {
         if (err instanceof Error) setError(err.message);
         else setError(String(err));
@@ -25,7 +30,20 @@ export function useUsers() {
       }
     }
     fetchData();
-  }, [supabase]);
+  }, []);
 
-  return { data, loading, error };
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      const users = await getUsers();
+      setData(users as User[] || []);
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { data, loading, error, refetch };
 }
