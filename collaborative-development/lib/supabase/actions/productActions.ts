@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserOrgId } from "./orgHelper";
 
 export async function getProducts() {
   const supabase = await createClient();
@@ -50,7 +51,10 @@ export async function getProductById(id: string) {
 
 export async function createProduct(productData: { name: string; price: number; stock: number; category_id?: string; supplier_id?: string }) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("products").insert([productData]).select().single();
+  const orgId = await getCurrentUserOrgId();
+  const payload: Record<string, unknown> = { ...productData };
+  if (orgId) payload.organization_id = orgId;
+  const { data, error } = await supabase.from("products").insert([payload]).select().single();
   if (error) throw error;
   return data;
 }

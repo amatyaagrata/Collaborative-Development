@@ -96,12 +96,151 @@
   padding: 24px 28px 0;
 }
 
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roleBadge {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #5b21b6;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.logoutButton {
+  border: 0;
+  background: #7c3aed;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.logoutButton:hover {
+  background: #5b21b6;
+  transform: translateY(-1px);
+}
+
 .topbarTitle {
   margin: 0;
   font-size: 1.95rem;
   font-weight: 800;
   color: #22054f;
   letter-spacing: -0.04em;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.userMenuContainer {
+  position: relative;
+  display: inline-flex;
+}
+
+.userMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(34, 5, 79, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.userMenuTrigger:hover {
+  background: #f8f6ff;
+  border-color: rgba(96, 8, 248, 0.18);
+}
+
+.userAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #1e5f74, #0f3b48);
+  color: #ffffff;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 90px;
+}
+
+.userName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #22054f;
+}
+
+.userRoleLabel {
+  font-size: 0.78rem;
+  color: #6f6792;
+  text-transform: capitalize;
+}
+
+.chevronIcon {
+  color: #6f6792;
+  transition: transform 0.2s ease;
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.userDropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 210px;
+  background: #ffffff;
+  border: 1px solid rgba(34, 5, 79, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(34, 5, 79, 0.08);
+  z-index: 20;
+  overflow: hidden;
+}
+
+.dropdownItem,
+.dropdownItemButton {
+  width: 100%;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  font-size: 0.95rem;
+}
+
+.dropdownItem {
+  color: #6f6792;
+}
+
+.dropdownItemButton {
+  cursor: pointer;
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.dropdownItemButton:hover {
+  background: rgba(124, 58, 237, 0.08);
 }
 
 .topbarMeta {
@@ -132,6 +271,14 @@
   font-size: 2rem;
   font-weight: 800;
   color: #22054f;
+}
+
+.productsHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .heroText {

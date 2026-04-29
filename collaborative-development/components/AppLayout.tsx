@@ -30,8 +30,12 @@ const defaultNavItems = [
   { label: "Settings", href: "/settings", icon: "Settings" },
 ];
 
+const managerNavItems = defaultNavItems.filter((item) => item.label !== "Categories");
+
 const supplierNavItems = [
   { label: "Orders", href: "/suppliers/orders", icon: "ShoppingCart" },
+  { label: "Product List", href: "/suppliers/products", icon: "Package" },
+  { label: "Categories", href: "/suppliers/categories", icon: "Grid3x3" },
 ];
 
 export function AppLayout({ title, children }: AppLayoutProps) {
@@ -43,7 +47,12 @@ export function AppLayout({ title, children }: AppLayoutProps) {
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  const navItems = userRole === "supplier" ? supplierNavItems : defaultNavItems;
+  const navItems =
+    userRole === "supplier"
+      ? supplierNavItems
+      : userRole === "inventory manager"
+        ? managerNavItems
+        : defaultNavItems;
 
   React.useEffect(() => {
     async function getUser() {

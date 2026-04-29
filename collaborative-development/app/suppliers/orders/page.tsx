@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { AppLayout } from "@/components/AppLayout";
 import { createClient } from "@/lib/supabase/client";
-import SupplierLayout from "@/components/layout/SupplierLayout";
 import OrderCard from "@/components/supplier/orders/OrderCard";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +38,74 @@ export default function SupplierOrders() {
 
   const fetchOrders = useCallback(async (): Promise<SupplierOrder[]> => {
     const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return [];
+
+    // Step 1: Find the supplier record linked to this auth user
+    // The suppliers table has a user_id FK that links to users.id,
+    // and users.auth_user_id links to auth.users.id
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", userData.user.id)
+      .single();
+
+    if (!userRow) {
+      console.error("No users row found for auth user:", userData.user.id);
+      return [];
+    }
+
+    const { data: supplierRow } = await supabase
+      .from("suppliers")
+      .select("id")
+      .eq("user_id", userRow.id)
+      .single();
+
+    if (!supplierRow) {
+      // Fallback: try matching by email
+      const { data: supplierByEmail } = await supabase
+        .from("suppliers")
+        .select("id")
+        .eq("contact_email", userData.user.email)
+        .single();
+
+      if (!supplierByEmail) {
+        console.error("No supplier record found for this user");
+        return [];
+      }
+
+      // Use the email-matched supplier
+      const { data, error } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          order_items (
+            id,
+            quantity,
+            unit_price,
+            total_price,
+            products:product_id (
+              name
+            )
+          ),
+          organizations:organization_id (
+            id,
+            name,
+            address,
+            phone,
+            email
+          )
+        `)
+        .eq("supplier_id", supplierByEmail.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching orders:", error);
+        return [];
+      }
+      return data as SupplierOrder[];
+    }
+
+    // Step 2: Fetch orders assigned to this supplier
     const { data, error } = await supabase
       .from("orders")
       .select(`
@@ -51,7 +119,7 @@ export default function SupplierOrders() {
             name
           )
         ),
-        organizations (
+        organizations:organization_id (
           id,
           name,
           address,
@@ -59,7 +127,7 @@ export default function SupplierOrders() {
           email
         )
       `)
-      .eq("supplier_id", userData.user?.id)
+      .eq("supplier_id", supplierRow.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -92,12 +160,16 @@ export default function SupplierOrders() {
   }
 
   return (
-    <SupplierLayout>
+    <AppLayout title="Product List">
       <div className={styles.pageStack}>
         <div className={styles.heroCard}>
-          <h1 className={styles.heroTitle}>My Orders</h1>
-          <p className={styles.heroText}>Search, filter, and update the status of every supplier order in one place.</p>
-          
+          <div className={styles.productsHeaderRow}>
+            <div>
+              <h2 className={styles.heroTitle}>Product List</h2>
+              <p className={styles.heroText}>Manage your supplier products in a clean, familiar inventory layout.</p>
+            </div>
+          </div>
+
           <div className={styles.filters}>
             <div className={styles.searchBox}>
               <Search size={18} />
@@ -144,6 +216,6 @@ export default function SupplierOrders() {
           </div>
         )}
       </div>
-    </SupplierLayout>
+    </AppLayout>
   );
 }

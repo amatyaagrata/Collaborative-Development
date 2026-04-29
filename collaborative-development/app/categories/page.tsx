@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Plus, ArrowLeft, Package, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import "./categories.css";
@@ -25,6 +26,7 @@ interface Product {
 
 export default function CategoriesPage() {
   const supabase = createClient();
+  const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -77,6 +79,17 @@ export default function CategoriesPage() {
   useEffect(() => {
     Promise.resolve().then(() => fetchCategories());
   }, [fetchCategories]);
+
+  useEffect(() => {
+    async function guardManagerAccess() {
+      const { data: { user } } = await supabase.auth.getUser();
+      const role = user?.user_metadata?.role;
+      if (role === "inventory manager") {
+        router.push("/product");
+      }
+    }
+    void guardManagerAccess();
+  }, [router, supabase]);
 
   const handleAddClick = () => {
     setFormMode("add");

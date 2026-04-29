@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserOrgId } from "./orgHelper";
 
 export async function getCategories() {
   const supabase = await createClient();
@@ -44,9 +45,12 @@ export async function createCategory(categoryData: {
   description?: string;
 }) {
   const supabase = await createClient();
+  const orgId = await getCurrentUserOrgId();
+  const payload: Record<string, unknown> = { ...categoryData };
+  if (orgId) payload.organization_id = orgId;
   const { data, error } = await supabase
     .from("categories")
-    .insert([categoryData])
+    .insert([payload])
     .select()
     .single();
   if (error) throw error;

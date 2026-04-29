@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserOrgId } from "./orgHelper";
 
 export async function getOrders() {
   const supabase = await createClient();
@@ -80,15 +81,20 @@ export async function createOrder(orderData: {
   }>;
 }) {
   const supabase = await createClient();
+  const orgId = await getCurrentUserOrgId();
+
+  // Build payload — only include organization_id if available (new schema)
+  const orderPayload: Record<string, unknown> = {
+    user_id: orderData.user_id,
+    total_amount: orderData.total_amount,
+    status: orderData.status,
+  };
+  if (orgId) orderPayload.organization_id = orgId;
 
   // Start a transaction
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .insert([{
-      user_id: orderData.user_id,
-      total_amount: orderData.total_amount,
-      status: orderData.status
-    }])
+    .insert([orderPayload])
     .select()
     .single();
 

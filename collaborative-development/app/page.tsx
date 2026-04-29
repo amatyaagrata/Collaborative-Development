@@ -206,14 +206,14 @@ export default function Home() {
                   className="rounded-3xl border border-zinc-100 bg-white shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="relative w-12 h-12 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center">
+                    <div className="relative w-16 h-16 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center flex-shrink-0">
                       <Image
                         src={feature.iconSrc}
                         alt=""
-                        width={32}
-                        height={32}
+                        width={40}
+                        height={40}
                         className="object-contain"
-                        sizes="32px"
+                        sizes="40px"
                       />
                     </div>
                     <h3 className="text-xl md:text-2xl font-bold tracking-tight">

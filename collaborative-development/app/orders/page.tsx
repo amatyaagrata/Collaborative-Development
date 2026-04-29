@@ -31,6 +31,11 @@ interface Product {
   } | null;
 }
 
+interface SupplierOption {
+  id: string;
+  name: string;
+}
+
 /**
  * Helper function to extract category name from product object
  * Handles both array and single object category structures
@@ -48,6 +53,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState(""); // Search filter for orders
   const [orders, setOrders] = useState<Order[]>([]); // List of orders from database
   const [products, setProducts] = useState<Product[]>([]); // List of products for dropdown
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]); // Suppliers for dropdown
   const [loading, setLoading] = useState(true); // Loading state for orders
   const [loadingProducts, setLoadingProducts] = useState(false); // Loading state for products
 
@@ -60,6 +66,7 @@ export default function OrdersPage() {
   const [formData, setFormData] = useState({
     product_name: "",
     supplier_name: "",
+    supplier_id: "",
     custom_product_id: "",
     category: "",
     total_price: "",
@@ -101,6 +108,22 @@ export default function OrdersPage() {
   }, [supabase]);
 
   /**
+   * Fetch suppliers for the dropdown
+   */
+  const fetchSuppliers = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("suppliers")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    if (error) {
+      console.error("Failed to load suppliers:", error.message);
+    } else {
+      setSuppliers(data || []);
+    }
+  }, [supabase]);
+
+  /**
    * Initial data load when component mounts
    * Uses Promise.resolve() to ensure async operations don't block rendering
    */
@@ -108,8 +131,9 @@ export default function OrdersPage() {
     Promise.resolve().then(() => {
       fetchOrders();
       fetchProducts();
+      fetchSuppliers();
     });
-  }, [fetchOrders, fetchProducts]);
+  }, [fetchOrders, fetchProducts, fetchSuppliers]);
 
   /**
    * Filter orders based on search term
@@ -131,6 +155,7 @@ export default function OrdersPage() {
     setFormData({ 
       product_name: "", 
       supplier_name: "", 
+      supplier_id: "",
       custom_product_id: "", 
       category: "", 
       total_price: "", 
@@ -169,6 +194,7 @@ export default function OrdersPage() {
     setFormData({
       product_name: order.product_name || "",
       supplier_name: order.supplier_name || "",
+      supplier_id: "",
       custom_product_id: order.custom_product_id || "",
       category: order.category || "",
       total_price: (order.total_price || 0).toString(),
@@ -222,17 +248,10 @@ export default function OrdersPage() {
       return;
     }
 
-    // Stock validation for new orders - check if enough stock available
-    if (formMode === "add" && formData.selected_product_id) {
-      const selectedProduct = products.find(p => p.id === formData.selected_product_id);
-      if (selectedProduct && quantity > selectedProduct.stock) {
-        toast.error(`Insufficient stock! Available stock: ${selectedProduct.stock}`);
-        return;
-      }
-    }
+
 
     // Prepare order payload for database
-    const payload = {
+    const payload: Record<string, unknown> = {
       product_name: formData.product_name,
       supplier_name: formData.supplier_name || "Unknown",
       custom_product_id: formData.custom_product_id || `#${Math.floor(Math.random() * 9999)}`,
@@ -242,11 +261,15 @@ export default function OrdersPage() {
       total_amount: (total_price || 0) * (quantity || 0),
     };
 
+    // Link supplier_id FK so the supplier can see this order
+    if (formData.supplier_id) {
+      payload.supplier_id = formData.supplier_id;
+    }
+
     // Handle Add New Order
     if (formMode === "add") {
       const insertPayload = {
         ...payload,
-        order_number: `ORD-${Date.now()}`, // Generate unique order number using timestamp
         status: "pending",
       };
       
@@ -257,36 +280,11 @@ export default function OrdersPage() {
         toast.error("Failed to add order: " + orderError.message);
         return;
       }
-
-      // Step 2: Update product stock if a product was selected
-      if (formData.selected_product_id && orderData) {
-        const selectedProduct = products.find(p => p.id === formData.selected_product_id);
-        if (selectedProduct) {
-          const newStock = selectedProduct.stock - quantity;
-          const { error: updateError } = await supabase
-            .from("products")
-            .update({ stock: newStock })
-            .eq("id", formData.selected_product_id);
-          
-          if (updateError) {
-            toast.error("Order added but failed to update stock: " + updateError.message);
-          } else {
-            toast.success("Order added and stock updated successfully!");
-            fetchProducts(); // Refresh products list to show updated stock
-          }
-        } else {
-          toast.success("Order added successfully!");
-        }
-      } else {
-        toast.success("Order added successfully!");
-      }
+      
+      toast.success("Order added successfully!");
     } 
     // Handle Edit Existing Order
     else if (formMode === "edit" && editingId !== null) {
-      // Calculate stock difference for edit operations
-      const originalOrder = orders.find(o => o.id === editingId);
-      const quantityDifference = quantity - (originalOrder?.quantity || 0);
-      
       // Update order in database
       const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
       if (error) {
@@ -294,31 +292,7 @@ export default function OrdersPage() {
         return;
       }
       
-      // Update stock if quantity changed and product is linked
-      if (formData.selected_product_id && quantityDifference !== 0) {
-        const selectedProduct = products.find(p => p.id === formData.selected_product_id);
-        if (selectedProduct) {
-          const newStock = selectedProduct.stock - quantityDifference;
-          // Prevent negative stock
-          if (newStock < 0) {
-            toast.error("Cannot update order: Insufficient stock for the additional quantity!");
-            return;
-          }
-          const { error: updateError } = await supabase
-            .from("products")
-            .update({ stock: newStock })
-            .eq("id", formData.selected_product_id);
-          
-          if (updateError) {
-            toast.error("Order updated but failed to update stock: " + updateError.message);
-          } else {
-            toast.success("Order updated and stock adjusted successfully!");
-            fetchProducts(); // Refresh products list
-          }
-        }
-      } else {
-        toast.success("Order updated successfully!");
-      }
+      toast.success("Order updated successfully!");
     }
 
     // Refresh orders list and return to list view
@@ -334,27 +308,12 @@ export default function OrdersPage() {
    */
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to permanently delete this order?")) {
-      // Get order details before deletion to restore stock
-      const orderToDelete = orders.find(o => o.id === id);
-      
       // Delete the order
       const { error } = await supabase.from("orders").delete().eq("id", id);
       if (error) {
         toast.error("Failed to delete order: " + error.message);
       } else {
-        // Restore stock by finding matching product by name
-        if (orderToDelete) {
-          const relatedProduct = products.find(p => p.name === orderToDelete.product_name);
-          if (relatedProduct) {
-            const restoredStock = relatedProduct.stock + orderToDelete.quantity;
-            await supabase
-              .from("products")
-              .update({ stock: restoredStock })
-              .eq("id", relatedProduct.id);
-            fetchProducts(); // Refresh products list
-          }
-        }
-        toast.success("Order deleted and stock restored.");
+        toast.success("Order deleted successfully.");
         setLoading(true);
         fetchOrders(); // Refresh orders list
       }
@@ -517,14 +476,24 @@ export default function OrdersPage() {
               {/* Row 2: Supplier and Product ID */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
-                  <label className="orders-form-label">Suppliers</label>
-                  <input
-                    type="text"
+                  <label className="orders-form-label">Supplier *</label>
+                  <select
                     className="orders-form-input"
-                    placeholder="Supplier name"
-                    value={formData.supplier_name}
-                    onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
-                  />
+                    value={formData.supplier_id}
+                    onChange={(e) => {
+                      const selected = suppliers.find(s => s.id === e.target.value);
+                      setFormData({
+                        ...formData,
+                        supplier_id: e.target.value,
+                        supplier_name: selected?.name || "",
+                      });
+                    }}
+                  >
+                    <option value="">-- Select a supplier --</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="orders-form-group">
                   <label className="orders-form-label">Product ID</label>

@@ -139,21 +139,11 @@ export default function Dashboard() {
       <div className="dashboard-content">
 
         {/* Top Bar with Organization Badge and User Menu */}
-        <div className="dashboard-top-bar">
-          <div className="organization-badge">
-            <div className="org-badge-icon">
-              <Store size={18} />
-            </div>
-            <div className="org-badge-info">
-              <span className="org-badge-label">Current Organization</span>
-              <span className="org-badge-name">{organizationName}</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Welcome Section */}
         <div className="welcome-section">
-          <h1 className="welcome-title">Welcome back, {getDisplayName()}! 🙌🏻</h1>
+          <h1 className="welcome-title">Welcome back, {getDisplayName()}!</h1>
           <p className="welcome-subtitle">
             You&apos;re logged in to <strong className="org-highlight">{organizationName}</strong>
           </p>

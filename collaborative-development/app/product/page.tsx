@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { Pencil, Trash2, Plus, Search, Package, ArrowLeft, Calendar, Hash } from "lucide-react";
+import { Pencil, Trash2, Search, Package, ArrowLeft, Calendar, Hash } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -91,11 +91,6 @@ export default function ProductPage() {
   useEffect(() => { fetchData(); }, []);
 
   /* Function to sign the user out and redirect them to the login screen */
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   /* Memoized logic to filter products based on search query */
   const filteredProducts = useMemo(() => {
     return products
@@ -193,18 +188,6 @@ export default function ProductPage() {
                 <p className="products-subtitle">Manage your product inventory</p>
               </div>
               <div className="products-header-actions">
-                <button onClick={handleLogout} className="logout-btn">Logout</button>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setFormMode("add");
-                    setFormData({ name: "", category_id: "", price: "", stock: "" });
-                    setViewMode("form");
-                  }}
-                >
-                  <Plus size={18} />
-                  Add Product
-                </button>
               </div>
             </div>
 
@@ -261,16 +244,6 @@ export default function ProductPage() {
               <div className="empty-state">
                 <Package size={48} />
                 <p>No products found</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setFormMode("add");
-                    setFormData({ name: "", category_id: "", price: "", stock: "" });
-                    setViewMode("form");
-                  }}
-                >
-                  Add your first product
-                </button>
               </div>
             ) : (
               <div className="products-grid">

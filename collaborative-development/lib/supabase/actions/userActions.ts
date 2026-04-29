@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserOrgId } from "./orgHelper";
 
 export async function getUsers() {
   const supabase = await createClient();
@@ -30,9 +31,12 @@ export async function createUser(userData: {
   phone?: string;
 }) {
   const supabase = await createClient();
+  const orgId = await getCurrentUserOrgId();
+  const payload: Record<string, unknown> = { ...userData };
+  if (orgId) payload.organization_id = orgId;
   const { data, error } = await supabase
     .from("users")
-    .insert([userData])
+    .insert([payload])
     .select()
     .single();
   if (error) throw error;

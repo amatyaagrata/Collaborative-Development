@@ -174,22 +174,61 @@ export async function POST(request: Request) {
       }
     }
 
-    // Step 1: Upsert user record
+    // Step 1: Try to upsert organization (new schema) or fall back (old schema)
     if (hasAdminConfig) {
-      console.log("[SIGNUP-API] Step 1/2: Upserting user record...");
+      let organizationId: string | undefined;
+
+      // Try new schema: organizations table
+      try {
+        console.log("[SIGNUP-API] Step 1/3: Checking for organizations table...");
+        const orgName = organization_name || "Default Organization";
+        const orgSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+        const { data: existingOrg } = await supabase
+          .from("organizations")
+          .select("id")
+          .eq("name", orgName)
+          .single();
+
+        if (existingOrg) {
+          organizationId = existingOrg.id;
+          console.log("[SIGNUP-API] Found existing organization:", organizationId);
+        } else {
+          const { data: newOrg, error: orgError } = await supabase
+            .from("organizations")
+            .insert({ name: orgName, slug: orgSlug })
+            .select("id")
+            .single();
+
+          if (orgError) {
+            console.warn("[SIGNUP-API] Org creation failed (may be old schema):", orgError.message);
+          } else {
+            organizationId = newOrg.id;
+            console.log("[SIGNUP-API] Created new organization:", organizationId);
+          }
+        }
+      } catch (e) {
+        console.warn("[SIGNUP-API] Organizations table not available, using old schema", e);
+      }
+
+      // Step 2: Upsert user record
+      console.log("[SIGNUP-API] Step 2/3: Upserting user record...");
+      const userPayload: Record<string, unknown> = {
+        auth_user_id: resolvedAuthUserId,
+        name,
+        email,
+        role: normalizedRole,
+        phone,
+      };
+      if (organizationId) {
+        userPayload.organization_id = organizationId;
+      } else {
+        userPayload.organization_name = organization_name;
+      }
+
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .upsert(
-          {
-            auth_user_id: resolvedAuthUserId,
-            name,
-            email,
-            role: normalizedRole,
-            phone,
-            organization_name,
-          },
-          { onConflict: "auth_user_id" }
-        )
+        .upsert(userPayload, { onConflict: "auth_user_id" })
         .select();
 
       if (userError) {
@@ -210,18 +249,21 @@ export async function POST(request: Request) {
 
       console.log("[SIGNUP-API] User record upserted successfully:", userData);
 
-      // Step 2: Upsert user_roles record
-      console.log("[SIGNUP-API] Step 2/2: Upserting user_roles record...");
+      // Step 3: Upsert user_roles record
+      console.log("[SIGNUP-API] Step 3/3: Upserting user_roles record...");
+      const rolePayload: Record<string, unknown> = {
+        user_id: resolvedAuthUserId,
+        role: normalizedRole,
+      };
+      if (organizationId) {
+        rolePayload.organization_id = organizationId;
+      } else {
+        rolePayload.organization_name = organization_name;
+      }
+
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .upsert(
-          {
-            user_id: resolvedAuthUserId,
-            role: normalizedRole,
-            organization_name,
-          },
-          { onConflict: "user_id" }
-        )
+        .upsert(rolePayload, { onConflict: "user_id" })
         .select();
 
       if (roleError) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserOrgId } from "./orgHelper";
 
 export async function getSuppliers() {
   const supabase = await createClient();
@@ -46,9 +47,12 @@ export async function createSupplier(supplierData: {
   address?: string;
 }) {
   const supabase = await createClient();
+  const orgId = await getCurrentUserOrgId();
+  const payload: Record<string, unknown> = { ...supplierData };
+  if (orgId) payload.organization_id = orgId;
   const { data, error } = await supabase
     .from("suppliers")
-    .insert([supplierData])
+    .insert([payload])
     .select()
     .single();
   if (error) throw error;
