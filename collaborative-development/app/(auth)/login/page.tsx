@@ -12,26 +12,39 @@ import Image from "next/image";
 const logo = "/assets/logo.png";
 
 export default function Auth() {
+  // State management for form inputs and loading status
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Router instance for navigation after successful login
   const router = useRouter();
+  
+  // Create Supabase client for authentication
   const supabase = createClient();
 
+  /**
+   * Handles the login form submission
+   * Authenticates user with Supabase and redirects based on their role
+   */
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault(); // Prevent default form submission
+    setLoading(true); // Show loading state on button
 
     try {
       console.log("[LOGIN] Starting login with email:", email);
       
+      // Step 1: Authenticate user with Supabase
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      // Handle authentication errors
       if (error) {
         console.error("[LOGIN] Auth signin error:", error);
+        
+        // Provide user-friendly error messages
         if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("not found")) {
           toast.error("Account not found. Please sign up first or check your email.");
         } else {
@@ -43,12 +56,13 @@ export default function Auth() {
 
       console.log("[LOGIN] Auth signin successful, fetching user role...");
 
-      // Get user role and redirect accordingly
+      // Step 2: Fetch user role from our API to determine dashboard redirect
       const roleResponse = await fetch("/api/auth/user-role");
       const roleData = await roleResponse.json();
 
       console.log("[LOGIN] Role data received:", roleData);
 
+      // Handle role fetch errors
       if (!roleResponse.ok) {
         console.error("[LOGIN] Failed to fetch role:", roleData.error);
         toast.error("Failed to load user profile. Please try again.");
@@ -56,16 +70,20 @@ export default function Auth() {
         return;
       }
 
+      // Step 3: Get role and redirect path from response
       const { role, redirect } = roleData;
       console.log("[LOGIN] User role:", role, "Redirecting to:", redirect);
 
+      // Show success message with user role
       toast.success(`Welcome back! You are logged in as ${role}`);
       
-      // Redirect to role-specific dashboard
+      // Step 4: Redirect to role-specific dashboard after short delay
       setTimeout(() => {
         router.push(redirect);
       }, 500);
+      
     } catch (error: unknown) {
+      // Handle any unexpected errors
       console.error("[LOGIN] Unexpected error:", error);
       toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
       setLoading(false);
@@ -74,19 +92,25 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4 relative overflow-hidden">
-      {/* Animated Background Elements */}
+      {/* Animated Background Elements - Decorative circles with animations */}
       <div className="absolute inset-0 overflow-hidden">
+        {/* Top-right animated circle */}
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+        
+        {/* Bottom-left animated circle with delay */}
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
+        
+        {/* Center animated circle with longer delay */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-2000"></div>
       </div>
 
-      {/* Main Card */}
+      {/* Main Card Container */}
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20 transform transition-all duration-500 hover:scale-[1.02]">
           
-          {/* Logo and Title */}
+          {/* Logo and Header Section */}
           <div className="flex flex-col items-center gap-3 mb-8">
+            {/* Circular logo with gradient border and hover effect */}
             <Link href="/" className="relative h-16 w-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 p-0.5 transition-transform hover:scale-110 duration-300">
               <div className="relative h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                 <Image 
@@ -99,20 +123,23 @@ export default function Auth() {
               </div>
             </Link>
             
+            {/* Gradient text for brand name */}
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
               GoGodam
             </h1>
             
+            {/* Subtitle text */}
             <p className="text-gray-500 text-sm">
               Welcome back! Please sign in to your account
             </p>
           </div>
 
-          {/* Form */}
+          {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
+            {/* Email Input Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                {/* Email icon */}
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
@@ -128,9 +155,10 @@ export default function Auth() {
               />
             </div>
 
-            {/* Password Field */}
+            {/* Password Input Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                {/* Password icon */}
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -147,6 +175,7 @@ export default function Auth() {
               />
             </div>
 
+            {/* Forgot Password Link */}
             <div className="text-right">
               <button
                 type="button"
@@ -157,12 +186,14 @@ export default function Auth() {
               </button>
             </div>
 
+            {/* Submit Button - Sign In */}
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl mt-4"
               disabled={loading}
             >
               {loading ? (
+                // Loading spinner state
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -176,7 +207,7 @@ export default function Auth() {
             </Button>
           </form>
 
-          {/* Divider */}
+          {/* Divider with "or" text */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
@@ -186,13 +217,15 @@ export default function Auth() {
             </div>
           </div>
 
-          {/* Social Login Buttons */}
+          {/* Social Login Buttons Section */}
           <div className="space-y-3">
+            {/* Google Sign In Button - Coming Soon */}
             <button
               type="button"
               className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-300 group"
               onClick={() => toast.info("Google sign in coming soon!")}
             >
+              {/* Google Icon SVG */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -203,6 +236,7 @@ export default function Auth() {
             </button>
           </div>
 
+          {/* Sign Up Link - For users without an account */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don&apos;t have an account?
@@ -212,7 +246,7 @@ export default function Auth() {
             </p>
           </div>
 
-          {/* Footer Note */}
+          {/* Footer Note - Terms and Privacy Policy */}
           <p className="text-center text-xs text-gray-500 mt-6">
             By continuing, you agree to our Terms of Service and Privacy Policy
           </p>

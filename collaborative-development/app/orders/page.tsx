@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "./orders.css";
 
+// TypeScript Interfaces for type safety
 interface Order {
   id: string; 
   product_name: string;
@@ -30,23 +31,32 @@ interface Product {
   } | null;
 }
 
+/**
+ * Helper function to extract category name from product object
+ * Handles both array and single object category structures
+ */
 function getCategoryName(product: Product): string {
   if (Array.isArray(product.categories)) return product.categories[0]?.name || "";
   return product.categories?.name || "";
 }
 
 export default function OrdersPage() {
+  // Supabase client instance for database operations
   const supabase = createClient();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  
+  // UI State Management
+  const [searchTerm, setSearchTerm] = useState(""); // Search filter for orders
+  const [orders, setOrders] = useState<Order[]>([]); // List of orders from database
+  const [products, setProducts] = useState<Product[]>([]); // List of products for dropdown
+  const [loading, setLoading] = useState(true); // Loading state for orders
+  const [loadingProducts, setLoadingProducts] = useState(false); // Loading state for products
 
+  // View Management (list vs form view)
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
   
+  // Form data state for creating/editing orders
   const [formData, setFormData] = useState({
     product_name: "",
     supplier_name: "",
@@ -54,9 +64,13 @@ export default function OrdersPage() {
     category: "",
     total_price: "",
     quantity: "",
-    selected_product_id: "", // Track selected product ID
+    selected_product_id: "", // Track selected product ID for stock management
   });
 
+  /**
+   * Fetch all orders from Supabase database
+   * Orders are sorted by creation date (newest first)
+   */
   const fetchOrders = useCallback(async () => {
     const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
     if (error) {
@@ -67,6 +81,11 @@ export default function OrdersPage() {
     setLoading(false);
   }, [supabase]);
 
+  /**
+   * Fetch all products from Supabase database
+   * Includes related category information via foreign key
+   * Products are sorted alphabetically by name
+   */
   const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
     const { data, error } = await supabase
@@ -81,6 +100,10 @@ export default function OrdersPage() {
     setLoadingProducts(false);
   }, [supabase]);
 
+  /**
+   * Initial data load when component mounts
+   * Uses Promise.resolve() to ensure async operations don't block rendering
+   */
   useEffect(() => {
     Promise.resolve().then(() => {
       fetchOrders();
@@ -88,6 +111,10 @@ export default function OrdersPage() {
     });
   }, [fetchOrders, fetchProducts]);
 
+  /**
+   * Filter orders based on search term
+   * Searches across multiple fields: product name, supplier, product ID, and category
+   */
   const filteredOrders = orders.filter((order) =>
     (order.product_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (order.supplier_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -95,6 +122,10 @@ export default function OrdersPage() {
     (order.category || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  /**
+   * Switch to form view for adding a new order
+   * Reset all form fields to empty/default values
+   */
   const handleAddClick = () => {
     setFormMode("add");
     setFormData({ 
@@ -109,6 +140,11 @@ export default function OrdersPage() {
     setViewMode("form");
   };
 
+  /**
+   * Handle product selection from dropdown
+   * Auto-populates product details (name, category, price)
+   * Does NOT auto-fill quantity - user specifies how many they want
+   */
   const handleProductSelect = (productId: string) => {
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
@@ -118,11 +154,15 @@ export default function OrdersPage() {
         product_name: selectedProduct.name,
         category: getCategoryName(selectedProduct),
         total_price: selectedProduct.price.toString(),
-        // Don't auto-fill quantity - let user specify how many they want to order
+        // Quantity intentionally left empty - user must specify order quantity
       });
     }
   };
 
+  /**
+   * Switch to form view for editing an existing order
+   * Populate form with existing order data
+   */
   const handleEditClick = (order: Order) => {
     setFormMode("edit");
     setEditingId(order.id);
@@ -138,21 +178,29 @@ export default function OrdersPage() {
     setViewMode("form");
   };
 
+  /**
+   * Cancel form editing and return to list view
+   */
   const handleCancelClick = () => {
     setViewMode("list");
   };
 
+  /**
+   * Save order to database (create new or update existing)
+   * Handles validation, stock management, and database operations
+   */
   const handleSaveClick = async () => {
+    // Validate required fields
     if (!formData.product_name || !formData.category) {
       toast.error("Please fill in the required fields (Product and Category).");
       return;
     }
 
-    // Parse values
+    // Parse and validate numeric values
     const total_price = parseFloat(formData.total_price);
     const quantity = parseInt(formData.quantity, 10);
 
-    // Validate non-negative values
+    // Price validation - must be a valid number and non-negative
     if (isNaN(total_price)) {
       toast.error("Please enter a valid price.");
       return;
@@ -163,6 +211,7 @@ export default function OrdersPage() {
       return;
     }
 
+    // Quantity validation - must be a valid number and non-negative
     if (isNaN(quantity)) {
       toast.error("Please enter a valid quantity.");
       return;
@@ -173,7 +222,7 @@ export default function OrdersPage() {
       return;
     }
 
-    // For new orders, check if we have enough stock
+    // Stock validation for new orders - check if enough stock available
     if (formMode === "add" && formData.selected_product_id) {
       const selectedProduct = products.find(p => p.id === formData.selected_product_id);
       if (selectedProduct && quantity > selectedProduct.stock) {
@@ -182,6 +231,7 @@ export default function OrdersPage() {
       }
     }
 
+    // Prepare order payload for database
     const payload = {
       product_name: formData.product_name,
       supplier_name: formData.supplier_name || "Unknown",
@@ -192,13 +242,15 @@ export default function OrdersPage() {
       total_amount: (total_price || 0) * (quantity || 0),
     };
 
+    // Handle Add New Order
     if (formMode === "add") {
       const insertPayload = {
         ...payload,
-        order_number: `ORD-${Date.now()}`,
+        order_number: `ORD-${Date.now()}`, // Generate unique order number using timestamp
         status: "pending",
       };
-      // First, create the order
+      
+      // Step 1: Create the order in database
       const { data: orderData, error: orderError } = await supabase.from("orders").insert([insertPayload]).select();
       
       if (orderError) {
@@ -206,7 +258,7 @@ export default function OrdersPage() {
         return;
       }
 
-      // Then, update the product stock if a product was selected
+      // Step 2: Update product stock if a product was selected
       if (formData.selected_product_id && orderData) {
         const selectedProduct = products.find(p => p.id === formData.selected_product_id);
         if (selectedProduct) {
@@ -220,8 +272,7 @@ export default function OrdersPage() {
             toast.error("Order added but failed to update stock: " + updateError.message);
           } else {
             toast.success("Order added and stock updated successfully!");
-            // Refresh products list
-            fetchProducts();
+            fetchProducts(); // Refresh products list to show updated stock
           }
         } else {
           toast.success("Order added successfully!");
@@ -229,11 +280,14 @@ export default function OrdersPage() {
       } else {
         toast.success("Order added successfully!");
       }
-    } else if (formMode === "edit" && editingId !== null) {
-      // For edit, we need to handle stock changes carefully
+    } 
+    // Handle Edit Existing Order
+    else if (formMode === "edit" && editingId !== null) {
+      // Calculate stock difference for edit operations
       const originalOrder = orders.find(o => o.id === editingId);
       const quantityDifference = quantity - (originalOrder?.quantity || 0);
       
+      // Update order in database
       const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
       if (error) {
         toast.error("Failed to update order: " + error.message);
@@ -245,6 +299,7 @@ export default function OrdersPage() {
         const selectedProduct = products.find(p => p.id === formData.selected_product_id);
         if (selectedProduct) {
           const newStock = selectedProduct.stock - quantityDifference;
+          // Prevent negative stock
           if (newStock < 0) {
             toast.error("Cannot update order: Insufficient stock for the additional quantity!");
             return;
@@ -258,7 +313,7 @@ export default function OrdersPage() {
             toast.error("Order updated but failed to update stock: " + updateError.message);
           } else {
             toast.success("Order updated and stock adjusted successfully!");
-            fetchProducts();
+            fetchProducts(); // Refresh products list
           }
         }
       } else {
@@ -266,21 +321,28 @@ export default function OrdersPage() {
       }
     }
 
+    // Refresh orders list and return to list view
     setLoading(true);
     fetchOrders();
     setViewMode("list");
   };
 
+  /**
+   * Delete an order from database
+   * Restores product stock when order is deleted
+   * Shows confirmation dialog before deletion
+   */
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to permanently delete this order?")) {
-      // Get the order before deleting to restore stock
+      // Get order details before deletion to restore stock
       const orderToDelete = orders.find(o => o.id === id);
       
+      // Delete the order
       const { error } = await supabase.from("orders").delete().eq("id", id);
       if (error) {
         toast.error("Failed to delete order: " + error.message);
       } else {
-        // Restore stock if we can find the product by name
+        // Restore stock by finding matching product by name
         if (orderToDelete) {
           const relatedProduct = products.find(p => p.name === orderToDelete.product_name);
           if (relatedProduct) {
@@ -289,29 +351,34 @@ export default function OrdersPage() {
               .from("products")
               .update({ stock: restoredStock })
               .eq("id", relatedProduct.id);
-            fetchProducts();
+            fetchProducts(); // Refresh products list
           }
         }
         toast.success("Order deleted and stock restored.");
         setLoading(true);
-        fetchOrders();
+        fetchOrders(); // Refresh orders list
       }
     }
   };
 
+  // Dynamic header title based on current view and mode
   const headerTitle = viewMode === "list" ? "Orders" : formMode === "add" ? "New Order" : "Edit Order";
 
   return (
     <AppLayout title={headerTitle}>
       <div className="orders-content">
         
+        {/* LIST VIEW - Display all orders in a table */}
         {viewMode === "list" && (
           <>
+            {/* Header Section */}
             <div className="orders-header-row">
               <h2 className="orders-title">All Orders</h2>
             </div>
 
+            {/* Toolbar with search and add button */}
             <div className="orders-toolbar">
+              {/* Search Input */}
               <div className="orders-search-wrapper">
                 <Search size={16} className="orders-search-icon" />
                 <input
@@ -322,6 +389,7 @@ export default function OrdersPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              {/* Add New Order Button */}
               <div className="orders-toolbar-actions">
                 <button className="orders-add-btn" onClick={handleAddClick}>
                   <Plus size={16} />
@@ -330,6 +398,7 @@ export default function OrdersPage() {
               </div>
             </div>
 
+            {/* Orders Table */}
             <div className="orders-table-card">
               <div className="orders-table-wrapper">
                 <table className="orders-table">
@@ -348,15 +417,18 @@ export default function OrdersPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Loading State */}
                     {loading ? (
                       <tr>
                         <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>Loading orders from database...</td>
                       </tr>
                     ) : filteredOrders.length === 0 ? (
+                      /* Empty State - No orders found */
                       <tr>
                         <td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>No orders found</td>
                       </tr>
                     ) : (
+                      /* Render each order as a table row */
                       filteredOrders.map((order) => (
                         <tr key={order.id}>
                           <td>
@@ -368,11 +440,13 @@ export default function OrdersPage() {
                           <td>{order.category}</td>
                           <td>${Number(order.total_price).toLocaleString()}</td>
                           <td>
+                            {/* Visual indicator for quantity levels */}
                             <span className={order.quantity > 50 ? "orders-quantity-high" : "orders-quantity-low"}>
                               {order.quantity}
                             </span>
                           </td>
                           <td>
+                            {/* Action Buttons - Edit and Delete */}
                             <div className="orders-action-buttons">
                               <button className="orders-action-btn" onClick={() => handleEditClick(order)}>
                                 <Pencil size={16} />
@@ -392,11 +466,14 @@ export default function OrdersPage() {
           </>
         )}
 
+        {/* FORM VIEW - Add/Edit Order Form */}
         {viewMode === "form" && (
           <div className="orders-form-container">
+            {/* Form Breadcrumb/Title */}
             <h3 className="orders-form-breadcrumb">Order Details</h3>
 
             <div className="orders-form-card">
+              {/* Row 1: Product Selection */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Select Product *</label>
@@ -404,7 +481,7 @@ export default function OrdersPage() {
                     className="orders-form-input"
                     value={formData.selected_product_id}
                     onChange={(e) => handleProductSelect(e.target.value)}
-                    disabled={formMode === "edit"}
+                    disabled={formMode === "edit"} // Product cannot be changed in edit mode
                   >
                     <option value="">-- Select a product --</option>
                     {loadingProducts ? (
@@ -417,6 +494,7 @@ export default function OrdersPage() {
                       ))
                     )}
                   </select>
+                  {/* Edit mode note */}
                   {formMode === "edit" && (
                     <small style={{ color: "#666", marginTop: "4px", display: "block" }}>
                       Product cannot be changed in edit mode
@@ -431,11 +509,12 @@ export default function OrdersPage() {
                     placeholder="Enter product name"
                     value={formData.product_name}
                     onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
-                    readOnly={!!formData.selected_product_id}
+                    readOnly={!!formData.selected_product_id} // Read-only when product is selected from dropdown
                   />
                 </div>
               </div>
 
+              {/* Row 2: Supplier and Product ID */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Suppliers</label>
@@ -459,6 +538,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
+              {/* Row 3: Category and Price */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Category *</label>
@@ -468,7 +548,7 @@ export default function OrdersPage() {
                     placeholder="Category"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    readOnly={!!formData.selected_product_id}
+                    readOnly={!!formData.selected_product_id} // Read-only when product is selected
                   />
                 </div>
                 <div className="orders-form-group">
@@ -482,15 +562,17 @@ export default function OrdersPage() {
                     value={formData.total_price}
                     onChange={(e) => {
                       const value = e.target.value;
+                      // Only allow non-negative values
                       if (value === "" || parseFloat(value) >= 0) {
                         setFormData({ ...formData, total_price: value });
                       }
                     }}
-                    readOnly={!!formData.selected_product_id}
+                    readOnly={!!formData.selected_product_id} // Read-only when product is selected
                   />
                 </div>
               </div>
 
+              {/* Row 4: Quantity */}
               <div className="orders-form-row">
                 <div className="orders-form-group">
                   <label className="orders-form-label">Quantity</label>
@@ -503,6 +585,7 @@ export default function OrdersPage() {
                     value={formData.quantity}
                     onChange={(e) => {
                       const value = e.target.value;
+                      // Only allow non-negative values
                       if (value === "" || parseInt(value, 10) >= 0) {
                         setFormData({ ...formData, quantity: value });
                       }
@@ -511,6 +594,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
+              {/* Form Action Buttons */}
               <div className="orders-form-actions">
                 <button className="orders-btn orders-btn-secondary" onClick={handleCancelClick}>
                   Cancel
