@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, ArrowLeft, Package, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import "./categories.css";
 
@@ -11,7 +11,15 @@ interface Category {
   id: string;
   name: string;
   description: string | null;
-  is_active: boolean;
+  created_at: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  category_id: string;
   created_at: string;
 }
 
@@ -19,19 +27,28 @@ export default function CategoriesPage() {
   const supabase = createClient();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Selected category and its products
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
-  const [viewMode, setViewMode] = useState<"list" | "form">("list");
+  // Form states
+  const [viewMode, setViewMode] = useState<"list" | "form" | "products">("list");
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    is_active: true,
   });
 
   const fetchCategories = useCallback(async () => {
-    const { data, error } = await supabase.from("categories").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
     if (error) {
       toast.error("Failed to load categories: " + error.message);
     } else {
@@ -40,13 +57,30 @@ export default function CategoriesPage() {
     setLoading(false);
   }, [supabase]);
 
+  const fetchProductsByCategory = useCallback(async (categoryId: string) => {
+    setLoadingProducts(true);
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("category_id", categoryId)
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      toast.error("Failed to load products: " + error.message);
+      setCategoryProducts([]);
+    } else {
+      setCategoryProducts(data || []);
+    }
+    setLoadingProducts(false);
+  }, [supabase]);
+
   useEffect(() => {
     Promise.resolve().then(() => fetchCategories());
   }, [fetchCategories]);
 
   const handleAddClick = () => {
     setFormMode("add");
-    setFormData({ name: "", description: "", is_active: true });
+    setFormData({ name: "", description: "" });
     setViewMode("form");
   };
 
@@ -56,7 +90,6 @@ export default function CategoriesPage() {
     setFormData({
       name: category.name,
       description: category.description || "",
-      is_active: category.is_active ?? true,
     });
     setViewMode("form");
   };
@@ -74,7 +107,6 @@ export default function CategoriesPage() {
     const payload = {
       name: formData.name,
       description: formData.description || null,
-      is_active: formData.is_active,
     };
 
     if (formMode === "add") {
@@ -111,10 +143,36 @@ export default function CategoriesPage() {
     }
   };
 
+  // Handle category card click - show products in that category
+  const handleCategoryClick = async (category: Category) => {
+    setSelectedCategory(category);
+    await fetchProductsByCategory(category.id);
+    setViewMode("products");
+  };
+
+  // Handle back to categories list
+  const handleBackToList = () => {
+    setSelectedCategory(null);
+    setCategoryProducts([]);
+    setViewMode("list");
+  };
+
+  // Get total products count for a category
+  const getProductCount = async (categoryId: string): Promise<number> => {
+    const { count, error } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("category_id", categoryId);
+    
+    if (error) return 0;
+    return count || 0;
+  };
+
   return (
-    <AppLayout title={viewMode === "list" ? "Categories" : formMode === "add" ? "Add Category" : "Edit Category"}>
+    <AppLayout title={viewMode === "list" ? "Categories" : viewMode === "products" ? `${selectedCategory?.name} Products` : formMode === "add" ? "Add Category" : "Edit Category"}>
       <div className="categories-content">
         
+        {/* LIST VIEW - Categories as Cards */}
         {viewMode === "list" && (
           <>
             <div className="categories-header-row">
@@ -125,60 +183,134 @@ export default function CategoriesPage() {
               </button>
             </div>
 
-            <div className="categories-table-card">
-              <div className="categories-table-wrapper">
-                <table className="categories-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Description</th>
-                      <th>Status</th>
-                      <th>Created On</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                       <tr>
-                         <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>Loading from Supabase...</td>
-                       </tr>
-                    ) : categories.length === 0 ? (
-                       <tr>
-                         <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>No categories found</td>
-                       </tr>
-                    ) : (
-                      categories.map((cat) => (
-                        <tr key={cat.id}>
-                          <td style={{ fontWeight: 600, color: "#000000" }}>{cat.name}</td>
-                          <td style={{ color: "#000000" }}>{cat.description || "N/A"}</td>
-                          <td>
-                            <span className={`category-status-badge ${cat.is_active !== false ? "category-status-active" : "category-status-inactive"}`}>
-                              {cat.is_active !== false ? "Active" : "Inactive"}
-                            </span>
-                          </td>
-                          <td style={{ color: "#000000" }}>
-                            {new Date(cat.created_at).toLocaleDateString()}
-                          </td>
-                          <td>
-                            <div className="action-buttons">
-                              <button className="categories-action-btn" onClick={() => handleEditClick(cat)}>
-                                <Pencil size={16} />
-                              </button>
-                              <button className="categories-action-btn delete" onClick={() => handleDeleteClick(cat.id)}>
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading categories...</p>
               </div>
-            </div>
+            ) : categories.length === 0 ? (
+              <div className="empty-state">
+                <Package size={48} />
+                <p>No categories found</p>
+                <button className="btn btn-primary" onClick={handleAddClick}>
+                  Create your first category
+                </button>
+              </div>
+            ) : (
+              <div className="categories-grid">
+                {categories.map((category) => (
+                  <div 
+                    key={category.id} 
+                    className="category-card"
+                    onClick={() => handleCategoryClick(category)}
+                  >
+                    <div className="category-card-header">
+                      <div className="category-icon">
+                        <Package size={24} />
+                      </div>
+                      <div className="category-actions">
+                        <button 
+                          className="categories-action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(category);
+                          }}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button 
+                          className="categories-action-btn delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(category.id);
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="category-card-body">
+                      <h3 className="category-name">{category.name}</h3>
+                      <p className="category-description">
+                        {category.description || "No description provided"}
+                      </p>
+                    </div>
+                    
+                    <div className="category-card-footer">
+                      <div className="category-stats">
+                        <Package size={14} />
+                        <span>View Products</span>
+                      </div>
+                      <ChevronRight size={16} className="arrow-icon" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
+        {/* PRODUCTS VIEW - Show all products in selected category */}
+        {viewMode === "products" && selectedCategory && (
+          <>
+            <div className="products-header-row">
+              <button className="btn btn-secondary" onClick={handleBackToList}>
+                <ArrowLeft size={18} style={{ marginRight: "8px" }} />
+                Back to Categories
+              </button>
+              <h2 className="products-title">{selectedCategory.name} - Products</h2>
+              <p className="products-subtitle">{categoryProducts.length} products in this category</p>
+            </div>
+
+            {loadingProducts ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading products...</p>
+              </div>
+            ) : categoryProducts.length === 0 ? (
+              <div className="empty-state">
+                <Package size={48} />
+                <p>No products found in this category</p>
+                <p className="empty-subtitle">Add products to {selectedCategory.name} to see them here</p>
+              </div>
+            ) : (
+              <div className="products-grid">
+                {categoryProducts.map((product) => (
+                  <div key={product.id} className="product-card">
+                    <div className="product-card-header">
+                      <h4 className="product-name">{product.name}</h4>
+                      <div className="product-price">Rs. {product.price.toLocaleString()}</div>
+                    </div>
+                    
+                    <div className="product-card-body">
+                      <div className="product-info-row">
+                        <span className="info-label">Stock:</span>
+                        <span className={`info-value ${product.stock <= 10 ? 'stock-low' : 'stock-normal'}`}>
+                          {product.stock} units
+                        </span>
+                      </div>
+                      <div className="product-info-row">
+                        <span className="info-label">Added:</span>
+                        <span className="info-value">
+                          {new Date(product.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="product-card-footer">
+                      <div className="product-id-badge">
+                        ID: {product.id.slice(0, 8)}...
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* FORM VIEW - Add/Edit Category */}
         {viewMode === "form" && (
           <div className="category-form-container">
             <h3 className="form-breadcrumb">Category details</h3>
@@ -204,19 +336,6 @@ export default function CategoriesPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
-              </div>
-
-              <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "10px" }}>
-                <input
-                  type="checkbox"
-                  id="category-active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                />
-                <label htmlFor="category-active" className="form-label" style={{ marginBottom: 0, cursor: "pointer" }}>
-                  Active Status (Visible in inventory manager)
-                </label>
               </div>
 
               <div className="form-actions-row">
