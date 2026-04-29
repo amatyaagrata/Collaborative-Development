@@ -15,7 +15,7 @@ function getRoleRedirect(role: string) {
     case "admin":
       return "/admin/dashboard";
     case "supplier":
-      return "/suppliers/dashboard";
+      return "/suppliers/orders";
     case "transporter":
       return "/driver/dashboard";
     default:

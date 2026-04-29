@@ -53,6 +53,15 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
+        // Check user role from metadata
+        const role = user.user_metadata?.role;
+        
+        // Redirect suppliers to their orders page
+        if (role === "supplier") {
+          router.push("/suppliers/orders");
+          return;
+        }
+
         setUserData({
           email: user.email || "user@example.com",
           fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || "User",
@@ -63,7 +72,7 @@ export default function Dashboard() {
 
     }
     loadDashboard();
-  }, [supabase]);
+  }, [supabase, router]);
 
   const stats = useMemo(() => {
     const inventoryValue = products.reduce(

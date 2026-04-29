@@ -1,280 +1,430 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const FEATURES = [
+  {
+    title: "Inventory control",
+    description:
+      "Track stock in real time, set reorder points, and prevent stockouts with simple, reliable workflows.",
+    iconSrc: "/assets/yellow_unbox.svg",
+  },
+  {
+    title: "Supplier & purchasing",
+    description:
+      "Manage suppliers, create purchase flows, and keep lead times visible so teams can plan with confidence.",
+    iconSrc: "/assets/blue_truck.svg",
+  },
+  {
+    title: "Delivery & tracking",
+    description:
+      "Coordinate deliveries and status updates so operations, suppliers, and drivers stay aligned end-to-end.",
+    iconSrc: "/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png",
+  },
+] as const;
+
+const STEPS = [
+  {
+    title: "Create an organization",
+    description: "Set up your team and roles in minutes.",
+  },
+  {
+    title: "Add products & categories",
+    description: "Define items, units, and minimum stock levels.",
+  },
+  {
+    title: "Start ordering",
+    description: "Place orders, update status, and track delivery progress.",
+  },
+] as const;
+
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden w-full bg-white">
-      {/* Navbar */}
-      <nav className="flex flex-row items-center justify-between px-6 md:px-12 py-8 max-w-7xl mx-auto w-full gap-4">
-        <Link href="/" className="flex items-center gap-4 flex-shrink-0 group">
-          <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform group-hover:scale-110 duration-300">
-            <Image
-              src="/assets/logo.png"
-              alt="GoGodam Logo"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
-          <span className="text-2xl md:text-3xl font-bold text-primary tracking-tighter">GoGodam</span>
-        </Link>
-        <div className="flex items-center gap-4 md:gap-10 font-bold text-sm md:text-lg whitespace-nowrap">
-          <Link href="/login" className="hover:text-primary transition-colors py-2 px-1">Login</Link>
-          <Link href="/signup" className="hover:text-primary transition-colors py-2 px-1">Signup</Link>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center pt-12 md:pt-24 pb-20 md:pb-32 text-center px-6 relative w-full overflow-hidden">
-        <h1 className="text-4xl sm:text-7xl md:text-8xl lg:text-[100px] font-bold leading-[0.95] md:leading-[0.9] tracking-tighter mb-8 md:mb-10 max-w-5xl break-words">
-          <span className="text-primary block mb-1 md:mb-2">Inventory</span>
-          <span className="text-foreground">System&Logistics</span>
-        </h1>
-        <div className="relative z-10">
-          <Link
-            href="/signup"
-            className="bg-primary hover:bg-[#4d00cc] text-white px-8 md:px-12 py-4 md:py-6 rounded-full font-bold text-base md:text-xl shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 inline-block"
-          >
-            Start now - it&apos;s free
+    <div className="flex flex-col min-h-screen overflow-x-hidden w-full bg-white text-foreground">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-zinc-100">
+        <nav className="h-[72px] md:h-20 flex flex-row items-center justify-between px-6 md:px-12 max-w-7xl mx-auto w-full gap-4">
+          <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
+            <div className="relative w-11 h-11 md:w-12 md:h-12 transition-transform group-hover:scale-105 duration-300">
+              <Image
+                src="/assets/logo.png"
+                alt="GoGodam Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <span className="text-xl md:text-2xl font-bold text-primary tracking-tighter leading-none">
+              GoGodam
+            </span>
           </Link>
-
-          <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 z-0 hidden md:block animate-bounce opacity-80">
-            <Image
-              src="/assets/grey_arrow_md_04.svg"
-              alt="Arrow pointing down"
-              width={40} height={90}
-            />
+          <div className="flex items-center gap-1.5 md:gap-2.5 font-semibold text-sm md:text-base whitespace-nowrap">
+            <Link
+              href="/login"
+              className="hover:text-primary transition-colors py-2.5 px-3.5 rounded-full"
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="bg-primary hover:bg-[#4d00cc] text-white py-3 px-5 md:px-6 rounded-full transition-colors shadow-sm shadow-primary/20 leading-none"
+            >
+              Sign up
+            </Link>
           </div>
-        </div>
+        </nav>
+      </header>
 
-        {/* Background Decorative Element */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full -z-10 opacity-5 pointer-events-none">
-          <div className="w-[120%] h-[120%] bg-primary rounded-full blur-[120px] -translate-x-10"></div>
-        </div>
-      </section>
+      <main className="flex-1">
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-primary/10 blur-[120px] rounded-full" />
+            <div className="absolute -bottom-56 right-0 w-[600px] h-[600px] bg-[#1e004b]/10 blur-[120px] rounded-full" />
+          </div>
 
-      {/* Seamless Continuity Section */}
-      <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col items-center">
-        <div className="flex flex-col items-center text-center mb-16 md:mb-28">
-          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1.1] max-w-3xl mb-6 md:mb-10">
-            <span className="text-primary">Seamless</span> Continuity
-          </h2>
-          <p className="text-base md:text-xl text-zinc-600 max-w-4xl leading-relaxed font-medium px-2">
-            Keep your shelves stocked and your production lines moving with GoGodam&apos;s intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
-          </p>
-        </div>
+          <div className="max-w-7xl mx-auto px-6 md:px-12 pt-10 md:pt-16 pb-12 md:pb-18">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start lg:items-center">
+              <div className="lg:col-span-7">
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/60 px-3 py-1 text-xs md:text-sm font-semibold text-zinc-700">
+                  <span className="text-primary">New</span>
+                  <span className="opacity-80">
+                    Role-based dashboards + real-time updates
+                  </span>
+                </div>
 
-        {/* Illustrations Grid */}
-        <div className="bg-[#f8f9fb] border border-zinc-100/50 rounded-[40px] md:rounded-[64px] p-10 md:p-20 flex flex-col md:flex-row items-center justify-center gap-16 md:gap-6 relative text-center w-full shadow-sm">
-          <div className="flex flex-col items-center space-y-6 md:w-1/3 z-10 group">
-            <div className="h-32 md:h-40 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
-              <Image src="/assets/blue_truck.svg" alt="Replenishment" width={110} height={110} className="w-auto h-24 md:h-28 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+                <h1 className="mt-6 text-4xl sm:text-6xl md:text-7xl font-bold tracking-tighter leading-[1.02]">
+                  Inventory, suppliers, and deliveries—
+                  <span className="text-primary"> in one flow</span>.
+                </h1>
+                <p className="mt-5 text-base md:text-xl text-zinc-600 leading-relaxed max-w-2xl">
+                  GoGodam helps teams keep stock accurate, purchasing predictable,
+                  and deliveries visible. Built for admins, suppliers,
+                  transporters, and inventory managers.
+                </p>
+
+                <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <Link
+                    href="/signup"
+                    className="bg-primary hover:bg-[#4d00cc] text-white px-6 md:px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.99] text-center"
+                  >
+                    Create your account
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="px-6 md:px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg border border-zinc-200 hover:border-primary/50 hover:text-primary transition-colors text-center bg-white/70"
+                  >
+                    Sign in
+                  </Link>
+                </div>
+
+                <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  <div className="rounded-2xl border border-zinc-100 bg-white/60 px-4 py-3">
+                    <p className="font-semibold">Fast setup</p>
+                    <p className="text-zinc-600 mt-0.5">Start in minutes</p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-100 bg-white/60 px-4 py-3">
+                    <p className="font-semibold">Secure by role</p>
+                    <p className="text-zinc-600 mt-0.5">RLS policies</p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-100 bg-white/60 px-4 py-3">
+                    <p className="font-semibold">Real-time</p>
+                    <p className="text-zinc-600 mt-0.5">Live status updates</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-5">
+                <div className="rounded-[32px] border border-zinc-100 bg-white shadow-sm overflow-hidden">
+                  <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-300" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-300" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-300" />
+                    </div>
+                    <p className="text-xs font-semibold text-zinc-500">Live overview</p>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-2xl border border-zinc-100 bg-[#f8f9fb] p-4">
+                        <p className="text-xs font-semibold text-zinc-500">Stock alerts</p>
+                        <p className="mt-1 text-2xl font-bold tracking-tight">12</p>
+                        <p className="mt-1 text-xs text-zinc-600">Items below minimum</p>
+                      </div>
+                      <div className="rounded-2xl border border-zinc-100 bg-[#f8f9fb] p-4">
+                        <p className="text-xs font-semibold text-zinc-500">Deliveries</p>
+                        <p className="mt-1 text-2xl font-bold tracking-tight">7</p>
+                        <p className="mt-1 text-xs text-zinc-600">In transit today</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-zinc-100 overflow-hidden">
+                      <div className="px-4 py-3 bg-white flex items-center justify-between">
+                        <p className="text-sm font-bold">Recent activity</p>
+                        <span className="text-xs font-semibold text-primary">Real-time</span>
+                      </div>
+                      <div className="divide-y divide-zinc-100">
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          <div className="relative w-9 h-9 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center">
+                            <Image src="/assets/yellow_unbox.svg" alt="" width={22} height={22} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">Purchase order approved</p>
+                            <p className="text-xs text-zinc-600">Warehouse • 2m ago</p>
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          <div className="relative w-9 h-9 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center">
+                            <Image src="/assets/blue_truck.svg" alt="" width={22} height={22} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">Driver assigned</p>
+                            <p className="text-xs text-zinc-600">Transport • 6m ago</p>
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          <div className="relative w-9 h-9 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center">
+                            <Image src="/assets/logo.png" alt="" width={22} height={22} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">New supplier invited</p>
+                            <p className="text-xs text-zinc-600">Admin • 14m ago</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-zinc-500 text-center lg:text-left">
+                  Preview UI for illustration (data shown is sample).
+                </p>
+              </div>
             </div>
-            <p className="font-serif font-bold text-2xl md:text-3xl text-foreground">Replenishment</p>
-          </div>
 
-          <div className="hidden lg:block w-6 relative z-0 flex-shrink-0 opacity-80 -rotate-90">
-            <Image src="/assets/arrow_dot_02.svg" alt="Path arrow" width={20} height={60} className="w-full h-auto" />
-          </div>
-
-          <div className="flex flex-col items-center space-y-6 md:w-1/3 z-10 group">
-            <div className="h-40 md:h-48 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
-              <Image src="/assets/yellow_shield_2.svg" alt="Quality Control" width={110} height={110} className="w-auto h-28 md:h-32 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+            <div className="mt-12 md:mt-16 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {FEATURES.map((feature) => (
+                <div
+                  key={feature.title}
+                  className="rounded-3xl border border-zinc-100 bg-white shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-12 h-12 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center">
+                      <Image
+                        src={feature.iconSrc}
+                        alt=""
+                        width={32}
+                        height={32}
+                        className="object-contain"
+                        sizes="32px"
+                      />
+                    </div>
+                    <h3 className="text-xl md:text-2xl font-bold tracking-tight">
+                      {feature.title}
+                    </h3>
+                  </div>
+                  <p className="mt-3 text-zinc-600 leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              ))}
             </div>
-            <p className="font-serif font-bold text-2xl md:text-3xl text-foreground">Quality Control</p>
           </div>
+        </section>
 
-          <div className="hidden lg:block w-6 relative z-0 flex-shrink-0 opacity-80 -rotate-90">
-            <Image src="/assets/arrow_dot_02.svg" alt="Path arrow" width={20} height={60} className="w-full h-auto" />
-          </div>
-
-          <div className="flex flex-col items-center space-y-6 md:w-1/3 z-10 group">
-            <div className="h-32 md:h-40 flex items-center justify-center bg-white p-6 rounded-[32px] shadow-sm group-hover:shadow-md transition-shadow">
-              <Image src="/assets/hand-truch.svg" alt="Storage" width={110} height={110} className="w-auto h-24 md:h-28 object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+        <section className="py-16 md:py-24">
+          <div className="max-w-7xl mx-auto px-6 md:px-12">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+              <div className="max-w-2xl">
+                <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tighter leading-tight">
+                  A workflow your whole operation can follow.
+                </h2>
+                <p className="mt-4 text-zinc-600 text-base md:text-lg leading-relaxed">
+                  From supplier to warehouse to delivery, each role sees exactly
+                  what they need—nothing more.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-zinc-100 bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold text-zinc-500">Built with</p>
+                  <p className="font-bold tracking-tight">Next.js + Supabase</p>
+                </div>
+                <div className="rounded-2xl border border-zinc-100 bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold text-zinc-500">Security</p>
+                  <p className="font-bold tracking-tight">RLS by default</p>
+                </div>
+              </div>
             </div>
-            <p className="font-serif font-bold text-2xl md:text-3xl text-foreground">Storage</p>
-          </div>
-        </div>
-      </section>
 
-      {/* Optimize Section */}
-      <section className="py-12 md:py-24 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col lg:flex-row items-center gap-12 md:gap-20 overflow-hidden">
-        <div className="flex-1 space-y-6 md:space-y-10 text-center lg:text-left relative z-10 lg:pr-10">
-          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter leading-[1.1] max-w-xl mx-auto lg:mx-0">
-            <span className="text-primary block mb-2">Optimize your</span>
-            <span className="text-[#1e004b] block">warehouse</span>
-          </h2>
-          <p className="text-base md:text-xl text-[#1e004b] leading-relaxed font-medium max-w-2xl mx-auto lg:mx-0">
-            Keep your shelves stocked and your production lines moving with GoGodam&apos;s intelligent replenishment engine. Utilize advanced strategies such as minimum-maximum thresholds, Make-to-Order (MTO) workflows, or a Master Production Schedule to eliminate stockouts entirely.
-          </p>
-          <div className="absolute -top-4 right-0 lg:-right-4 opacity-30 hidden lg:block select-none pointer-events-none transform -scale-x-100 rotate-[-10deg]">
-            <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} />
-          </div>
-        </div>
-
-        <div className="flex-1 relative w-full px-0 sm:px-6 group lg:mt-0 xl:pl-4">
-          <div className="bg-[#f0f2f5] rounded-2xl md:rounded-[32px] aspect-video flex-grow flex items-center justify-center w-full relative shadow-inner border border-zinc-100 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <span className="text-3xl md:text-5xl italic font-serif opacity-30 group-hover:opacity-60 transition-all text-foreground group-hover:scale-110 duration-700">screen shot</span>
-          </div>
-
-          <div className="absolute -bottom-8 right-2 md:-bottom-12 md:right-0 w-24 h-24 md:w-32 md:h-32 z-20">
-            <Image src="/assets/yellow_unbox.svg" alt="Unboxing Icon" fill className="object-contain drop-shadow-2xl group-hover:-translate-y-4 group-hover:-translate-x-4 transition-transform duration-700 delay-100" />
-          </div>
-        </div>
-      </section>
-
-      {/* One Need Section */}
-      <section className="py-16 md:py-32 px-6 md:px-12 max-w-7xl mx-auto w-full text-center">
-        <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-[80px] font-bold tracking-tighter mb-16 md:mb-24 leading-tight">
-          <span className="text-primary">One</span> <span className="text-[#1e004b]">need, one site.</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-12 lg:gap-20">
-          <div className="flex flex-col items-center space-y-10 group">
-            <div className="flex items-center justify-center">
-              <Image
-                src="/assets/Gemini_Generated_Image_3he0nh3he0nh3he0-Photoroom.png"
-                alt="Sales"
-                width={280}
-                height={280}
-                className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
-                sizes="(max-width: 768px) 220px, 280px"
-              />
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {STEPS.map((step, index) => (
+                <div
+                  key={step.title}
+                  className="rounded-3xl border border-zinc-100 bg-white p-6 md:p-7 shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-primary text-white flex items-center justify-center font-bold">
+                      {index + 1}
+                    </div>
+                    <h3 className="font-bold text-lg md:text-xl">{step.title}</h3>
+                  </div>
+                  <p className="mt-3 text-zinc-600 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              ))}
             </div>
-            <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Sales</p>
           </div>
-          <div className="flex flex-col items-center space-y-10 group">
-            <div className="flex items-center justify-center">
-              <Image
-                src="/assets/Gemini_Generated_Image_g19kejg19kejg19k-Photoroom.png"
-                alt="Tracking"
-                width={280}
-                height={280}
-                className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
-                sizes="(max-width: 768px) 220px, 280px"
-              />
+        </section>
+
+        <section className="py-16 md:py-24 bg-[#f8f9fb] border-y border-zinc-100">
+          <div className="max-w-7xl mx-auto px-6 md:px-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+              <div>
+                <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tighter leading-tight">
+                  Built for every role.
+                </h2>
+                <p className="mt-4 text-zinc-600 text-base md:text-lg leading-relaxed">
+                  Admins manage users and data. Suppliers confirm orders.
+                  Transporters update delivery status. Inventory managers keep
+                  stock accurate.
+                </p>
+                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/signup"
+                    className="bg-[#1e004b] hover:bg-[#150035] text-white px-6 py-3 rounded-full font-bold transition-colors text-center"
+                  >
+                    Get started
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="px-6 py-3 rounded-full font-bold border border-zinc-200 hover:border-[#1e004b]/30 transition-colors text-center bg-white"
+                  >
+                    I already have an account
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white border border-zinc-100 shadow-sm p-6 md:p-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-zinc-100 p-5">
+                    <p className="font-bold">Admin</p>
+                    <p className="text-sm text-zinc-600 mt-1">
+                      Users, stats, oversight
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-100 p-5">
+                    <p className="font-bold">Supplier</p>
+                    <p className="text-sm text-zinc-600 mt-1">
+                      Orders, confirmations
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-100 p-5">
+                    <p className="font-bold">Transporter</p>
+                    <p className="text-sm text-zinc-600 mt-1">
+                      Pickups, delivery status
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-100 p-5">
+                    <p className="font-bold">Inventory</p>
+                    <p className="text-sm text-zinc-600 mt-1">
+                      Stock, products, flow
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-2xl bg-primary/5 border border-primary/10 p-5">
+                  <p className="font-bold">Tip</p>
+                  <p className="text-sm text-zinc-700 mt-1">
+                    Use the test users script to explore every dashboard quickly.
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Tracking</p>
           </div>
-          <div className="flex flex-col items-center space-y-10 group">
-            <div className="flex items-center justify-center">
-              <Image
-                src="/assets/Gemini_Generated_Image_soedpzsoedpzsoed-Photoroom.png"
-                alt="Inventory"
-                width={280}
-                height={280}
-                className="icon-force-size drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
-                sizes="(max-width: 768px) 220px, 280px"
-              />
+        </section>
+
+        <section className="py-16 md:py-24">
+          <div className="max-w-7xl mx-auto px-6 md:px-12">
+            <div className="rounded-[40px] md:rounded-[56px] border border-zinc-100 bg-[#1e004b] text-white p-8 md:p-12 overflow-hidden relative">
+              <div className="absolute -top-24 -right-24 w-[360px] h-[360px] bg-primary/30 blur-[90px] rounded-full" />
+              <div className="absolute -bottom-32 -left-24 w-[420px] h-[420px] bg-white/10 blur-[100px] rounded-full" />
+
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <div className="max-w-2xl">
+                  <h2 className="text-white text-3xl sm:text-5xl md:text-6xl font-bold tracking-tighter leading-tight">
+                    Ready to organize your operations?
+                  </h2>
+                  <p className="mt-4 text-white/80 text-base md:text-lg leading-relaxed">
+                    Create an account, invite your team, and start managing
+                    stock and orders with role-based access.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/signup"
+                    className="bg-white text-[#1e004b] hover:bg-white/90 px-7 py-3 rounded-full font-bold transition-colors text-center"
+                  >
+                    Start free
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="border border-white/25 hover:border-white/40 px-7 py-3 rounded-full font-bold transition-colors text-center"
+                  >
+                    Sign in
+                  </Link>
+                </div>
+              </div>
             </div>
-            <p className="font-caveat font-bold text-3xl md:text-4xl text-[#1e004b]">Inventory</p>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Join Us Section */}
-      <section className="py-20 md:py-32 flex flex-col items-center justify-center text-center px-6 relative max-w-5xl mx-auto w-full overflow-visible">
-        <div className="absolute top-10 left-0 md:left-10 opacity-20 select-none pointer-events-none hidden sm:block">
-          <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={100} height={100} className="rotate-[-15deg] opacity-60" />
-        </div>
-        <div className="absolute top-0 right-0 md:right-10 opacity-20 select-none pointer-events-none hidden sm:block">
-          <Image src="/assets/grey_arrow_loop_01.svg" alt="Arrow" width={120} height={120} className="scale-x-[-1] rotate-[15deg] opacity-60" />
-        </div>
+      <footer className="bg-white border-t border-zinc-100">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10">
+                <Image
+                  src="/assets/logo.png"
+                  alt="GoGodam Logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div>
+                <p className="font-bold tracking-tight">GoGodam</p>
+                <p className="text-sm text-zinc-600">
+                  Inventory & logistics platform
+                </p>
+              </div>
+            </div>
 
-        <h2 className="text-7xl md:text-[120px] font-bold tracking-tighter mb-12 z-10 leading-none">
-          <span className="text-primary mr-4">Join</span>
-          <span className="text-[#1e004b]">us</span>
-        </h2>
-
-        <div className="flex flex-col items-center gap-8 z-10">
-          <Link
-            href="/signup"
-            className="bg-primary hover:bg-[#4d00cc] text-white px-12 md:px-20 py-5 md:py-7 rounded-full font-bold text-xl md:text-2xl shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95"
-          >
-            Start now - It&apos;s free
-          </Link>
-          <p className="text-sm md:text-base font-medium text-zinc-500">or continue with</p>
-        </div>
-      </section>
-
-      {/* Footer Branding & Links */}
-      <footer className="bg-[#1e004b] text-white pt-20 px-6 md:px-12 flex flex-col items-center relative overflow-hidden w-full">
-
-        {/* Top Section: Newsletter & Logo */}
-        <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center lg:items-end justify-between gap-12 mb-16 z-10">
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left gap-6 w-full lg:w-1/2">
-            <h3 className="text-2xl md:text-3xl font-bold tracking-tight">Get Exclusive Offers and GoGodam News</h3>
-            <div className="flex w-full max-w-md bg-white rounded-full p-1 shadow-md">
-              <input
-                type="email"
-                placeholder="Email address"
-                className="flex-1 bg-transparent px-4 py-2 text-zinc-900 outline-none w-full text-base"
-              />
-              <Link href="/signup" className="bg-primary hover:bg-[#4d00cc] text-white px-6 py-2 rounded-full font-bold transition-colors text-sm md:text-base whitespace-nowrap flex items-center justify-center">
-                Sign Up
+            <div className="flex items-center gap-4 text-sm font-semibold">
+              <Link
+                href="/login"
+                className="text-zinc-700 hover:text-primary transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                href="/signup"
+                className="text-zinc-700 hover:text-primary transition-colors"
+              >
+                Sign up
               </Link>
             </div>
           </div>
-          <div className="flex-shrink-0 mb-4 lg:mb-0">
-            <Image
-              src="/assets/white logo.png"
-              alt="GoGodam White Logo"
-              width={100}
-              height={100}
-              className="object-contain w-20 md:w-24 opacity-90"
-            />
-          </div>
-        </div>
 
-        {/* Divider */}
-        <div className="w-full max-w-7xl h-px bg-white/10 mb-16 z-10"></div>
-
-        {/* Middle Section: Links Grid */}
-        <div className="w-full max-w-7xl grid grid-cols-2 lg:grid-cols-4 gap-12 mb-20 z-10 text-sm md:text-base">
-          <div className="flex flex-col gap-4">
-            <h4 className="font-bold mb-2">Information</h4>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Help</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Track My Order</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Returns</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Shipping</Link>
+          <div className="mt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs text-zinc-500">
+            <p>© 2026 GoGodam. All rights reserved.</p>
+            <div className="flex items-center gap-3">
+              <Link href="#" className="hover:text-zinc-700 transition-colors">
+                Terms
+              </Link>
+              <span className="opacity-40">•</span>
+              <Link href="#" className="hover:text-zinc-700 transition-colors">
+                Privacy
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-col gap-4">
-            <h4 className="font-bold mb-2">Products</h4>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Inventory Management</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Order Tracking</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Custom Workflows</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Analytics</Link>
-          </div>
-          <div className="flex flex-col gap-4">
-            <h4 className="font-bold mb-2">Programs</h4>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">For Business</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Partner Program</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Affiliates</Link>
-            <Link href="#" className="opacity-70 hover:opacity-100 transition-opacity">Discounts</Link>
-          </div>
-          <div className="flex flex-col gap-4">
-            <h4 className="font-bold mb-2">Locations</h4>
-            <span className="opacity-70">United States</span>
-            <span className="opacity-70">Canada</span>
-            <span className="opacity-70">United Kingdom</span>
-            <span className="opacity-70">Australia</span>
-          </div>
-        </div>
-
-        {/* Bottom Section: Copyright & Massive Logo */}
-        <div className="flex flex-col items-center gap-2 z-10 w-full pb-8">
-          <div className="flex gap-4 text-xs font-medium opacity-60 mb-2">
-            <Link href="#" className="hover:opacity-100 transition">Terms of Service</Link>
-            <Link href="#" className="hover:opacity-100 transition">Privacy</Link>
-          </div>
-          <p className="text-xs md:text-sm font-medium opacity-60">© 2026 - GoGodam</p>
-        </div>
-
-        {/* Massive Text at the very bottom edge */}
-        <div className="w-full text-center select-none pointer-events-none mt-4 -mb-4 z-0">
-          <h1 className="text-[18vw] font-bold tracking-tighter leading-none">
-            GoGodam
-          </h1>
         </div>
       </footer>
     </div>

@@ -29,7 +29,7 @@ All test accounts use the password: **`Password123!`**
 | Role | Email | Redirect Path |
 |------|-------|---------------|
 | **Admin** | `admin@gogodam.com` | `/admin/dashboard` |
-| **Supplier** | `supplier@gogodam.com` | `/suppliers/dashboard` |
+| **Supplier** | `supplier@gogodam.com` | `/suppliers/orders` |
 | **Transporter** | `transporter@gogodam.com` | `/driver/dashboard` |
 | **Inventory Manager** | `manager@gogodam.com` | `/dashboard` |
 

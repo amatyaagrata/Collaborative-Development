@@ -30,6 +30,16 @@ export default function ProductPage() {
   const supabase = createClient();
   const router = useRouter();
 
+  React.useEffect(() => {
+    async function checkSupplier() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.role === "supplier") {
+        router.push("/suppliers/orders");
+      }
+    }
+    checkSupplier();
+  }, [supabase, router]);
+
   /* State to toggle between the main product list and the add edit form */
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
   

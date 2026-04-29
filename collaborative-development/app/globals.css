@@ -8,7 +8,8 @@
   --secondary: #f8f6ff;
   --accent: #ffb800;
   --dark-bg: #1e004b;
-  --font-sans-stack: "Avenir Next", "Segoe UI", sans-serif;
+  --font-sans-stack: var(--font-montserrat), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono-stack: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
   --font-script-stack: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
 }
@@ -38,8 +39,42 @@ body {
   font-family: var(--font-sans-stack);
 }
 
+.font-sans {
+  font-family: var(--font-sans-stack);
+}
+
 .font-caveat {
   font-family: var(--font-script-stack);
+}
+
+@layer base {
+  body {
+    @apply text-[15px] md:text-base leading-relaxed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply tracking-tight text-foreground;
+  }
+
+  h1 {
+    @apply font-extrabold;
+  }
+
+  h2 {
+    @apply font-bold;
+  }
+
+  h3,
+  h4 {
+    @apply font-semibold;
+  }
+
+  p {
+    @apply text-zinc-600;
+  }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

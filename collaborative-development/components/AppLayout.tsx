@@ -22,13 +22,16 @@ const iconMap: Record<string, React.ElementType> = {
   Truck, FileText, Users, Settings,
 };
 
-// Filtered nav items (no Transfer, Reports, Users)
-const navItems = [
+const defaultNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
   { label: "Product", href: "/product", icon: "Package" },
   { label: "Categories", href: "/categories", icon: "Grid3x3" },
   { label: "Orders", href: "/orders", icon: "ShoppingCart" },
   { label: "Settings", href: "/settings", icon: "Settings" },
+];
+
+const supplierNavItems = [
+  { label: "Orders", href: "/suppliers/orders", icon: "ShoppingCart" },
 ];
 
 export function AppLayout({ title, children }: AppLayoutProps) {
@@ -38,6 +41,26 @@ export function AppLayout({ title, children }: AppLayoutProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  const navItems = userRole === "supplier" ? supplierNavItems : defaultNavItems;
+
+  React.useEffect(() => {
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email || "user@example.com");
+        setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || "User");
+        const role = user.user_metadata?.role;
+        setUserRole(typeof role === "string" ? role : null);
+
+        if (role === "supplier" && (pathname === "/dashboard" || pathname === "/product")) {
+          router.push("/suppliers/orders");
+        }
+      }
+    }
+    getUser();
+  }, [supabase, pathname, router]);
 
   React.useEffect(() => {
     async function getUser() {

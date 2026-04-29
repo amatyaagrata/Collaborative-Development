@@ -12,10 +12,7 @@ export default function SupplierLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/suppliers/dashboard", label: "Dashboard", icon: Home },
     { href: "/suppliers/orders", label: "Orders", icon: ShoppingBag },
-    { href: "/product", label: "Products", icon: Package },
-    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   const currentItem = navItems.find((item) => pathname.startsWith(item.href));
@@ -48,7 +45,7 @@ export default function SupplierLayout({ children }: { children: ReactNode }) {
       <main className={styles.main}>
         <header className={styles.topbar}>
           <div>
-            <h1 className={styles.topbarTitle}>{currentItem?.label || "Dashboard"}</h1>
+            <h1 className={styles.topbarTitle}>{currentItem?.label || "Orders"}</h1>
             <div className={styles.topbarMeta}>Manage orders, products, and supplier activity.</div>
           </div>
           <NotificationBell />

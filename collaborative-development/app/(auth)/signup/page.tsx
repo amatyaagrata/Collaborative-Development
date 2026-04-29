@@ -37,6 +37,7 @@ export default function SignUp() {
   });
   const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -253,56 +254,103 @@ export default function SignUp() {
       setTimeout(() => {
         router.push("/login");
       }, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[CLIENT] Signup error:", error);
-      toast.error(error.message || "An unexpected error occurred. Please try again.");
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Google Sign Up Handler
+  const handleGoogleSignUp = () => {
+    if (!agreeToTerms) {
+      toast.error("Please agree to the Terms and Services before continuing with Google");
+      return;
+    }
+
+    setGoogleLoading(true);
+    
+    // Store pending signup data in session storage
+    sessionStorage.setItem("pendingSignUpRole", selectedRole);
+    sessionStorage.setItem("pendingOrganizationName", formData.organizationName);
+    sessionStorage.setItem("pendingPhoneNumber", formData.phoneNumber);
+    sessionStorage.setItem("pendingUsername", formData.username);
+    
+    // Redirect to Google OAuth endpoint
+    window.location.href = "/api/auth/google";
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4 py-8 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-2000"></div>
+    <div className="min-h-screen bg-white">
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-primary/10 blur-[120px] rounded-full" />
+        <div className="absolute -bottom-56 right-0 w-[600px] h-[600px] bg-[#1e004b]/10 blur-[120px] rounded-full" />
       </div>
 
-      {/* Main Card */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20 transition-all duration-500">
-          
-          {/* Logo and Title */}
-          <div className="flex flex-col items-center gap-3 mb-8">
-            <Link href="/" className="relative h-16 w-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 p-0.5 transition-transform hover:scale-110 duration-300">
-              <div className="relative h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                <Image 
-                  src={logo} 
-                  alt="GoGodam Logo" 
-                  width={40}
-                  height={40}
-                  className="object-contain"
-                />
+      <div className="min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+          <div className="hidden lg:flex flex-col justify-center rounded-[32px] border border-zinc-100 bg-white/60 backdrop-blur p-10">
+            <Link href="/" className="flex items-center gap-3 w-fit">
+              <div className="relative w-11 h-11">
+                <Image src={logo} alt="GoGodam Logo" fill className="object-contain" />
               </div>
+              <span className="text-2xl font-bold text-primary tracking-tighter">
+                GoGodam
+              </span>
             </Link>
-            
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              Create Account
+
+            <h1 className="mt-10 text-4xl font-extrabold tracking-tight leading-tight">
+              Create your account.
             </h1>
-            
-            <p className="text-gray-500 text-sm">
-              Join GoGodam to streamline your inventory
+            <p className="mt-4 text-zinc-600 leading-relaxed max-w-md">
+              Pick a role, add your organization, and start managing inventory and orders with a clean workflow.
             </p>
+
+            <div className="mt-8 rounded-3xl border border-zinc-100 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold">Selected role</p>
+              <p className="mt-1 text-2xl font-bold tracking-tight capitalize">
+                {selectedRole}
+              </p>
+              <p className="mt-2 text-sm text-zinc-600">
+                {roles.find((r) => r.value === selectedRole)?.description}
+              </p>
+            </div>
           </div>
 
+          <div className="rounded-[32px] border border-zinc-100 bg-white shadow-sm p-7 md:p-9">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/" className="flex items-center gap-2 lg:hidden">
+                <div className="relative w-10 h-10">
+                  <Image src={logo} alt="GoGodam Logo" fill className="object-contain" />
+                </div>
+                <span className="text-xl font-bold text-primary tracking-tighter">
+                  GoGodam
+                </span>
+              </Link>
+              <p className="text-xs md:text-sm text-zinc-500">
+                Already have an account?{" "}
+                <Link href="/login" className="text-primary font-semibold hover:underline">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Sign up
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Create an account to start using GoGodam.
+              </p>
+            </div>
+
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 mt-6">
             {/* Role Selector Dropdown */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 Select Role *
@@ -312,7 +360,7 @@ export default function SignUp() {
                 <select
                   value={selectedRole}
                   onChange={handleRoleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 appearance-none bg-white text-gray-700 cursor-pointer"
+                  className="w-full px-4 py-3 rounded-2xl border border-zinc-200 focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-200 appearance-none bg-white text-zinc-700 cursor-pointer"
                 >
                   {roles.map((role) => (
                     <option key={role.value} value={role.value}>
@@ -337,7 +385,7 @@ export default function SignUp() {
             {/* Email */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 Email *
@@ -365,7 +413,7 @@ export default function SignUp() {
             {/* Username */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Username *
@@ -393,7 +441,7 @@ export default function SignUp() {
             {/* Organization Name */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 Organization Name *
@@ -417,10 +465,10 @@ export default function SignUp() {
               </div>
             </div>
 
-            {/* Password with Eye Icon */}
+            {/* Password */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 Password *
@@ -443,18 +491,9 @@ export default function SignUp() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-purple-600 transition-colors z-10"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
                   >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
+                    {showPassword ? "🔓" : "🔒"}
                   </button>
                 </div>
                 {errors.password && (
@@ -466,10 +505,10 @@ export default function SignUp() {
               </div>
             </div>
 
-            {/* Confirm Password with Eye Icon */}
+            {/* Confirm Password */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 Confirm Password *
@@ -492,18 +531,9 @@ export default function SignUp() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-purple-600 transition-colors z-10"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
                   >
-                    {showConfirmPassword ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
+                    {showConfirmPassword ? "🔓" : "🔒"}
                   </button>
                 </div>
                 {errors.confirmPassword && (
@@ -515,7 +545,7 @@ export default function SignUp() {
             {/* Phone Number */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
                 Phone Number (Optional)
@@ -547,14 +577,14 @@ export default function SignUp() {
                 id="terms"
                 checked={agreeToTerms}
                 onChange={(e) => setAgreeToTerms(e.target.checked)}
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mt-1"
+                className="w-4 h-4 text-primary border-zinc-300 rounded focus:ring-primary mt-1"
               />
               <label htmlFor="terms" className="text-sm text-gray-600">
                 By signing up you agree to GoGodam&apos;s{" "}
                 <button
                   type="button"
                   onClick={() => toast.info("Terms and Services will be shown here")}
-                  className="text-purple-600 hover:text-purple-700 font-medium"
+                  className="text-primary hover:opacity-90 font-medium"
                 >
                   terms and services
                 </button>
@@ -564,7 +594,7 @@ export default function SignUp() {
             {/* Submit Button */}
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl mt-4"
+              className="w-full bg-primary hover:bg-[#4d00cc] text-white font-semibold py-3.5 px-4 rounded-2xl transition-all duration-200 active:scale-[0.99] shadow-sm shadow-primary/20 mt-4"
               disabled={loading}
             >
               {loading ? (
@@ -587,34 +617,23 @@ export default function SignUp() {
               <div className="w-full border-t border-gray-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/80 backdrop-blur-sm text-gray-500">or continue with</span>
+              <span className="px-4 bg-white text-zinc-500">or continue with</span>
             </div>
           </div>
 
           {/* Google Sign Up Button */}
           <button
             type="button"
-            onClick={() => {
-              if (!agreeToTerms) {
-                toast.error("Please agree to the Terms and Services before continuing with Google");
-                return;
-              }
-              setLoading(true);
-              sessionStorage.setItem("pendingSignUpRole", selectedRole);
-              sessionStorage.setItem("pendingOrganizationName", formData.organizationName);
-              sessionStorage.setItem("pendingPhoneNumber", formData.phoneNumber);
-              sessionStorage.setItem("pendingUsername", formData.username);
-              window.location.href = "/api/auth/google";
-            }}
-            disabled={loading}
-            className="relative w-full group overflow-hidden rounded-xl bg-white border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleGoogleSignUp}
+            disabled={googleLoading}
+            className="relative w-full group overflow-hidden rounded-2xl bg-white border border-zinc-200 hover:border-primary/40 transition-all duration-200 hover:shadow-sm"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             
             <div className="relative flex items-center justify-center gap-3 px-4 py-3">
-              {loading ? (
+              {googleLoading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -628,10 +647,10 @@ export default function SignUp() {
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                   </svg>
-                  <span className="text-gray-700 font-medium group-hover:text-purple-700 transition-colors duration-300">
+                  <span className="text-zinc-700 font-medium group-hover:text-zinc-900 transition-colors duration-200">
                     Continue with Google
                   </span>
-                  <svg className="w-4 h-4 text-gray-400 group-hover:text-purple-500 transition-all duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-zinc-400 group-hover:text-primary transition-all duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </>
@@ -653,16 +672,14 @@ export default function SignUp() {
           </div>
 
           {/* Login Link */}
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="mt-4 text-center lg:hidden">
+            <p className="text-sm text-zinc-600">
               Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-purple-600 font-semibold hover:text-purple-700 hover:underline transition-all"
-              >
+              <Link href="/login" className="text-primary font-semibold hover:underline">
                 Log in
               </Link>
             </p>
+          </div>
           </div>
         </div>
       </div>

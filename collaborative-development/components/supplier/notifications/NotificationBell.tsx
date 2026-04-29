@@ -112,9 +112,9 @@ export default function NotificationBell() {
     
     // Navigate based on notification type
     if (notification.type === "order") {
-      router.push("/supplier/orders");
+      router.push("/suppliers/orders");
     } else if (notification.type === "alert") {
-      router.push("/supplier/dashboard");
+      router.push("/suppliers/orders");
     }
   }
 
