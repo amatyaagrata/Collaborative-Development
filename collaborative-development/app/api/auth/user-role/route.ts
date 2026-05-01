@@ -1,27 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-
-const ALLOWED_ROLES = ["admin", "supplier", "transporter", "inventory manager"] as const;
-
-function normalizeRole(role?: string) {
-  return ALLOWED_ROLES.includes((role ?? "") as (typeof ALLOWED_ROLES)[number])
-    ? (role as (typeof ALLOWED_ROLES)[number])
-    : "inventory manager";
-}
-
-function getRoleRedirect(role: string) {
-  switch (role) {
-    case "admin":
-      return "/admin/dashboard";
-    case "supplier":
-      return "/suppliers/orders";
-    case "transporter":
-      return "/driver/dashboard";
-    default:
-      return "/dashboard";
-  }
-}
+import { normalizeRole, getRoleRedirect } from "@/lib/roles/config";
 
 /**
  * GET /api/auth/user-role
@@ -77,18 +57,36 @@ export async function GET() {
 
     console.log("[GET-ROLE] User authenticated:", user.id);
 
-    // Get user role from user_roles table
-    const { data: roleData, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+    let roleStr: string | undefined;
 
-    if (roleError) console.error("[GET-ROLE] Error fetching role from user_roles:", roleError);
+    // 1. Try profiles table first (new schema)
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.role) roleStr = profile.role;
+    } catch { /* profiles table may not exist */ }
 
-    const metadataRoleRaw = user.user_metadata?.role;
-    const metadataRole = typeof metadataRoleRaw === "string" ? normalizeRole(metadataRoleRaw) : undefined;
-    const role = normalizeRole(roleData?.role ?? metadataRole);
+    // 2. Fallback to user_roles table (old schema)
+    if (!roleStr) {
+      try {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        if (roleData?.role) roleStr = roleData.role;
+      } catch { /* user_roles table may not exist */ }
+    }
+
+    // 3. Fallback to user metadata
+    if (!roleStr && user.user_metadata?.role) {
+      roleStr = user.user_metadata.role as string;
+    }
+
+    const role = normalizeRole(roleStr);
     const redirect = getRoleRedirect(role);
 
     console.log("[GET-ROLE] Returning role and redirect:", { role, redirect });
