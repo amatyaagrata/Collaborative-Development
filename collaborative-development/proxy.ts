@@ -18,14 +18,14 @@ function normalizeRole(role: string): UserRole {
   if (role === 'inventory_manager') return 'inventory_manager';
   if (role === 'supplier') return 'supplier';
   if (role === 'transporter') return 'transporter';
-  return 'inventory_manager'; // default
+  return 'inventory_manager';
 }
 
 function getRoleRedirect(role: UserRole): string {
   return ROLE_REDIRECTS[role] || '/dashboard';
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
@@ -59,40 +59,38 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // Check if current route is public
+  // ✅ SKIP AUTH FOR API ROUTES
+  if (path.startsWith('/api')) {
+    return supabaseResponse;
+  }
+
   const isPublicRoute = PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/'));
 
-  // If on public route and logged in, redirect to role dashboard
   if (isPublicRoute && user) {
     const role = await fetchUserRole(supabase, user.id);
     const redirectUrl = getRoleRedirect(role);
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
-  // If on public route and not logged in, allow access
   if (isPublicRoute) {
     return supabaseResponse;
   }
 
-  // Protected routes - require authentication
   if (!user) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', path);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Fetch user role and status
   const role = await fetchUserRole(supabase, user.id);
-  const status = await fetchUserStatus(supabase, user.id);
+  const hasAccess = await checkUserAccess(supabase, user.id);
 
-  // Block pending/rejected accounts
-  if (status && status !== 'approved') {
+  if (!hasAccess) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('error', 'pending');
     return NextResponse.redirect(loginUrl);
   }
 
-  // Role-based route restrictions
   const rolePrefixes = [
     { prefix: '/admin', requiredRole: 'admin' as UserRole },
     { prefix: '/inventory-manager', requiredRole: 'inventory_manager' as UserRole },
@@ -109,36 +107,43 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
-// Helper functions
 async function fetchUserRole(supabase: any, userId: string): Promise<UserRole> {
-  // Try profiles table first
   try {
     const { data } = await supabase
-      .from('profiles')
+      .from('user_roles')
       .select('role')
-      .eq('id', userId)
+      .eq('user_id', userId)
       .single();
     if (data?.role) return normalizeRole(data.role);
   } catch {
     // fall through
   }
 
-  // Fallback to user_metadata
   const { data: { user } } = await supabase.auth.getUser();
   return normalizeRole(user?.user_metadata?.role);
 }
 
-async function fetchUserStatus(supabase: any, userId: string): Promise<string | null> {
+async function checkUserAccess(supabase: any, userId: string): Promise<boolean> {
   try {
     const { data } = await supabase
-      .from('profiles')
-      .select('status')
-      .eq('id', userId)
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
       .single();
-    return data?.status ?? null;
+    return !!data;
   } catch {
-    return null;
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', userId)
+        .single();
+      if (data) return data.status === 'approved';
+    } catch {
+      // fall through
+    }
   }
+  return false;
 }
 
 export const config = {
