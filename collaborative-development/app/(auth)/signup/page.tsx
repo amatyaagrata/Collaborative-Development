@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -16,21 +16,38 @@ const roles = [
   { value: "inventory manager", label: "Inventory Manager", description: "Manage products and stock" },
 ];
 
-// Terms and Conditions Modal Component
+// Terms and Conditions Modal Component - FIXED (Hooks before conditional return)
 function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: () => void; onAccept: () => void }) {
-  const [scrollPosition, setScrollPosition] = useState(0);
+  // ✅ ALL hooks at the top level, BEFORE any conditional returns
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const bottom = target.scrollHeight - target.scrollTop === target.clientHeight;
-    setScrollPosition(target.scrollTop);
-    if (bottom) {
-      setHasScrolledToBottom(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  const handleScroll = () => {
+    if (contentRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+      // Consider "bottom" when scrolled within 10px of the bottom
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 10;
+      if (isAtBottom && !hasScrolledToBottom) {
+        setHasScrolledToBottom(true);
+      }
     }
   };
+
+  // Reset scroll state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setHasScrolledToBottom(false);
+      // Reset scroll position
+      setTimeout(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+        }
+      }, 100);
+    }
+  }, [isOpen]);
+
+  // ✅ Conditional return AFTER all hooks
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -50,6 +67,7 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
 
         {/* Content */}
         <div 
+          ref={contentRef}
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto p-6 space-y-6 text-gray-700"
         >
@@ -57,13 +75,62 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
             <h3 className="text-lg font-semibold text-gray-900">1. Acceptance of Terms</h3>
             <p className="text-sm leading-relaxed">
               By requesting access to GoGodam's inventory management platform, you agree to be bound by these Terms and Conditions, 
-              all applicable laws and regulations.
+              all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws.
             </p>
           </div>
+
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">2. Request Process</h3>
             <p className="text-sm leading-relaxed">
-              Submitting a request does not guarantee access. Administrators review requests and will contact you if approved.
+              Submitting a request does not guarantee access. All requests are reviewed by an administrator 
+              who will verify your information before granting access to the platform.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">3. Account Security</h3>
+            <p className="text-sm leading-relaxed">
+              You are responsible for maintaining the security of your account and any actions that occur under your account. 
+              You must notify GoGodam immediately of any unauthorized use of your account.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">4. Data Privacy</h3>
+            <p className="text-sm leading-relaxed">
+              GoGodam collects and processes your personal information as described in our Privacy Policy. 
+              By using our service, you consent to such processing and warrant that all data provided by you is accurate.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">5. Acceptable Use</h3>
+            <p className="text-sm leading-relaxed">
+              You agree to use GoGodam only for lawful purposes and in a way that does not infringe the rights of, 
+              restrict or inhibit anyone else's use of the platform.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">6. Termination</h3>
+            <p className="text-sm leading-relaxed">
+              GoGodam reserves the right to terminate or suspend access to our service immediately, without prior notice, 
+              for conduct that violates these Terms or for other conduct deemed harmful to other users or the platform.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">7. Changes to Terms</h3>
+            <p className="text-sm leading-relaxed">
+              GoGodam reserves the right to modify or replace these Terms at any time. If a revision is material, 
+              we will provide at least 30 days' notice prior to any new terms taking effect.
+            </p>
+          </div>
+
+          <div className="space-y-4 pb-4">
+            <h3 className="text-lg font-semibold text-gray-900">8. Contact Information</h3>
+            <p className="text-sm leading-relaxed">
+              If you have any questions about these Terms, please contact us at legal@gogodam.com.
             </p>
           </div>
         </div>
@@ -81,16 +148,17 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
             disabled={!hasScrolledToBottom}
             className={`px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
               hasScrolledToBottom
-                ? "bg-primary hover:bg-[#4d00cc] text-white shadow-md hover:shadow-lg active:scale-[0.98]"
+                ? "bg-primary hover:bg-[#4d00cc] text-white shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
             I Accept the Terms
           </button>
         </div>
+        
         {!hasScrolledToBottom && (
           <div className="px-6 pb-4 text-xs text-amber-600 text-center">
-            Please scroll to the bottom to accept the terms and conditions
+            📜 Please scroll to the bottom to accept the terms and conditions
           </div>
         )}
       </div>
@@ -130,6 +198,7 @@ export default function RequestAccess() {
   const validateName = (name: string) => {
     if (!name) return "Name is required";
     if (name.length < 2) return "Name must be at least 2 characters";
+    if (name.length > 100) return "Name must be less than 100 characters";
     return "";
   };
 
@@ -137,6 +206,7 @@ export default function RequestAccess() {
     if (!phone) return "";
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length > 0 && cleaned.length < 10) return "Phone number must be at least 10 digits";
+    if (cleaned.length > 15) return "Phone number too long";
     return "";
   };
 
@@ -412,10 +482,11 @@ export default function RequestAccess() {
                         onChange={handleChange}
                         placeholder="Enter your full name"
                         required
-                        className={`w-full px-4 py-3 rounded-xl border transition-all duration-300 ${errors.name
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                          : "border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                          }`}
+                        className={`w-full px-4 py-3 rounded-xl border transition-all duration-300 ${
+                          errors.name
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : "border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                        }`}
                       />
                       {errors.name && (
                         <p className="text-xs text-red-500 mt-1">{errors.name}</p>
@@ -440,6 +511,9 @@ export default function RequestAccess() {
                       required
                       className="w-full px-4 py-3.5 rounded-xl border border-zinc-200 focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
                     />
+                    {errors.email && (
+                      <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+                    )}
                   </div>
 
                   {/* Phone Number */}
@@ -457,10 +531,11 @@ export default function RequestAccess() {
                         value={formData.phoneNumber}
                         onChange={handleChange}
                         placeholder="+977-XXXXXXXXXX"
-                        className={`w-full px-4 py-3 rounded-xl border transition-all duration-300 ${errors.phoneNumber
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                          : "border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                          }`}
+                        className={`w-full px-4 py-3 rounded-xl border transition-all duration-300 ${
+                          errors.phoneNumber
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                            : "border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                        }`}
                       />
                       {errors.phoneNumber && (
                         <p className="text-xs text-red-500 mt-1">{errors.phoneNumber}</p>
