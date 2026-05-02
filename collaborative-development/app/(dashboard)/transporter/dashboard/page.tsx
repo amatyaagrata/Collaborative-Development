@@ -1,114 +1,234 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useRealtimeTrips } from "@/hooks/useRealtimeTrips";
-import TripCard from "@/components/driver/trips/TripCard";
-import { toast } from "sonner";
-import type { Trip, TripStats } from "@/types/models";
-import { Truck, CheckCircle, Navigation, Clock } from "lucide-react";
+import { Truck, CheckCircle, Navigation, Clock, X } from "lucide-react";
 import styles from "@/components/layout/PortalLayout.module.css";
 import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
 
+/**
+ * OrderRecord Interface
+ * Maps the database schema for the 'orders' table.
+ * Includes optional fields for vehicle details and custom column names.
+ */
+interface OrderRecord {
+  id: string;
+  delivery_status: 'not_assigned' | 'in_transit' | 'delivered' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+  "Total Miles"?: number | null; 
+  is_on_time?: boolean | null;  
+  destination?: string;
+  vehicle_plate?: string;
+  vehicle_model?: string;
+}
+
 export default function TransporterDashboard() {
-  const [trips, setTrips] = useState<Trip[]>([]);
+  /**
+   * STATE MANAGEMENT
+   * orders: Raw list fetched from Supabase
+   * loading: Prevents UI flickering during initial fetch
+   * modalType: Controls which category list is being viewed in the popup
+   */
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalType, setModalType] = useState<'active' | 'completed' | null>(null);
+  
   const supabase = createClient();
-  const router = useRouter();
 
-  const fetchTrips = useCallback(async (): Promise<Trip[]> => {
+  /**
+   * DATA FETCHING
+   * Memoized fetcher to retrieve orders for the logged-in transporter.
+   * Uses useCallback to prevent unnecessary re-renders of the effect hook.
+   */
+  const fetchDashboardData = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return [];
-    
-    // Attempt to match driver_assignments to this user.
-    // In a real flow, you'd match auth user -> profile -> driver/transporter record.
-    const { data, error } = await supabase
-      .from("driver_assignments")
-      .select(`*, orders:order_id(id, order_number, customer_name, customer_phone, delivery_address, total_amount, organizations(name, address, phone))`)
-      // Temporary: we don't have driver linking fully mapped in the SQL script, so we fetch all or just gracefully handle empty
-      .order("assigned_at", { ascending: false });
+    if (!userData.user) return;
 
-    if (!error && data) return data as Trip[];
-    return [];
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*") 
+      .eq("transporter_id", userData.user.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setOrders(data as OrderRecord[]);
+    }
+    setLoading(false);
   }, [supabase]);
 
+  /**
+   * REALTIME SUBSCRIPTION
+   * Sets up a live listener to the 'orders' table.
+   * Automatically refreshes metrics when database rows change.
+   */
   useEffect(() => {
-    fetchTrips().then(data => { setTrips(data); setLoading(false); });
-  }, [fetchTrips]);
+    fetchDashboardData();
 
-  useRealtimeTrips({
-    onNewTrip: (newTrip: Trip) => {
-      toast.info(`New trip assigned to you!`, { duration: 10000 });
-      setTrips(prev => [newTrip, ...prev]);
-    }
-  });
+    const channel = supabase
+      .channel("realtime_dashboard_updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchDashboardData())
+      .subscribe();
 
-  async function updateTripStatus(tripId: string, status: string) {
-    const { error } = await supabase.from("driver_assignments").update({ status, completed_at: status === "delivered" ? new Date().toISOString() : null }).eq("id", tripId);
-    if (!error) { toast.success(`Trip status updated to ${status}`); fetchTrips().then(setTrips); }
-  }
+    return () => { supabase.removeChannel(channel); };
+  }, [supabase, fetchDashboardData]);
 
-  const pendingTrips = trips.filter(t => t.status === "assigned" || t.status === "accepted");
-  const activeTrips = trips.filter(t => t.status === "in_transit");
-  const completedTrips = trips.filter(t => t.status === "delivered");
+  /**
+   * BUSINESS LOGIC & METRICS
+   * useMemo ensures these calculations only run when 'orders' data changes.
+   * Calculations include mileage aggregation and on-time performance percentage.
+   */
+  const stats = useMemo(() => {
+    const inTransitOrders = orders.filter((o) => o.delivery_status === "in_transit");
+    const deliveredOrders = orders.filter((o) => o.delivery_status === "delivered");
+    
+    const completedTodayOrders = deliveredOrders.filter((o) => {
+      const completionDate = new Date(o.updated_at || o.created_at).toDateString();
+      return completionDate === new Date().toDateString();
+    });
 
-  // Fallback mock data for new stats
-  const stats = {
-    activeDeliveries: activeTrips.length,
-    completedToday: completedTrips.length,
-    totalMiles: 145,
-    onTimeRate: "98.5%"
-  };
+    const totalMiles = orders
+      .filter(o => o.delivery_status === "delivered" || o.delivery_status === "in_transit")
+      .reduce((acc, curr) => acc + Number(curr["Total Miles"] ?? 0), 0);
 
-  if (loading) return <><div className={styles.loadingState}>Loading dashboard...</div></>;
+    const onTimeRate = deliveredOrders.length > 0 
+      ? ((deliveredOrders.filter(o => o.is_on_time !== false).length / deliveredOrders.length) * 100).toFixed(1) 
+      : "100.0";
+
+    return { 
+      activeList: inTransitOrders,
+      completedTodayList: completedTodayOrders,
+      totalMiles: Math.round(totalMiles).toLocaleString(),
+      onTimeRate 
+    };
+  }, [orders]);
+
+  const modalData = modalType === 'active' ? stats.activeList : stats.completedTodayList;
+
+  if (loading) return <div className={styles.loadingState}>Refreshing metrics...</div>;
 
   return (
     <>
       <WelcomeMessage roleOverride="Driver/Transporter" />
+      
       <div className={styles.pageStack}>
         <div className={styles.statsGrid}>
-          <div className={styles.metricCard}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><Truck size={16} color="#7c3aed"/><h3 className={styles.metricLabel}>Active Deliveries</h3></div>
-            <p className={styles.metricValue}>{stats.activeDeliveries}</p>
+          
+          <div 
+            onClick={() => setModalType('active')} 
+            className={`${styles.metricCard} ${styles.clickableCard}`}
+            style={{ cursor: 'pointer' }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Truck size={18} color="#7c3aed" />
+              <h3 className={styles.metricLabel}>Active Deliveries</h3>
+            </div>
+            <p className={styles.metricValue}>{stats.activeList.length}</p>
           </div>
-          <div className={styles.metricCard}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><CheckCircle size={16} color="#10b981"/><h3 className={styles.metricLabel}>Completed Today</h3></div>
-            <p className={styles.metricValue}>{stats.completedToday}</p>
+
+          <div 
+            onClick={() => setModalType('completed')} 
+            className={`${styles.metricCard} ${styles.clickableCard}`}
+            style={{ cursor: 'pointer' }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <CheckCircle size={18} color="#10b981" />
+              <h3 className={styles.metricLabel}>Completed Today</h3>
+            </div>
+            <p className={styles.metricValue}>{stats.completedTodayList.length}</p>
           </div>
+
           <div className={styles.metricCard}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><Navigation size={16} color="#3b82f6"/><h3 className={styles.metricLabel}>Total Miles</h3></div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Navigation size={18} color="#3b82f6" />
+              <h3 className={styles.metricLabel}>Total Miles</h3>
+            </div>
             <p className={styles.metricValue}>{stats.totalMiles}</p>
           </div>
+
           <div className={styles.metricCard}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><Clock size={16} color="#f59e0b"/><h3 className={styles.metricLabel}>On-Time Rate</h3></div>
-            <p className={styles.metricValue}>{stats.onTimeRate}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Clock size={18} color="#f59e0b" />
+              <h3 className={styles.metricLabel}>On-Time Rate</h3>
+            </div>
+            <p className={styles.metricValue}>{stats.onTimeRate}%</p>
           </div>
         </div>
 
-        {activeTrips.length > 0 && (
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Active Deliveries</h2></div>
-            <div className={styles.cardList}>
-              {activeTrips.map((trip) => <TripCard key={trip.id} trip={trip} onComplete={() => updateTripStatus(trip.id, "delivered")} showActions={true} />)}
-            </div>
-          </div>
-        )}
+        {/**
+         * MODAL UI COMPONENT
+         * Includes an overlay that closes the modal on background click.
+         * StopPropagation ensures clicks inside the white box don't trigger the close.
+         */}
+        {modalType && (
+          <div 
+            onClick={() => setModalType(null)}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, width: '100%', height: '100%',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              zIndex: 9999
+            }}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'white',
+                padding: '30px',
+                borderRadius: '16px',
+                width: '90%',
+                maxWidth: '800px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                maxHeight: '80vh',
+                overflowY: 'auto'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#1e1b4b" }}>
+                  {modalType === 'active' ? 'Active Deliveries' : 'Completed Today'}
+                </h2>
+                <button onClick={() => setModalType(null)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
+                  <X size={24} color="#64748b" />
+                </button>
+              </div>
 
-        {pendingTrips.length > 0 && (
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Pending Deliveries</h2><span className={styles.topbarMeta}>{pendingTrips.length} trips</span></div>
-            <div className={styles.cardList}>
-              {pendingTrips.map((trip) => <TripCard key={trip.id} trip={trip} onAccept={() => updateTripStatus(trip.id, "accepted")} onReject={() => updateTripStatus(trip.id, "cancelled")} onComplete={() => updateTripStatus(trip.id, "in_transit")} showActions={true} />)}
-            </div>
-          </div>
-        )}
-
-        {completedTrips.length > 0 && (
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Recent Deliveries</h2><button className={styles.ghostButton} onClick={() => router.push("/transporter/deliveries")} type="button">View All →</button></div>
-            <div className={styles.cardList}>
-              {completedTrips.slice(0, 3).map((trip) => <TripCard key={trip.id} trip={trip} showActions={false} />)}
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left' }}>
+                    <th style={{ padding: '12px', color: '#64748b' }}>Order ID</th>
+                    <th style={{ padding: '12px', color: '#64748b' }}>Plate</th>
+                    <th style={{ padding: '12px', color: '#64748b' }}>Model</th>
+                    <th style={{ padding: '12px', color: '#64748b' }}>Destination</th>
+                    <th style={{ padding: '12px', color: '#64748b' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modalData.map((order) => (
+                    <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px', fontWeight: '600' }}>#{order.id.slice(0, 8)}</td>
+                      <td style={{ padding: '12px' }}>{order.vehicle_plate || "N/A"}</td>
+                      <td style={{ padding: '12px' }}>{order.vehicle_model || "Standard"}</td>
+                      <td style={{ padding: '12px' }}>{order.destination || "TBD"}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          backgroundColor: order.delivery_status === 'in_transit' ? '#f5f3ff' : '#ecfdf5',
+                          color: order.delivery_status === 'in_transit' ? '#7c3aed' : '#10b981',
+                          textTransform: 'capitalize'
+                        }}>
+                          {order.delivery_status.replace('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {modalData.length === 0 && (
+                <p style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No records found.</p>
+              )}
             </div>
           </div>
         )}
