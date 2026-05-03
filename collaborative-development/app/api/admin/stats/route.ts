@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, hasAdminClientConfig } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/admin/stats
  * Returns aggregated dashboard statistics from the database.
+ * Uses the authenticated client to enforce RLS and isolate by organization.
  */
 export async function GET() {
   try {
-    let supabase;
-    if (hasAdminClientConfig()) {
-      supabase = createAdminClient();
-    } else {
-      supabase = await createClient();
-    }
+    const supabase = await createClient();
 
     // Fetch all data in parallel for speed
     const [productsRes, ordersRes, usersRes] = await Promise.all([

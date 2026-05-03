@@ -112,6 +112,11 @@ export interface SupplierOrder {
   total_amount: number;
   supplier_id?: string;
   items_count?: number;
+  transporter_id?: string;
+  delivery_status?: string;
+  transporter?: {
+    name: string;
+  };
   organizations: {
     name: string;
     address: string;

@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, hasAdminClientConfig } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/admin/users
  * Fetches all users from the database for the admin panel.
- * Uses service_role client to bypass RLS when available.
+ * Uses the authenticated client to enforce RLS and isolate by organization.
  */
 export async function GET() {
   try {
-    let supabase;
-
-    if (hasAdminClientConfig()) {
-      // Use service_role client — bypasses RLS, can see ALL users
-      supabase = createAdminClient();
-    } else {
-      // Fallback to server client (limited by RLS)
-      supabase = await createClient();
-    }
+    const supabase = await createClient();
 
     const { data: users, error } = await supabase
       .from("users")
-      .select("*")
+      .select("*, organizations(name)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -29,7 +20,12 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ users: users || [] }, { status: 200 });
+    const formattedUsers = users?.map((user: any) => ({
+      ...user,
+      organization_name: user.organizations?.name || user.organization_name
+    })) || [];
+
+    return NextResponse.json({ users: formattedUsers }, { status: 200 });
   } catch (error) {
     console.error("[ADMIN-USERS] Unexpected error:", error);
     return NextResponse.json(

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { Building2, MapPin, Phone, Check } from "lucide-react";
 import styles from "@/components/layout/PortalLayout.module.css";
 
 interface OrderCardProps {
@@ -25,13 +26,27 @@ interface OrderCardProps {
         name?: string;
       };
     }>;
+    transporter_id?: string;
+    delivery_status?: string;
+    transporter?: {
+      name: string;
+    };
   };
   onView?: () => void;
   onStatusChange?: (status: string) => void;
+  transporters?: { id: string; name: string }[];
+  onAssignTransporter?: (transporterId: string) => void;
   showActions?: boolean;
 }
 
-export default function OrderCard({ order, onView, onStatusChange, showActions = false }: OrderCardProps) {
+export default function OrderCard({ 
+  order, 
+  onView, 
+  onStatusChange, 
+  transporters,
+  onAssignTransporter,
+  showActions = false 
+}: OrderCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const statusColors = {
@@ -57,16 +72,23 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
     <div className={styles.orderCard}>
       <div className={styles.cardHeader} onClick={() => setIsExpanded(!isExpanded)}>
         <div className={styles.cardInfo}>
-          <span className={styles.entityNumber}>Order #{order.order_number}</span>
-          <span className={`${styles.statusBadge} ${styles[statusColors[order.status as keyof typeof statusColors]]}`}>
-            {order.status.toUpperCase()}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span className={styles.entityNumber}>Order #{order.order_number}</span>
+            <span className={`${styles.statusBadge} ${styles[statusColors[order.status as keyof typeof statusColors]]}`}>
+              {order.status.replace(/_/g, " ").toUpperCase()}
+            </span>
+          </div>
+          <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#6008f8", marginTop: "4px" }}>
+            {order.organizations?.name || "Unknown Organization"}
           </span>
         </div>
-        <div className={styles.cardMeta}>
-          <span>
-            {new Date(order.created_at).toLocaleString()}
+        <div className={styles.cardMeta} style={{ alignItems: "flex-end", justifyContent: "center" }}>
+          <span style={{ fontWeight: 800, fontSize: "1.25rem", color: "#22054f" }}>
+            Rs. {order.total_amount.toLocaleString()}
           </span>
-          <span>Rs. {order.total_amount.toLocaleString()}</span>
+          <span style={{ color: "#6b7280", fontSize: "0.85rem" }}>
+            {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       </div>
 
@@ -74,14 +96,29 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
         <div className={styles.cardDetails}>
           <div className={styles.detailBlock}>
             <h4 className={styles.detailTitle}>Organization Details</h4>
-            <p className={styles.detailText}><strong>Name:</strong> {order.organizations?.name}</p>
-            <p className={styles.detailText}><strong>Address:</strong> {order.organizations?.address}</p>
-            <p className={styles.detailText}><strong>Phone:</strong> {order.organizations?.phone}</p>
-          </div>
-
-          <div className={styles.detailBlock}>
-            <h4 className={styles.detailTitle}>Delivery Address</h4>
-            <p className={styles.detailText}>{order.delivery_address}</p>
+            <div className={styles.infoGrid}>
+              <div className={styles.infoItem}>
+                <div className={styles.infoIconWrapper}><Building2 size={20} /></div>
+                <div className={styles.infoContent}>
+                  <span className={styles.infoContentLabel}>Name</span>
+                  <span className={styles.infoContentValue}>{order.organizations?.name || "N/A"}</span>
+                </div>
+              </div>
+              <div className={styles.infoItem}>
+                <div className={styles.infoIconWrapper}><MapPin size={20} /></div>
+                <div className={styles.infoContent}>
+                  <span className={styles.infoContentLabel}>Address</span>
+                  <span className={styles.infoContentValue}>{order.organizations?.address || "N/A"}</span>
+                </div>
+              </div>
+              <div className={styles.infoItem}>
+                <div className={styles.infoIconWrapper}><Phone size={20} /></div>
+                <div className={styles.infoContent}>
+                  <span className={styles.infoContentLabel}>Phone</span>
+                  <span className={styles.infoContentValue}>{order.organizations?.phone || "N/A"}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className={styles.detailBlock}>
@@ -108,29 +145,66 @@ export default function OrderCard({ order, onView, onStatusChange, showActions =
             </table>
           </div>
 
-          {showActions && onStatusChange && (
+          {showActions && onAssignTransporter && transporters && (
             <div className={styles.detailBlock}>
-              <h4 className={styles.detailTitle}>Update Status</h4>
-              <div className={styles.statusGrid}>
-                {statusSteps.map((step, idx) => (
-                  <button
-                    key={step}
-                    className={`${styles.statusStep} ${idx <= currentStepIndex ? styles.statusStepCompleted : ""} ${order.status === step ? styles.statusStepActive : ""}`}
-                    onClick={() => onStatusChange(step)}
-                    disabled={idx < currentStepIndex}
+              <h4 className={styles.detailTitle}>Delivery Assignment</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <select
+                    style={{ width: '100%', padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(34,5,79,0.1)', background: '#f9f8fc', color: '#22054f', fontWeight: 600, fontSize: '0.9rem' }}
+                    value={order.transporter_id || ""}
+                    onChange={(e) => onAssignTransporter(e.target.value)}
                   >
-                    {step}
-                  </button>
-                ))}
+                    <option value="">-- Select a Transporter --</option>
+                    {transporters.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '200px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#8a849c', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Delivery Status:
+                  </span>
+                  <span className={`${styles.statusBadge} ${order.delivery_status === 'delivered' ? styles.badgeSuccess : order.delivery_status === 'in_transit' ? styles.badgePrimary : styles.badgeSecondary}`}>
+                    {(order.delivery_status || 'NOT ASSIGNED').replace(/_/g, ' ').toUpperCase()}
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
-          <div className={styles.actionRow}>
-            <button className={styles.actionButton} onClick={onView} type="button">
-              View Full Details
-            </button>
-          </div>
+          {showActions && onStatusChange && (
+            <div className={styles.detailBlock}>
+              <h4 className={styles.detailTitle}>Order Progress</h4>
+              <div className={styles.stepperContainer}>
+                <div className={styles.stepLine}>
+                  <div 
+                    className={styles.stepLineProgress} 
+                    style={{ width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%` }}
+                  />
+                </div>
+                {statusSteps.map((step, idx) => {
+                  const isCompleted = idx <= currentStepIndex;
+                  const isActive = step === order.status;
+                  return (
+                    <div key={step} className={styles.stepWrapper}>
+                      <button
+                        className={`${styles.stepCircle} ${isCompleted ? styles.stepCircleCompleted : ""} ${isActive ? styles.stepCircleActive : ""}`}
+                        onClick={() => onStatusChange(step)}
+                        disabled={idx < currentStepIndex}
+                        title={`Set status to ${step.replace(/_/g, " ").toUpperCase()}`}
+                      >
+                        {isCompleted && !isActive ? <Check size={18} strokeWidth={3} /> : (idx + 1)}
+                      </button>
+                      <span className={`${styles.stepLabel} ${isActive ? styles.stepLabelActive : ""}`}>
+                        {step.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient, hasAdminClientConfig } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -15,12 +14,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    let supabase;
-    if (hasAdminClientConfig()) {
-      supabase = createAdminClient();
-    } else {
-      supabase = await createClient();
-    }
+    const supabase = await createClient();
 
     // Build the update object — only include fields that were sent
     const updates: Record<string, unknown> = {};
@@ -88,12 +82,7 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    let supabase;
-    if (hasAdminClientConfig()) {
-      supabase = createAdminClient();
-    } else {
-      supabase = await createClient();
-    }
+    const supabase = await createClient();
 
     // Soft delete — set is_active to false
     const { data, error } = await supabase

@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import OrderCard from "@/components/supplier/orders/OrderCard";
-import { Search } from "lucide-react";
+import { Search, Inbox, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { SupplierOrder } from "@/types/models";
 import styles from "@/components/layout/PortalLayout.module.css";
@@ -12,6 +12,7 @@ import styles from "@/components/layout/PortalLayout.module.css";
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
+  const [transporters, setTransporters] = useState<{id: string, name: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -140,10 +141,19 @@ export default function SupplierOrders() {
     const loadOrders = async () => {
       const data = await fetchOrders();
       setOrders(data);
+      
+      const { data: transData } = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('role', 'transporter');
+      if (transData) {
+        setTransporters(transData);
+      }
+
       setLoading(false);
     };
     loadOrders();
-  }, [fetchOrders]);
+  }, [fetchOrders, supabase]);
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const { error } = await supabase
@@ -158,14 +168,29 @@ export default function SupplierOrders() {
     }
   }
 
+  async function assignTransporter(orderId: string, transporterId: string) {
+    const { error } = await supabase
+      .from("orders")
+      .update({ transporter_id: transporterId || null, delivery_status: transporterId ? 'in_transit' : 'not_assigned' })
+      .eq("id", orderId);
+
+    if (!error) {
+      toast.success("Transporter assigned successfully!");
+      const updatedOrders = await fetchOrders();
+      setOrders(updatedOrders);
+    } else {
+      toast.error("Failed to assign transporter: " + error.message);
+    }
+  }
+
   return (
     <>
       <div className={styles.pageStack}>
         <div className={styles.heroCard}>
           <div className={styles.productsHeaderRow}>
             <div>
-              <h2 className={styles.heroTitle}>Product List</h2>
-              <p className={styles.heroText}>Manage your supplier products in a clean, familiar inventory layout.</p>
+              <h2 className={styles.heroTitle}>Supplier Orders</h2>
+              <p className={styles.heroText}>Manage and process incoming orders from organizations.</p>
             </div>
           </div>
 
@@ -197,10 +222,14 @@ export default function SupplierOrders() {
         </div>
 
         {loading ? (
-          <div className={styles.loadingState}>Loading orders...</div>
+          <div className={styles.loadingState}>
+            <Loader2 className="animate-spin" size={32} style={{ margin: "0 auto 12px", color: "#6008f8" }} />
+            <p>Loading orders...</p>
+          </div>
         ) : filteredOrders.length === 0 ? (
           <div className={styles.emptyState}>
-            <p>No orders found</p>
+            <Inbox size={48} style={{ margin: "0 auto 16px", color: "#d1cbe0" }} />
+            <p>No orders found matching your criteria</p>
           </div>
         ) : (
           <div className={styles.cardList}>
@@ -209,6 +238,8 @@ export default function SupplierOrders() {
                 key={order.id}
                 order={order}
                 onStatusChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
+                transporters={transporters}
+                onAssignTransporter={(transporterId) => assignTransporter(order.id, transporterId)}
                 showActions={true}
               />
             ))}
