@@ -36,9 +36,13 @@ export default function SupplierProductsPage() {
     name: "",
     productId: "",
     price: "",
+    stock: "0",
     categoryId: "",
     isActive: true,
   });
+  const [updatingStock, setUpdatingStock] = useState<Record<string, boolean>>({});
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -145,14 +149,42 @@ export default function SupplierProductsPage() {
       name: "",
       productId: "",
       price: "",
+      stock: "0",
       categoryId: "",
       isActive: true,
     });
+    setIsAddingCategory(false);
+    setNewCategoryName("");
     setViewMode("form");
   };
 
   const handleCancelClick = () => {
     setViewMode("list");
+  };
+
+  const handleAddNewCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) {
+      toast.error("Category name cannot be empty.");
+      return;
+    }
+    
+    const { data, error } = await supabase
+      .from("categories")
+      .insert([{ name }])
+      .select("id,name")
+      .single();
+
+    if (error) {
+      toast.error("Failed to add category: " + error.message);
+      return;
+    }
+
+    setCategories((prev) => [...prev, data as CategoryRow].sort((a, b) => a.name.localeCompare(b.name)));
+    setFormData((prev) => ({ ...prev, categoryId: data.id }));
+    setIsAddingCategory(false);
+    setNewCategoryName("");
+    toast.success("Category added successfully!");
   };
 
   const handleSaveClick = async () => {
@@ -179,6 +211,7 @@ export default function SupplierProductsPage() {
       sku: formData.productId.trim() ? formData.productId.trim() : null,
       category_id: formData.categoryId || null,
       price: priceValue,
+      stock: parseInt(formData.stock, 10) || 0,
       is_active: formData.isActive,
     };
 
@@ -210,6 +243,26 @@ export default function SupplierProductsPage() {
     }
 
     setUpdatingAvailability((prev) => ({ ...prev, [productId]: false }));
+  };
+
+  const setProductStock = async (productId: string, newStock: number) => {
+    if (isNaN(newStock) || newStock < 0) return;
+    setUpdatingStock((prev) => ({ ...prev, [productId]: true }));
+
+    const previousProducts = products;
+    setProducts((prev) =>
+      prev.map((product) => (product.id === productId ? { ...product, stock: newStock } : product))
+    );
+
+    const { error } = await supabase.from("products").update({ stock: newStock }).eq("id", productId);
+    if (error) {
+      setProducts(previousProducts);
+      toast.error("Failed to update stock: " + error.message);
+    } else {
+      toast.success("Stock updated successfully.");
+    }
+
+    setUpdatingStock((prev) => ({ ...prev, [productId]: false }));
   };
 
   return (
@@ -288,6 +341,26 @@ export default function SupplierProductsPage() {
                       </div>
 
                       <div className="product-info-row">
+                        <span className="info-label">Stock Quantity</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <input 
+                            type="number" 
+                            min="0"
+                            className="form-input-styled" 
+                            style={{ width: "80px", height: "32px", padding: "0 8px" }}
+                            defaultValue={product.stock || 0}
+                            disabled={!!updatingStock[product.id]}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val) && val !== product.stock) {
+                                setProductStock(product.id, val);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="product-info-row">
                         <span className="info-label">Added</span>
                         <span className="info-value">
                           {new Date(product.created_at).toLocaleDateString()}
@@ -334,18 +407,44 @@ export default function SupplierProductsPage() {
 
               <div className="form-group">
                 <label className="form-label">Category</label>
-                <select
-                  className="form-select-styled"
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, categoryId: e.target.value }))}
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                {!isAddingCategory ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      className="form-select-styled"
+                      style={{ flex: 1 }}
+                      value={formData.categoryId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, categoryId: e.target.value }))}
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="btn btn-secondary" onClick={() => setIsAddingCategory(true)} style={{ padding: '0 12px' }}>
+                      <Plus size={16} /> New
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      className="form-input-styled"
+                      style={{ flex: 1 }}
+                      placeholder="New category name"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      autoFocus
+                    />
+                    <button type="button" className="btn btn-primary" onClick={handleAddNewCategory} style={{ padding: '0 16px' }}>
+                      Save
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => { setIsAddingCategory(false); setNewCategoryName(""); }} style={{ padding: '0 16px' }}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -357,6 +456,17 @@ export default function SupplierProductsPage() {
                   placeholder="0"
                   value={formData.price}
                   onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Initial Stock</label>
+                <input
+                  type="number"
+                  className="form-input-styled"
+                  placeholder="0"
+                  value={formData.stock}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, stock: e.target.value }))}
                 />
               </div>
 

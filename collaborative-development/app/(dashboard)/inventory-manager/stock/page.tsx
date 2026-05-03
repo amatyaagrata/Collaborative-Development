@@ -7,7 +7,7 @@ import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "./orders.css";
 
 interface Order { id: string; product_name: string; supplier_name: string; custom_product_id: string; category: string; total_price: number; quantity: number; created_at?: string; }
-interface Product { id: string; name: string; price: number; stock: number; categories?: { name?: string }[] | { name?: string } | null; }
+interface Product { id: string; name: string; price: number; stock: number; supplier_id?: string; categories?: { name?: string }[] | { name?: string } | null; }
 interface SupplierOption { id: string; name: string; }
 
 function getCategoryName(product: Product): string {
@@ -38,7 +38,7 @@ export default function IMStockPage() {
 
   const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
-    const { data, error } = await supabase.from("products").select("id, name, price, stock, categories:category_id(name)").order("name", { ascending: true });
+    const { data, error } = await supabase.from("products").select("id, name, price, stock, supplier_id, categories:category_id(name)").order("name", { ascending: true });
     if (error) toast.error("Failed to load products: " + error.message);
     else setProducts(data || []);
     setLoadingProducts(false);
@@ -68,7 +68,18 @@ export default function IMStockPage() {
   const handleProductSelect = (productId: string) => {
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
-      setFormData({ ...formData, selected_product_id: productId, product_name: selectedProduct.name, category: getCategoryName(selectedProduct), total_price: selectedProduct.price.toString() });
+      const supId = selectedProduct.supplier_id || "";
+      const supMatch = suppliers.find(s => s.id === supId);
+      
+      setFormData({ 
+        ...formData, 
+        selected_product_id: productId, 
+        product_name: selectedProduct.name, 
+        category: getCategoryName(selectedProduct), 
+        total_price: selectedProduct.price.toString(),
+        supplier_id: supId,
+        supplier_name: supMatch?.name || formData.supplier_name
+      });
     }
   };
 
@@ -80,7 +91,7 @@ export default function IMStockPage() {
   };
 
   const handleSaveClick = async () => {
-    if (!formData.product_name || !formData.category) { toast.error("Please fill in the required fields (Product and Category)."); return; }
+    if (!formData.product_name || !formData.supplier_id) { toast.error("Please select a Product and a Supplier."); return; }
     const total_price = parseFloat(formData.total_price);
     const quantity = parseInt(formData.quantity, 10);
     if (isNaN(total_price) || total_price < 0) { toast.error("Please enter a valid price."); return; }
@@ -96,8 +107,20 @@ export default function IMStockPage() {
     if (formData.supplier_id) payload.supplier_id = formData.supplier_id;
 
     if (formMode === "add") {
-      const { error } = await supabase.from("orders").insert([{ ...payload, status: "pending" }]);
+      const { data: newOrder, error } = await supabase.from("orders").insert([{ ...payload, status: "pending" }]).select().single();
       if (error) { toast.error("Failed to add order: " + error.message); return; }
+      
+      if (formData.selected_product_id) {
+        const { error: itemError } = await supabase.from("order_items").insert([{
+          order_id: newOrder.id,
+          product_id: formData.selected_product_id,
+          quantity: quantity,
+          unit_price: total_price,
+          total_price: total_price * quantity
+        }]);
+        if (itemError) console.error("Failed to add order item:", itemError);
+      }
+      
       toast.success("Order added successfully!");
     } else if (formMode === "edit" && editingId !== null) {
       const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
@@ -128,14 +151,14 @@ export default function IMStockPage() {
             <div className="orders-table-card">
               <div className="orders-table-wrapper">
                 <table className="orders-table">
-                  <thead><tr><th style={{ width: 40 }}><input type="checkbox" className="orders-checkbox" /></th><th>Product</th><th>Suppliers</th><th>Product Id</th><th>Category</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead>
+                  <thead><tr><th style={{ width: 40 }}><input type="checkbox" className="orders-checkbox" /></th><th>Product</th><th>Suppliers</th><th>Product Id</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead>
                   <tbody>
-                    {loading ? <tr><td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>Loading orders from database...</td></tr>
-                    : filteredOrders.length === 0 ? <tr><td colSpan={8} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>No orders found</td></tr>
+                    {loading ? <tr><td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>Loading orders from database...</td></tr>
+                    : filteredOrders.length === 0 ? <tr><td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "#8c8a94" }}>No orders found</td></tr>
                     : filteredOrders.map((order) => (
                       <tr key={order.id}>
                         <td><input type="checkbox" className="orders-checkbox" /></td>
-                        <td style={{ fontWeight: 600 }}>{order.product_name}</td><td>{order.supplier_name}</td><td>{order.custom_product_id}</td><td>{order.category}</td><td>${Number(order.total_price).toLocaleString()}</td>
+                        <td style={{ fontWeight: 600 }}>{order.product_name}</td><td>{order.supplier_name}</td><td>{order.custom_product_id}</td><td>${Number(order.total_price).toLocaleString()}</td>
                         <td><span className={order.quantity > 50 ? "orders-quantity-high" : "orders-quantity-low"}>{order.quantity}</span></td>
                         <td><div className="orders-action-buttons"><button className="orders-action-btn" onClick={() => handleEditClick(order)}><Pencil size={16} /></button><button className="orders-action-btn delete" onClick={() => handleDelete(order.id)}><Trash2 size={16} /></button></div></td>
                       </tr>
@@ -159,10 +182,7 @@ export default function IMStockPage() {
                 <div className="orders-form-group"><label className="orders-form-label">Product ID</label><input type="text" className="orders-form-input" placeholder="#364738" value={formData.custom_product_id} onChange={(e) => setFormData({ ...formData, custom_product_id: e.target.value })} /></div>
               </div>
               <div className="orders-form-row">
-                <div className="orders-form-group"><label className="orders-form-label">Category *</label><input type="text" className="orders-form-input" placeholder="Category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} readOnly={!!formData.selected_product_id} /></div>
                 <div className="orders-form-group"><label className="orders-form-label">Price</label><input type="number" className="orders-form-input" placeholder="$.00" min="0" step="0.01" value={formData.total_price} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setFormData({ ...formData, total_price: val }); }} readOnly={!!formData.selected_product_id} /></div>
-              </div>
-              <div className="orders-form-row">
                 <div className="orders-form-group"><label className="orders-form-label">Quantity</label><input type="number" className="orders-form-input" placeholder="Quantity" min="0" step="1" value={formData.quantity} onChange={(e) => { const val = e.target.value; if (val === "" || parseInt(val, 10) >= 0) setFormData({ ...formData, quantity: val }); }} /></div>
               </div>
               <div className="orders-form-actions"><button className="orders-btn orders-btn-secondary" onClick={() => setViewMode("list")}>Cancel</button><button className="orders-btn orders-btn-primary" onClick={handleSaveClick}>Save Order</button></div>
