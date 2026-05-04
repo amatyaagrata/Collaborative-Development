@@ -171,7 +171,7 @@ export default function SupplierOrders() {
   async function assignTransporter(orderId: string, transporterId: string) {
     const { error } = await supabase
       .from("orders")
-      .update({ transporter_id: transporterId || null, delivery_status: transporterId ? 'in_transit' : 'not_assigned' })
+      .update({ transporter_id: transporterId || null, delivery_status: transporterId ? 'pending_acceptance' : 'not_assigned' })
       .eq("id", orderId);
 
     if (!error) {

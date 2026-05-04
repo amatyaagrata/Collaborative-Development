@@ -54,7 +54,7 @@ CREATE POLICY "transporter_view_orders" ON public.orders
 FOR SELECT USING (
   get_current_role() = 'transporter' AND 
   organization_id = get_current_org_id() AND 
-  (transporter_id = (SELECT id FROM users WHERE auth_user_id = auth.uid() LIMIT 1) OR transporter_id IS NULL)
+  transporter_id = (SELECT id FROM users WHERE auth_user_id = auth.uid() LIMIT 1)
 );
 
 CREATE POLICY "transporter_update_orders" ON public.orders

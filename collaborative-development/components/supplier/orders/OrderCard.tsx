@@ -165,7 +165,14 @@ export default function OrderCard({
                   <span style={{ fontSize: '0.75rem', color: '#8a849c', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Delivery Status:
                   </span>
-                  <span className={`${styles.statusBadge} ${order.delivery_status === 'delivered' ? styles.badgeSuccess : order.delivery_status === 'in_transit' ? styles.badgePrimary : styles.badgeSecondary}`}>
+                  <span className={`${styles.statusBadge} ${
+                    order.delivery_status === 'delivered' ? styles.badgeSuccess 
+                    : order.delivery_status === 'in_transit' ? styles.badgePrimary 
+                    : order.delivery_status === 'accepted' ? styles.badgeInfo
+                    : order.delivery_status === 'pending_acceptance' ? styles.badgeWarning
+                    : order.delivery_status === 'rejected' ? styles.badgeDanger
+                    : styles.badgeSecondary
+                  }`}>
                     {(order.delivery_status || 'NOT ASSIGNED').replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>

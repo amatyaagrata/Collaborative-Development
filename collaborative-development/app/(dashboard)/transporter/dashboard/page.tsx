@@ -51,10 +51,19 @@ export default function TransporterDashboard() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
 
+    // Fetch the correct transporter ID from the users table
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", userData.user.id)
+      .single();
+
+    if (!userRow) return;
+
     const { data, error } = await supabase
       .from("orders")
       .select("*") 
-      .eq("transporter_id", userData.user.id)
+      .eq("transporter_id", userRow.id)
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -68,7 +77,7 @@ export default function TransporterDashboard() {
     try {
       const { error } = await supabase
         .from("orders")
-        .update({ delivery_status: "accepted" })
+        .update({ delivery_status: "accepted", status: "out_for_delivery" })
         .eq("id", orderId);
 
       if (error) throw error;

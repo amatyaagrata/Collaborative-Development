@@ -29,10 +29,20 @@ export default function TransporterDeliveriesPage() {
   const getHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Fetch the correct transporter ID from the users table
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (!userRow) return;
+
     const { data, error } = await supabase
       .from("orders")
       .select("*")
-      .eq("transporter_id", user.id)
+      .eq("transporter_id", userRow.id)
       .order("created_at", { ascending: false });
     if (!error && data) setHistory(data);
   };
@@ -84,7 +94,8 @@ export default function TransporterDeliveriesPage() {
           priority: formData.priority,
           eta: formData.eta,
           due_time: formData.due_time,
-          delivery_status: formData.delivery_status
+          delivery_status: formData.delivery_status,
+          delivery_address: formData.destination
         })
         .eq("id", editingId);
       
@@ -151,8 +162,15 @@ export default function TransporterDeliveriesPage() {
               Update Delivery Details
             </h3>
             <form onSubmit={handleSubmitOrder} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontSize: "0.9rem" }}>
-                <strong>Destination:</strong> {formData.destination}
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                <label style={{ fontSize: "0.8rem", color: "#64748b", marginLeft: "5px" }}>Destination Address</label>
+                <input 
+                  type="text"
+                  value={formData.destination} 
+                  onChange={(e) => setFormData({...formData, destination: e.target.value})} 
+                  placeholder="Enter destination address"
+                  style={{ padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "white" }} 
+                />
               </div>
               <div style={{ padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontSize: "0.9rem" }}>
                 <strong>Product:</strong> {formData.product}
