@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Truck, CheckCircle, Navigation, Clock, X } from "lucide-react";
+import { Truck, CheckCircle, Navigation, Clock, X, Package, XCircle } from "lucide-react";
 import styles from "@/components/layout/PortalLayout.module.css";
+import { toast } from "sonner";
 import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
 
 /**
@@ -21,6 +22,11 @@ interface OrderRecord {
   destination?: string;
   vehicle_plate?: string;
   vehicle_model?: string;
+  order_number?: string;
+  product_name?: string;
+  priority?: string;
+  due_time?: string;
+  delivery_address?: string;
 }
 
 export default function TransporterDashboard() {
@@ -57,6 +63,38 @@ export default function TransporterDashboard() {
     setLoading(false);
   }, [supabase]);
 
+  /* Accept a delivery assignment from supplier */
+  const handleAccept = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ delivery_status: "accepted" })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toast.success("Delivery accepted! You can now start transit.");
+      fetchDashboardData();
+    } catch (error) {
+      toast.error("Failed to accept delivery");
+    }
+  };
+
+  /* Reject a delivery assignment from supplier */
+  const handleReject = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ delivery_status: "rejected" })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toast.success("Delivery rejected.");
+      fetchDashboardData();
+    } catch (error) {
+      toast.error("Failed to reject delivery");
+    }
+  };
+
   /**
    * REALTIME SUBSCRIPTION
    * Sets up a live listener to the 'orders' table.
@@ -79,6 +117,7 @@ export default function TransporterDashboard() {
    * Calculations include mileage aggregation and on-time performance percentage.
    */
   const stats = useMemo(() => {
+    const pendingRequests = orders.filter((o) => o.delivery_status === "pending_acceptance");
     const inTransitOrders = orders.filter((o) => o.delivery_status === "in_transit");
     const deliveredOrders = orders.filter((o) => o.delivery_status === "delivered");
     
@@ -96,6 +135,7 @@ export default function TransporterDashboard() {
       : "100.0";
 
     return { 
+      pendingRequests,
       activeList: inTransitOrders,
       completedTodayList: completedTodayOrders,
       totalMiles: Math.round(totalMiles).toLocaleString(),
@@ -112,6 +152,70 @@ export default function TransporterDashboard() {
       <WelcomeMessage roleOverride="Driver/Transporter" />
       
       <div className={styles.pageStack}>
+        {/* INCOMING DELIVERY REQUESTS - ACCEPT/REJECT */}
+        {stats.pendingRequests.length > 0 && (
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#c2410c", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <Package size={20} /> Incoming Requests ({stats.pendingRequests.length})
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
+              {stats.pendingRequests.map((order) => (
+                <div key={order.id} style={{
+                  background: "white",
+                  padding: "24px",
+                  borderRadius: "20px",
+                  border: "2px solid #fed7aa",
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <span style={{ fontWeight: "800", color: "#4338ca", fontSize: "1rem" }}>{order.order_number || "New Order"}</span>
+                    <span style={{ 
+                      padding: "4px 12px", borderRadius: "20px", fontSize: "0.7rem", fontWeight: "700",
+                      background: "#fff7ed", color: "#c2410c"
+                    }}>
+                      Awaiting Response
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontSize: "0.9rem" }}>
+                      <Truck size={16} color="#7c3aed" />
+                      <strong>To:</strong> {order.delivery_address || "N/A"}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontSize: "0.9rem" }}>
+                      <Package size={16} color="#7c3aed" />
+                      <strong>Product:</strong> {order.product_name || "N/A"}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button 
+                      onClick={() => handleAccept(order.id)}
+                      style={{
+                        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                        padding: "12px", borderRadius: "12px", border: "none",
+                        background: "#10b981", color: "white", fontWeight: "700", fontSize: "0.9rem", cursor: "pointer"
+                      }}
+                    >
+                      <CheckCircle size={18} /> Accept
+                    </button>
+                    <button 
+                      onClick={() => handleReject(order.id)}
+                      style={{
+                        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                        padding: "12px", borderRadius: "12px", border: "2px solid #fca5a5",
+                        background: "white", color: "#dc2626", fontWeight: "700", fontSize: "0.9rem", cursor: "pointer"
+                      }}
+                    >
+                      <XCircle size={18} /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className={styles.statsGrid}>
           
           <div 
