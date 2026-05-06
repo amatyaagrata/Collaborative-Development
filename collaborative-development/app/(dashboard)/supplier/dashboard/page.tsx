@@ -1,28 +1,150 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
-import { Package, ShoppingCart, Truck, CreditCard, DollarSign, CheckCircle } from "lucide-react";
+import { Package, ShoppingCart, Truck, CreditCard, DollarSign, CheckCircle, Loader2, Inbox } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import styles from "@/components/layout/PortalLayout.module.css";
 
-export default function SupplierDashboardPage() {
-  const [loading, setLoading] = useState(false);
+interface DashboardStats {
+  totalProducts: number;
+  pendingOrders: number;
+  completedOrders: number;
+  totalEarnings: number;
+}
 
-  // Fallback mock data
-  const stats = { totalProducts: 12, pendingOrders: 5, completedOrders: 34, totalEarnings: 145000 };
-  const recentOrders = [
-    { id: "ORD-001", org: "Alpha Retail", date: "2026-05-01", amount: 12500, status: "Pending" },
-    { id: "ORD-002", org: "Beta Mart", date: "2026-04-29", amount: 34000, status: "Processing" },
-    { id: "ORD-003", org: "Gamma Store", date: "2026-04-28", amount: 8900, status: "Completed" },
-  ];
-  const payments = [
-    { status: "Pending", amount: 24500, count: 3 },
-    { status: "Processing", amount: 12000, count: 1 },
-    { status: "Completed", amount: 145000, count: 12 },
-  ];
+interface RecentOrder {
+  id: string;
+  order_number: string;
+  org: string;
+  date: string;
+  amount: number;
+  status: string;
+}
+
+interface PaymentItem {
+  status: string;
+  amount: number;
+  count: number;
+}
+
+export default function SupplierDashboardPage() {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({ totalProducts: 0, pendingOrders: 0, completedOrders: 0, totalEarnings: 0 });
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("id, organization_id")
+        .eq("auth_user_id", authUser.id)
+        .single();
+
+      if (!userRow) return;
+
+      const { data: supplierRow } = await supabase
+        .from("suppliers")
+        .select("id")
+        .eq("user_id", userRow.id)
+        .single();
+
+      const resolvedSupplierId = supplierRow?.id;
+      if (!resolvedSupplierId) {
+        setLoading(false);
+        return;
+      }
+
+      // 1. Fetch Stats
+      const [productsRes, pendingRes, completedRes] = await Promise.all([
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId).eq("status", "pending"),
+        supabase.from("orders").select("total_amount", { count: "exact" }).eq("supplier_id", resolvedSupplierId).eq("status", "delivered")
+      ]);
+
+      const totalEarnings = (completedRes.data || []).reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+      setStats({
+        totalProducts: productsRes.count || 0,
+        pendingOrders: pendingRes.count || 0,
+        completedOrders: completedRes.count || 0,
+        totalEarnings
+      });
+
+      // 2. Fetch Recent Orders
+      const { data: ordersData } = await supabase
+        .from("orders")
+        .select("id, order_number, status, created_at, total_amount, organizations(name)")
+        .eq("supplier_id", resolvedSupplierId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (ordersData) {
+        setRecentOrders(ordersData.map(o => ({
+          id: o.id,
+          order_number: o.order_number,
+          org: (o.organizations as any)?.name || "Unknown",
+          date: new Date(o.created_at).toLocaleDateString(),
+          amount: o.total_amount || 0,
+          status: o.status
+        })));
+      }
+
+      // 3. Payment Summary (grouped by status)
+      const { data: allOrders } = await supabase
+        .from("orders")
+        .select("status, total_amount")
+        .eq("supplier_id", resolvedSupplierId);
+
+      if (allOrders) {
+        const summaryMap: Record<string, { amount: number; count: number }> = {
+          "pending": { amount: 0, count: 0 },
+          "preparing": { amount: 0, count: 0 },
+          "delivered": { amount: 0, count: 0 },
+        };
+
+        allOrders.forEach(o => {
+          const status = o.status.toLowerCase();
+          const key = status === "delivered" ? "delivered" : (status === "pending" ? "pending" : "preparing");
+          if (!summaryMap[key]) summaryMap[key] = { amount: 0, count: 0 };
+          summaryMap[key].amount += (o.total_amount || 0);
+          summaryMap[key].count += 1;
+        });
+
+        setPayments([
+          { status: "Pending", amount: summaryMap["pending"].amount, count: summaryMap["pending"].count },
+          { status: "Preparing", amount: summaryMap["preparing"].amount, count: summaryMap["preparing"].count },
+          { status: "Completed", amount: summaryMap["delivered"].amount, count: summaryMap["delivered"].count },
+        ]);
+      }
+
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   if (loading) {
-    return <><div className={styles.loadingState}>Loading dashboard...</div></>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "60vh", color: "#64748b" }}>
+        <Loader2 size={40} className="spin" style={{ marginBottom: "16px", color: "#7c3aed" }} />
+        <p style={{ fontWeight: 500 }}>Updating dashboard with live data...</p>
+        <style jsx global>{` .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } } `}</style>
+      </div>
+    );
   }
 
   return (
@@ -55,26 +177,33 @@ export default function SupplierDashboardPage() {
               <h2 className={styles.sectionTitle}>Recent Orders</h2>
             </div>
             <div className={styles.dataTable} style={{ display: "block" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Order ID</th>
-                    <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Organization</th>
-                    <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Date</th>
-                    <th style={{ textAlign: "right", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map(order => (
-                    <tr key={order.id}>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", fontWeight: 600, color: "#4f46e5" }}>{order.id}</td>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", fontWeight: 500 }}>{order.org}</td>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.9rem" }}>{order.date}</td>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", textAlign: "right", fontWeight: 600 }}>Rs. {order.amount.toLocaleString()}</td>
+              {recentOrders.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
+                  <Inbox size={32} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
+                  <p>No orders found yet.</p>
+                </div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Order ID</th>
+                      <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Organization</th>
+                      <th style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Date</th>
+                      <th style={{ textAlign: "right", padding: "8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentOrders.map(order => (
+                      <tr key={order.id}>
+                        <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", fontWeight: 600, color: "#4f46e5" }}>#{order.order_number}</td>
+                        <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", fontWeight: 500 }}>{order.org}</td>
+                        <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", color: "#64748b", fontSize: "0.9rem" }}>{order.date}</td>
+                        <td style={{ padding: "12px 8px", borderBottom: "1px solid #f1f5f9", textAlign: "right", fontWeight: 600 }}>Rs. {order.amount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
 
@@ -88,7 +217,7 @@ export default function SupplierDashboardPage() {
                 <div key={payment.status} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: "#f8fafc", borderRadius: "12px" }}>
                   <div>
                     <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9rem", color: "#334155" }}>{payment.status}</p>
-                    <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#64748b" }}>{payment.count} invoices</p>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#64748b" }}>{payment.count} orders</p>
                   </div>
                   <p style={{ margin: 0, fontWeight: 700, color: "#1e293b" }}>Rs. {payment.amount.toLocaleString()}</p>
                 </div>
@@ -100,3 +229,4 @@ export default function SupplierDashboardPage() {
     </>
   );
 }
+
