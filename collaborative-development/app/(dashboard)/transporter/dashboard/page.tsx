@@ -91,12 +91,68 @@ export default function TransporterDashboard() {
   /* Reject a delivery assignment from supplier */
   const handleReject = async (orderId: string) => {
     try {
+      // 1. Get the order details first (to find the supplier)
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("order_number, supplier_id, status")
+        .eq("id", orderId)
+        .single();
+
+      // 2. Reset the assignment so the supplier can reassign
       const { error } = await supabase
         .from("orders")
-        .update({ delivery_status: "rejected" })
+        .update({ 
+          delivery_status: "rejected",
+          transporter_id: null,
+          status: orderData?.status === "out_for_delivery" ? "ready_for_delivery" : orderData?.status
+        })
         .eq("id", orderId);
 
       if (error) throw error;
+
+      // 3. Create a notification for the supplier
+      if (orderData?.supplier_id) {
+        // Find the supplier's auth user id to send the notification
+        const { data: supplierUser } = await supabase
+          .from("users")
+          .select("auth_user_id")
+          .eq("id", orderData.supplier_id)
+          .single();
+
+        // Fallback: find supplier user via suppliers table
+        if (!supplierUser) {
+          const { data: supplierRecord } = await supabase
+            .from("suppliers")
+            .select("user_id")
+            .eq("id", orderData.supplier_id)
+            .single();
+          
+          if (supplierRecord?.user_id) {
+            const { data: supUser } = await supabase
+              .from("users")
+              .select("auth_user_id")
+              .eq("id", supplierRecord.user_id)
+              .single();
+
+            if (supUser?.auth_user_id) {
+              await supabase.from("notifications").insert({
+                user_id: supUser.auth_user_id,
+                title: "Delivery Rejected",
+                message: `Transporter has declined delivery for order ${orderData.order_number}. Please reassign a new transporter.`,
+                type: "delivery_rejected"
+              });
+            }
+          }
+        } else if (supplierUser.auth_user_id) {
+          await supabase.from("notifications").insert({
+            user_id: supplierUser.auth_user_id,
+            title: "Delivery Rejected",
+            message: `Transporter has declined delivery for order ${orderData.order_number}. Please reassign a new transporter.`,
+            type: "delivery_rejected"
+          });
+        }
+      }
+
       toast.success("Delivery rejected.");
       fetchDashboardData();
     } catch (error) {

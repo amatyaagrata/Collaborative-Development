@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, MapPin, Phone, Check } from "lucide-react";
+import { Building2, MapPin, Phone, Check, Truck, AlertTriangle } from "lucide-react";
 import styles from "@/components/layout/PortalLayout.module.css";
 
 interface OrderCardProps {
@@ -58,15 +58,40 @@ export default function OrderCard({
     delivered: "badge-secondary",
   };
 
-  const statusSteps = [
-    "pending",
-    "confirmed",
-    "preparing",
-    "ready_for_delivery",
-    "out_for_delivery",
-    "delivered",
+  /* ── Unified steps: order lifecycle + delivery lifecycle ── */
+  const unifiedSteps = [
+    { key: "pending",             label: "Pending",           type: "order" },
+    { key: "confirmed",           label: "Confirmed",         type: "order" },
+    { key: "preparing",           label: "Preparing",         type: "order" },
+    { key: "ready_for_delivery",  label: "Ready",             type: "order" },
+    { key: "assigned",            label: "Assigned",          type: "delivery" },
+    { key: "accepted",            label: "Accepted",          type: "delivery" },
+    { key: "in_transit",          label: "In Transit",        type: "delivery" },
+    { key: "delivered",           label: "Delivered",         type: "both" },
   ];
-  const currentStepIndex = statusSteps.indexOf(order.status);
+
+  /* Determine which step we are at */
+  const getActiveIndex = () => {
+    const ds = order.delivery_status || "not_assigned";
+    const os = order.status;
+
+    if (ds === "delivered" || os === "delivered") return 7;
+    if (ds === "in_transit") return 6;
+    if (ds === "accepted" || os === "out_for_delivery") return 5;
+    if (ds === "pending_acceptance") return 4;
+
+    // Order-only statuses
+    const orderMap: Record<string, number> = {
+      ready_for_delivery: 3,
+      preparing: 2,
+      confirmed: 1,
+      pending: 0,
+    };
+    return orderMap[os] ?? 0;
+  };
+
+  const activeIndex = getActiveIndex();
+  const isRejected = order.delivery_status === "rejected";
 
   return (
     <div className={styles.orderCard}>
@@ -77,6 +102,15 @@ export default function OrderCard({
             <span className={`${styles.statusBadge} ${styles[statusColors[order.status as keyof typeof statusColors]]}`}>
               {order.status.replace(/_/g, " ").toUpperCase()}
             </span>
+            {isRejected && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: "4px",
+                padding: "3px 10px", borderRadius: "20px", fontSize: "0.7rem",
+                fontWeight: 700, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca"
+              }}>
+                <AlertTriangle size={12} /> DRIVER REJECTED
+              </span>
+            )}
           </div>
           <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#6008f8", marginTop: "4px" }}>
             {order.organizations?.name || "Unknown Organization"}
@@ -145,9 +179,13 @@ export default function OrderCard({
             </table>
           </div>
 
+          {/* ── Transporter Assignment (inline with card) ── */}
           {showActions && onAssignTransporter && transporters && (
             <div className={styles.detailBlock}>
-              <h4 className={styles.detailTitle}>Delivery Assignment</h4>
+              <h4 className={styles.detailTitle}>
+                <Truck size={16} style={{ display: "inline", marginRight: "6px", verticalAlign: "middle" }} />
+                Assign Driver
+              </h4>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '200px' }}>
                   <select
@@ -161,54 +199,102 @@ export default function OrderCard({
                     ))}
                   </select>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '200px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.75rem', color: '#8a849c', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Delivery Status:
+                    Status:
                   </span>
-                  <span className={`${styles.statusBadge} ${
-                    order.delivery_status === 'delivered' ? styles.badgeSuccess 
-                    : order.delivery_status === 'in_transit' ? styles.badgePrimary 
-                    : order.delivery_status === 'accepted' ? styles.badgeInfo
-                    : order.delivery_status === 'pending_acceptance' ? styles.badgeWarning
-                    : order.delivery_status === 'rejected' ? styles.badgeDanger
-                    : styles.badgeSecondary
-                  }`}>
-                    {(order.delivery_status || 'NOT ASSIGNED').replace(/_/g, ' ').toUpperCase()}
+                  <span style={{
+                    padding: "4px 12px", borderRadius: "20px", fontSize: "0.7rem", fontWeight: 700,
+                    background: isRejected ? "#fef2f2" : order.delivery_status === "pending_acceptance" ? "#fffbeb" : order.delivery_status === "accepted" ? "#eff6ff" : order.delivery_status === "in_transit" ? "#f0f9ff" : order.delivery_status === "delivered" ? "#f0fdf4" : "#f8fafc",
+                    color: isRejected ? "#dc2626" : order.delivery_status === "pending_acceptance" ? "#d97706" : order.delivery_status === "accepted" ? "#2563eb" : order.delivery_status === "in_transit" ? "#0284c7" : order.delivery_status === "delivered" ? "#16a34a" : "#64748b",
+                    border: `1px solid ${isRejected ? "#fecaca" : "transparent"}`
+                  }}>
+                    {isRejected ? "⚠ REJECTED — Reassign above" : (order.delivery_status || 'NOT ASSIGNED').replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>
               </div>
             </div>
           )}
 
+          {/* ── Single Unified Progress Tracker ── */}
           {showActions && onStatusChange && (
             <div className={styles.detailBlock}>
-              <h4 className={styles.detailTitle}>Order Progress</h4>
-              <div className={styles.stepperContainer}>
-                <div className={styles.stepLine}>
-                  <div 
-                    className={styles.stepLineProgress} 
-                    style={{ width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%` }}
-                  />
+              <h4 className={styles.detailTitle}>Order & Delivery Progress</h4>
+              <div style={{ padding: "20px 12px 12px", background: "#f8fafc", borderRadius: "14px", marginTop: "8px" }}>
+                {/* Stepper */}
+                <div style={{ display: "flex", justifyContent: "space-between", position: "relative", padding: "0 8px" }}>
+                  {unifiedSteps.map((step, idx) => {
+                    const isCompleted = idx <= activeIndex && !isRejected;
+                    const isCurrent = idx === activeIndex && !isRejected;
+                    const isDeliveryStep = step.type === "delivery" || step.type === "both";
+                    const isOrderStep = step.type === "order";
+                    /* A rejected step shows at the 'assigned' position */
+                    const isRejectedStep = isRejected && idx === 4;
+                    const canClick = isOrderStep && idx > activeIndex;
+
+                    return (
+                      <div key={step.key} style={{
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+                        zIndex: 1, position: "relative", flex: 1
+                      }}>
+                        <button
+                          onClick={() => {
+                            if (canClick && onStatusChange) onStatusChange(step.key);
+                          }}
+                          disabled={!canClick}
+                          title={canClick ? `Set status to ${step.label}` : isDeliveryStep ? "Updated by transporter" : ""}
+                          style={{
+                            width: "28px", height: "28px", borderRadius: "50%",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "0.7rem", fontWeight: 700, border: "none",
+                            cursor: canClick ? "pointer" : "default",
+                            transition: "all 0.3s",
+                            color: "white",
+                            background: isRejectedStep ? "#dc2626"
+                              : isCompleted ? "#7c3aed"
+                              : "#ddd6fe",
+                            boxShadow: isCurrent ? "0 0 0 4px rgba(124,58,237,0.2)"
+                              : isRejectedStep ? "0 0 0 4px rgba(220,38,38,0.2)"
+                              : "none",
+                          }}
+                        >
+                          {isRejectedStep ? <AlertTriangle size={14} />
+                            : isCompleted ? <Check size={14} strokeWidth={3} />
+                            : idx + 1}
+                        </button>
+                        <span style={{
+                          fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
+                          textAlign: "center", lineHeight: "1.2",
+                          color: isRejectedStep ? "#dc2626" : isCompleted ? "#4338ca" : "#94a3b8"
+                        }}>
+                          {isRejectedStep ? "Rejected" : step.label}
+                        </span>
+                        {isDeliveryStep && !isRejectedStep && (
+                          <span style={{
+                            fontSize: "0.5rem", color: "#a78bfa", fontWeight: 600,
+                            marginTop: "-4px"
+                          }}>
+                            (driver)
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Background connector line */}
+                  <div style={{
+                    position: "absolute", top: "14px", left: "6%", right: "6%",
+                    height: "3px", background: "#ede9fe", borderRadius: "4px", zIndex: 0
+                  }} />
+                  {/* Progress fill */}
+                  <div style={{
+                    position: "absolute", top: "14px", left: "6%",
+                    width: `${Math.max(0, activeIndex / (unifiedSteps.length - 1)) * 88}%`,
+                    height: "3px", borderRadius: "4px", zIndex: 0,
+                    background: isRejected ? "linear-gradient(90deg, #7c3aed 80%, #dc2626 100%)" : "#7c3aed",
+                    transition: "width 0.5s ease"
+                  }} />
                 </div>
-                {statusSteps.map((step, idx) => {
-                  const isCompleted = idx <= currentStepIndex;
-                  const isActive = step === order.status;
-                  return (
-                    <div key={step} className={styles.stepWrapper}>
-                      <button
-                        className={`${styles.stepCircle} ${isCompleted ? styles.stepCircleCompleted : ""} ${isActive ? styles.stepCircleActive : ""}`}
-                        onClick={() => onStatusChange(step)}
-                        disabled={idx < currentStepIndex}
-                        title={`Set status to ${step.replace(/_/g, " ").toUpperCase()}`}
-                      >
-                        {isCompleted && !isActive ? <Check size={18} strokeWidth={3} /> : (idx + 1)}
-                      </button>
-                      <span className={`${styles.stepLabel} ${isActive ? styles.stepLabelActive : ""}`}>
-                        {step.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           )}

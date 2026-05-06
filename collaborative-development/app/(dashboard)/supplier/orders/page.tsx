@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import OrderCard from "@/components/supplier/orders/OrderCard";
-import { Search, Inbox, Loader2 } from "lucide-react";
+import { Search, Inbox, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { SupplierOrder } from "@/types/models";
 import styles from "@/components/layout/PortalLayout.module.css";
@@ -153,6 +153,22 @@ export default function SupplierOrders() {
       setLoading(false);
     };
     loadOrders();
+
+    // Real-time subscription: auto-refresh when orders change (e.g. transporter rejects)
+    const channel = supabase
+      .channel("supplier_order_updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, async (payload) => {
+        const updated = await fetchOrders();
+        setOrders(updated);
+
+        // Show a toast if a delivery was just rejected
+        if (payload.eventType === 'UPDATE' && payload.new?.delivery_status === 'rejected') {
+          toast.error(`Transporter rejected delivery for order ${payload.new?.order_number || ''}. Please reassign.`);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [fetchOrders, supabase]);
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
@@ -221,6 +237,61 @@ export default function SupplierOrders() {
           </div>
         </div>
 
+        {/* REJECTED DELIVERY ALERTS */}
+        {!loading && orders.filter(o => o.delivery_status === 'rejected').length > 0 && (
+          <div style={{
+            background: "linear-gradient(135deg, #fef2f2, #fff1f2)",
+            border: "2px solid #fecaca",
+            borderRadius: "16px",
+            padding: "20px 24px",
+            marginBottom: "8px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+              <AlertTriangle size={20} color="#dc2626" />
+              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#dc2626" }}>
+                Delivery Rejected ({orders.filter(o => o.delivery_status === 'rejected').length})
+              </h3>
+            </div>
+            <p style={{ margin: "0 0 12px", fontSize: "0.85rem", color: "#991b1b" }}>
+              The following orders were rejected by the assigned transporter. Reassign a new driver below.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {orders.filter(o => o.delivery_status === 'rejected').map(order => (
+                <div key={order.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "white", padding: "14px 16px", borderRadius: "12px",
+                  border: "1px solid #fecaca", gap: "12px", flexWrap: "wrap"
+                }}>
+                  <div style={{ minWidth: "180px" }}>
+                    <span style={{ fontWeight: 700, color: "#4338ca" }}>Order #{order.order_number}</span>
+                    <span style={{ marginLeft: "12px", fontSize: "0.8rem", color: "#64748b" }}>
+                      {order.organizations?.name || ""}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "200px" }}>
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) assignTransporter(order.id, e.target.value);
+                      }}
+                      style={{
+                        flex: 1, padding: "8px 12px", borderRadius: "8px",
+                        border: "1px solid #fecaca", background: "#fff",
+                        color: "#22054f", fontWeight: 600, fontSize: "0.85rem"
+                      }}
+                    >
+                      <option value="">-- Pick a new driver --</option>
+                      {transporters.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className={styles.loadingState}>
             <Loader2 className="animate-spin" size={32} style={{ margin: "0 auto 12px", color: "#6008f8" }} />
@@ -234,14 +305,15 @@ export default function SupplierOrders() {
         ) : (
           <div className={styles.cardList}>
             {filteredOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onStatusChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
-                transporters={transporters}
-                onAssignTransporter={(transporterId) => assignTransporter(order.id, transporterId)}
-                showActions={true}
-              />
+              <div key={order.id} id={`order-${order.id}`}>
+                <OrderCard
+                  order={order}
+                  onStatusChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
+                  transporters={transporters}
+                  onAssignTransporter={(transporterId) => assignTransporter(order.id, transporterId)}
+                  showActions={true}
+                />
+              </div>
             ))}
           </div>
         )}
