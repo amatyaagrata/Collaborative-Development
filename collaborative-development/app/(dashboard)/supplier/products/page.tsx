@@ -21,6 +21,7 @@ type ProductRow = {
   category_id: string | null;
   is_active: boolean;
   created_at: string;
+  categories: { name: string } | null;
 };
 
 export default function SupplierProductsPage() {
@@ -44,6 +45,7 @@ export default function SupplierProductsPage() {
   const [updatingStock, setUpdatingStock] = useState<Record<string, boolean>>({});
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -56,6 +58,7 @@ export default function SupplierProductsPage() {
   }, [products, searchQuery]);
 
   const fetchCategories = useCallback(async (currentOrgId: string) => {
+    if (!currentOrgId) return;
     const { data, error } = await supabase
       .from("categories")
       .select("id,name")
@@ -115,7 +118,7 @@ export default function SupplierProductsPage() {
 
     const { data, error } = await supabase
       .from("products")
-      .select("id,name,price,stock,min_stock_level,sku,category_id,is_active,created_at")
+      .select("id,name,price,stock,min_stock_level,sku,category_id,is_active,created_at,categories(name)")
       .eq("supplier_id", resolvedSupplierId)
       .order("created_at", { ascending: false });
 
@@ -140,6 +143,7 @@ export default function SupplierProductsPage() {
   }, [fetchProducts, fetchCategories]);
 
   const handleAddClick = () => {
+    setEditingProduct(null);
     setFormData({
       name: "",
       productId: "",
@@ -147,6 +151,21 @@ export default function SupplierProductsPage() {
       stock: "0",
       categoryId: "",
       isActive: true,
+    });
+    setIsAddingCategory(false);
+    setNewCategoryName("");
+    setViewMode("form");
+  };
+
+  const handleEditClick = (product: ProductRow) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      productId: product.sku || "",
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      categoryId: product.category_id || "",
+      isActive: product.is_active,
     });
     setIsAddingCategory(false);
     setNewCategoryName("");
@@ -216,14 +235,21 @@ export default function SupplierProductsPage() {
       is_active: formData.isActive,
     };
 
-    const { error } = await supabase.from("products").insert([payload]);
-    if (error) {
-      toast.error("Failed to add product: " + error.message);
+    let result;
+    if (editingProduct) {
+      result = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+    } else {
+      result = await supabase.from("products").insert([payload]);
+    }
+
+    if (result.error) {
+      toast.error("Failed to save product: " + result.error.message);
       return;
     }
 
-    toast.success("Product added successfully!");
+    toast.success(editingProduct ? "Product updated successfully!" : "Product added successfully!");
     setViewMode("list");
+    setEditingProduct(null);
     fetchProducts();
   };
 
@@ -244,6 +270,28 @@ export default function SupplierProductsPage() {
     }
 
     setUpdatingAvailability((prev) => ({ ...prev, [productId]: false }));
+  };
+
+  const [updatingPrice, setUpdatingPrice] = useState<Record<string, boolean>>({});
+
+  const setProductPrice = async (productId: string, newPrice: number) => {
+    if (isNaN(newPrice) || newPrice < 0) return;
+    setUpdatingPrice((prev) => ({ ...prev, [productId]: true }));
+
+    const previousProducts = products;
+    setProducts((prev) =>
+      prev.map((product) => (product.id === productId ? { ...product, price: newPrice } : product))
+    );
+
+    const { error } = await supabase.from("products").update({ price: newPrice }).eq("id", productId);
+    if (error) {
+      setProducts(previousProducts);
+      toast.error("Failed to update price: " + error.message);
+    } else {
+      toast.success("Price updated successfully.");
+    }
+
+    setUpdatingPrice((prev) => ({ ...prev, [productId]: false }));
   };
 
   const setProductStock = async (productId: string, newStock: number) => {
@@ -312,7 +360,26 @@ export default function SupplierProductsPage() {
                   <div key={product.id} className="product-card">
                     <div className="product-card-header">
                       <h4 className="product-name">{product.name}</h4>
-                      <div className="product-price">Rs. {Number(product.price).toLocaleString()}</div>
+                      <div className="product-price">
+                        <span style={{ fontSize: "0.8rem", marginRight: "4px" }}>Rs.</span>
+                        <input 
+                          type="number" 
+                          min="0"
+                          step="0.01"
+                          className="form-input-styled" 
+                          style={{ width: "100px", height: "36px", padding: "0 8px", fontSize: "1.1rem", fontWeight: 700, color: "#6008f8", border: "1px solid transparent", background: "transparent" }} 
+                          defaultValue={product.price}
+                          disabled={!!updatingPrice[product.id]}
+                          onFocus={(e) => e.target.style.border = "1px solid #e2e8f0"}
+                          onBlur={(e) => {
+                            e.target.style.border = "1px solid transparent";
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val !== product.price) {
+                              setProductPrice(product.id, val);
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
 
                     <div className="product-card-body">
@@ -335,6 +402,11 @@ export default function SupplierProductsPage() {
                       </div>
 
 
+
+                      <div className="product-info-row">
+                        <span className="info-label">Category</span>
+                        <span className="info-value">{product.categories?.name || "Uncategorized"}</span>
+                      </div>
 
                       <div className="product-info-row">
                         <span className="info-label">ID</span>
@@ -371,6 +443,13 @@ export default function SupplierProductsPage() {
 
                     <div className="product-card-footer">
                       <div className="product-id-badge">UUID: {product.id.slice(0, 8)}...</div>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                        onClick={() => handleEditClick(product)}
+                      >
+                        Edit
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -381,7 +460,7 @@ export default function SupplierProductsPage() {
 
         {viewMode === "form" && (
           <div className="supplier-product-form-container">
-            <h3 className="form-breadcrumb">Product details</h3>
+            <h3 className="form-breadcrumb">{editingProduct ? "Edit product" : "Product details"}</h3>
 
             <div className="supplier-product-form-card">
               <div className="form-group">
