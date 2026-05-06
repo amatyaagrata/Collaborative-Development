@@ -30,24 +30,62 @@ export default function IMStockPage() {
   const [formData, setFormData] = useState({ product_name: "", supplier_name: "", supplier_id: "", custom_product_id: "", category: "", total_price: "", quantity: "", selected_product_id: "" });
 
   const fetchOrders = useCallback(async () => {
-    const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-    if (error) toast.error("Failed to load orders: " + error.message);
-    else setOrders(data || []);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', userData.user?.id || '')
+      .single();
+
+    if (userRow?.organization_id) {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("organization_id", userRow.organization_id)
+        .order("created_at", { ascending: false });
+      
+      if (error) toast.error("Failed to load orders: " + error.message);
+      else setOrders(data || []);
+    }
     setLoading(false);
   }, [supabase]);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (supplierId?: string) => {
     setLoadingProducts(true);
-    const { data, error } = await supabase.from("products").select("id, name, price, stock, supplier_id, categories:category_id(name)").order("name", { ascending: true });
+    let query = supabase
+      .from("products")
+      .select("id, name, price, stock, supplier_id, categories:category_id(name), sku")
+      .order("name", { ascending: true });
+    
+    if (supplierId) {
+      query = query.eq("supplier_id", supplierId);
+    }
+
+    const { data, error } = await query;
     if (error) toast.error("Failed to load products: " + error.message);
     else setProducts(data || []);
     setLoadingProducts(false);
   }, [supabase]);
 
   const fetchSuppliers = useCallback(async () => {
-    const { data, error } = await supabase.from("suppliers").select("id, name").eq("is_active", true).order("name");
-    if (error) console.error("Failed to load suppliers:", error.message);
-    else setSuppliers(data || []);
+    // Get current IM's organization
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', userData.user?.id || '')
+      .single();
+
+    if (currentUser?.organization_id) {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .eq("is_active", true)
+        .eq("organization_id", currentUser.organization_id)
+        .order("name");
+      if (error) console.error("Failed to load suppliers:", error.message);
+      else setSuppliers(data || []);
+    }
   }, [supabase]);
 
   useEffect(() => { Promise.resolve().then(() => { fetchOrders(); fetchProducts(); fetchSuppliers(); }); }, [fetchOrders, fetchProducts, fetchSuppliers]);
@@ -68,18 +106,33 @@ export default function IMStockPage() {
   const handleProductSelect = (productId: string) => {
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
-      const supId = selectedProduct.supplier_id || "";
-      const supMatch = suppliers.find(s => s.id === supId);
-      
       setFormData({ 
         ...formData, 
         selected_product_id: productId, 
         product_name: selectedProduct.name, 
         category: getCategoryName(selectedProduct), 
         total_price: selectedProduct.price.toString(),
-        supplier_id: supId,
-        supplier_name: supMatch?.name || formData.supplier_name
+        custom_product_id: selectedProduct.sku || "", // Auto-fill Product ID (SKU)
       });
+    }
+  };
+
+  const handleSupplierSelect = (supplierId: string) => {
+    const s = suppliers.find(sup => sup.id === supplierId);
+    setFormData({ 
+      ...formData, 
+      supplier_id: supplierId, 
+      supplier_name: s?.name || "",
+      selected_product_id: "", // Reset product when supplier changes
+      product_name: "",
+      category: "",
+      total_price: "",
+      custom_product_id: ""
+    });
+    if (supplierId) {
+      fetchProducts(supplierId); // Filter products by this supplier
+    } else {
+      setProducts([]);
     }
   };
 
@@ -92,10 +145,9 @@ export default function IMStockPage() {
 
   const handleSaveClick = async () => {
     if (!formData.product_name || !formData.supplier_id) { toast.error("Please select a Product and a Supplier."); return; }
-    const total_price = parseFloat(formData.total_price);
+    const total_price = parseFloat(formData.total_price) || 0;
     const quantity = parseInt(formData.quantity, 10);
-    if (isNaN(total_price) || total_price < 0) { toast.error("Please enter a valid price."); return; }
-    if (isNaN(quantity) || quantity < 0) { toast.error("Please enter a valid quantity."); return; }
+    if (isNaN(quantity) || quantity <= 0) { toast.error("Please enter a quantity greater than 0."); return; }
 
     const payload: Record<string, unknown> = {
       product_name: formData.product_name, supplier_name: formData.supplier_name || "Unknown",
@@ -174,15 +226,46 @@ export default function IMStockPage() {
             <h3 className="orders-form-breadcrumb">Order Details</h3>
             <div className="orders-form-card">
               <div className="orders-form-row">
-                <div className="orders-form-group"><label className="orders-form-label">Select Product *</label><select className="orders-form-input" value={formData.selected_product_id} onChange={(e) => handleProductSelect(e.target.value)} disabled={formMode === "edit"}><option value="">-- Select a product --</option>{loadingProducts ? <option disabled>Loading products...</option> : products.map((p) => <option key={p.id} value={p.id}>{p.name} - Stock: {p.stock} - Price: ${p.price}</option>)}</select>{formMode === "edit" && <small style={{ color: "#666", marginTop: "4px", display: "block" }}>Product cannot be changed in edit mode</small>}</div>
+                <div className="orders-form-group">
+                  <label className="orders-form-label">Supplier *</label>
+                  <select 
+                    className="orders-form-input" 
+                    value={formData.supplier_id} 
+                    onChange={(e) => handleSupplierSelect(e.target.value)}
+                    disabled={formMode === "edit"}
+                  >
+                    <option value="">-- Select a supplier --</option>
+                    {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div className="orders-form-group">
+                  <label className="orders-form-label">Select Product *</label>
+                  <select 
+                    className="orders-form-input" 
+                    value={formData.selected_product_id} 
+                    onChange={(e) => handleProductSelect(e.target.value)} 
+                    disabled={formMode === "edit" || !formData.supplier_id}
+                  >
+                    <option value="">{formData.supplier_id ? "-- Select a product --" : "-- Choose supplier first --"}</option>
+                    {loadingProducts ? <option disabled>Loading products...</option> : products.map((p) => <option key={p.id} value={p.id}>{p.name} - Stock: {p.stock} - Price: ${p.price}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="orders-form-row">
                 <div className="orders-form-group"><label className="orders-form-label">Product Name *</label><input type="text" className="orders-form-input" placeholder="Enter product name" value={formData.product_name} onChange={(e) => setFormData({ ...formData, product_name: e.target.value })} readOnly={!!formData.selected_product_id} /></div>
+                <div className="orders-form-group"><label className="orders-form-label">Product ID (SKU)</label><input type="text" className="orders-form-input" placeholder="#364738" value={formData.custom_product_id} readOnly /></div>
               </div>
               <div className="orders-form-row">
-                <div className="orders-form-group"><label className="orders-form-label">Supplier *</label><select className="orders-form-input" value={formData.supplier_id} onChange={(e) => { const s = suppliers.find(sup => sup.id === e.target.value); setFormData({ ...formData, supplier_id: e.target.value, supplier_name: s?.name || "" }); }}><option value="">-- Select a supplier --</option>{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                <div className="orders-form-group"><label className="orders-form-label">Product ID</label><input type="text" className="orders-form-input" placeholder="#364738" value={formData.custom_product_id} onChange={(e) => setFormData({ ...formData, custom_product_id: e.target.value })} /></div>
-              </div>
-              <div className="orders-form-row">
-                <div className="orders-form-group"><label className="orders-form-label">Price</label><input type="number" className="orders-form-input" placeholder="$.00" min="0" step="0.01" value={formData.total_price} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setFormData({ ...formData, total_price: val }); }} readOnly={!!formData.selected_product_id} /></div>
+                <div className="orders-form-group">
+                  <label className="orders-form-label">Category</label>
+                  <input 
+                    type="text" 
+                    className="orders-form-input" 
+                    placeholder="Category" 
+                    value={formData.category} 
+                    readOnly 
+                  />
+                </div>
                 <div className="orders-form-group"><label className="orders-form-label">Quantity</label><input type="number" className="orders-form-input" placeholder="Quantity" min="0" step="1" value={formData.quantity} onChange={(e) => { const val = e.target.value; if (val === "" || parseInt(val, 10) >= 0) setFormData({ ...formData, quantity: val }); }} /></div>
               </div>
               <div className="orders-form-actions"><button className="orders-btn orders-btn-secondary" onClick={() => setViewMode("list")}>Cancel</button><button className="orders-btn orders-btn-primary" onClick={handleSaveClick}>Save Order</button></div>

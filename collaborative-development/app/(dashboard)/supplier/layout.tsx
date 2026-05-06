@@ -24,6 +24,24 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const supabase = createClient();
   const [showMenu, setShowMenu] = useState(false);
+  const [orgName, setOrgName] = useState<string>("");
+
+  React.useEffect(() => {
+    const fetchOrg = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("users")
+          .select("organizations(name)")
+          .eq("auth_user_id", user.id)
+          .single();
+        if (data?.organizations) {
+          setOrgName((data.organizations as any).name);
+        }
+      }
+    };
+    fetchOrg();
+  }, [supabase]);
 
   const activeNavItem = navItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"));
   const title = activeNavItem ? activeNavItem.label : "Supplier Portal";
@@ -71,7 +89,9 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <User size={15} color="#fff" />
               </div>
-              <span style={{ fontWeight: 600, color: "#1a1a2e" }}>Supplier</span>
+              <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                Supplier {orgName ? `| ${orgName}` : ""}
+              </span>
               <ChevronDown size={14} color="#64748b" style={{ transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
             </button>
             {showMenu && (

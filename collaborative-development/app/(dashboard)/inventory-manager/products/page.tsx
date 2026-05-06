@@ -22,10 +22,29 @@ export default function IMProductsPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data: prodData } = await supabase.from("products").select("*, categories(name)").order("created_at", { ascending: false });
-    const { data: catData } = await supabase.from("categories").select("id, name").order("name", { ascending: true });
-    if (prodData) setProducts(prodData);
-    if (catData) setAvailableCategories(catData);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', userData.user?.id || '')
+      .single();
+
+    if (userRow?.organization_id) {
+      const { data: prodData } = await supabase
+        .from("products")
+        .select("*, categories(name)")
+        .eq("organization_id", userRow.organization_id)
+        .order("created_at", { ascending: false });
+
+      const { data: catData } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("organization_id", userRow.organization_id)
+        .order("name", { ascending: true });
+
+      if (prodData) setProducts(prodData);
+      if (catData) setAvailableCategories(catData);
+    }
     setLoading(false);
   }, [supabase]);
 

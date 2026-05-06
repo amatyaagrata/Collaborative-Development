@@ -28,6 +28,7 @@ export default function SupplierProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
@@ -54,10 +55,11 @@ export default function SupplierProductsPage() {
     });
   }, [products, searchQuery]);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (currentOrgId: string) => {
     const { data, error } = await supabase
       .from("categories")
       .select("id,name")
+      .eq("organization_id", currentOrgId)
       .order("name", { ascending: true });
 
     if (error) {
@@ -81,13 +83,15 @@ export default function SupplierProductsPage() {
     // Resolve: auth.uid → users.id → suppliers.user_id → suppliers.id
     const { data: userRow } = await supabase
       .from("users")
-      .select("id")
+      .select("id, organization_id")
       .eq("auth_user_id", userData.user.id)
       .single();
 
     let resolvedSupplierId: string | null = null;
+    let currentOrgId: string | null = null;
 
     if (userRow) {
+      currentOrgId = userRow.organization_id;
       const { data: supplierRow } = await supabase
         .from("suppliers")
         .select("id")
@@ -99,26 +103,14 @@ export default function SupplierProductsPage() {
       }
     }
 
-    // Fallback: try matching by email
-    if (!resolvedSupplierId) {
-      const { data: supplierByEmail } = await supabase
-        .from("suppliers")
-        .select("id")
-        .eq("contact_email", userData.user.email)
-        .single();
-
-      if (supplierByEmail) {
-        resolvedSupplierId = supplierByEmail.id;
-      }
-    }
-
+    setOrgId(currentOrgId);
     setSupplierId(resolvedSupplierId);
 
     if (!resolvedSupplierId) {
       toast.error("No supplier profile found. Ask your admin to create one.");
       setProducts([]);
       setLoading(false);
-      return;
+      return null;
     }
 
     const { data, error } = await supabase
@@ -134,15 +126,18 @@ export default function SupplierProductsPage() {
       setProducts((data as ProductRow[]) || []);
     }
     setLoading(false);
+    return currentOrgId;
   }, [supabase]);
 
   useEffect(() => {
-    Promise.resolve().then(() => fetchProducts());
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    Promise.resolve().then(() => fetchCategories());
-  }, [fetchCategories]);
+    const init = async () => {
+      const resolvedOrgId = await fetchProducts();
+      if (resolvedOrgId) {
+        fetchCategories(resolvedOrgId);
+      }
+    };
+    init();
+  }, [fetchProducts, fetchCategories]);
 
   const handleAddClick = () => {
     setFormData({
@@ -169,9 +164,14 @@ export default function SupplierProductsPage() {
       return;
     }
     
+    if (!orgId) {
+      toast.error("Organization ID missing. Cannot add category.");
+      return;
+    }
+
     const { data, error } = await supabase
       .from("categories")
-      .insert([{ name }])
+      .insert([{ name, organization_id: orgId }])
       .select("id,name")
       .single();
 
@@ -207,6 +207,7 @@ export default function SupplierProductsPage() {
 
     const payload = {
       supplier_id: supplierId,
+      organization_id: orgId,
       name,
       sku: formData.productId.trim() ? formData.productId.trim() : null,
       category_id: formData.categoryId || null,

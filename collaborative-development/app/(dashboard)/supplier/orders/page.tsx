@@ -142,12 +142,22 @@ export default function SupplierOrders() {
       const data = await fetchOrders();
       setOrders(data);
       
-      const { data: transData } = await supabase
+      // Fetch transporters from the SAME organization only
+      const { data: currentUser } = await supabase
         .from('users')
-        .select('id, name')
-        .eq('role', 'transporter');
-      if (transData) {
-        setTransporters(transData);
+        .select('organization_id')
+        .eq('auth_user_id', (await supabase.auth.getUser()).data.user?.id || '')
+        .single();
+
+      if (currentUser?.organization_id) {
+        const { data: transData } = await supabase
+          .from('users')
+          .select('id, name')
+          .eq('role', 'transporter')
+          .eq('organization_id', currentUser.organization_id);
+        if (transData) {
+          setTransporters(transData);
+        }
       }
 
       setLoading(false);
