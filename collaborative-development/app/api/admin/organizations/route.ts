@@ -9,10 +9,24 @@ export async function GET() {
   try {
     const supabase = createAdminClient();
 
-    const { data, error } = await supabase
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    // Use the admin client to check the users table safely
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', authUser?.id || '')
+      .single();
+
+    let query = supabase
       .from("organizations")
       .select("id, name, phone, address, created_at")
       .order("created_at", { ascending: false });
+
+    if (userRow?.organization_id) {
+      query = query.eq("id", userRow.organization_id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("[ORGS] Fetch error:", error);

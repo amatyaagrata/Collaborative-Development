@@ -10,10 +10,23 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    const { data: users, error } = await supabase
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', authUser?.id || '')
+      .single();
+
+    let query = supabase
       .from("users")
       .select("*, organizations(name)")
       .order("created_at", { ascending: false });
+
+    if (userRow?.organization_id) {
+      query = query.eq("organization_id", userRow.organization_id);
+    }
+
+    const { data: users, error } = await query;
 
     if (error) {
       console.error("[ADMIN-USERS] Error fetching users:", error);

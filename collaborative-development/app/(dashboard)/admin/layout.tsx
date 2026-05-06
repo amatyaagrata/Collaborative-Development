@@ -31,9 +31,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const supabase = createClient();
   const [showMenu, setShowMenu] = useState(false);
+  const [orgName, setOrgName] = useState<string>("");
+  const [hasOrg, setHasOrg] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    const fetchOrg = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("users")
+          .select("organization_id, organizations(name)")
+          .eq("auth_user_id", user.id)
+          .single();
+        if (data?.organizations) {
+          setOrgName((data.organizations as any).name);
+          setHasOrg(!!data.organization_id);
+        }
+      }
+    };
+    fetchOrg();
+  }, [supabase]);
+
+  // Dynamically filter nav items: hide 'Organizations' if it's an Org Admin
+  const filteredNavItems = adminNavItems.filter(item => {
+    if (item.label === "Organizations" && hasOrg) return false;
+    return true;
+  });
 
   // Compute title dynamically based on current route
-  const activeNavItem = adminNavItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"));
+  const activeNavItem = filteredNavItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"));
   const title = activeNavItem ? activeNavItem.label : "Admin Portal";
 
   const handleLogout = async () => {
@@ -73,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-          {adminNavItems.map(({ label, href, Icon }) => {
+          {filteredNavItems.map(({ label, href, Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link key={href} href={href} style={{
@@ -142,7 +168,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               }}>
                 <User size={15} color="#fff" />
               </div>
-              <span style={{ fontWeight: 600, color: "#1a1a2e" }}>Admin</span>
+              <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                Admin {orgName ? `| ${orgName}` : ""}
+              </span>
               <ChevronDown size={14} color="#64748b" style={{ transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
             </button>
 

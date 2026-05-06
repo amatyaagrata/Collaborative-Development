@@ -12,7 +12,7 @@ interface TripCardProps {
     delivery_charge: number;
     assigned_at: string;
     pickup_address?: string;
-    orders: {
+    orders?: {
       order_number: string;
       customer_name: string;
       customer_phone: string;
@@ -23,6 +23,12 @@ interface TripCardProps {
         address: string;
         phone: string;
       };
+      suppliers?: {
+        name: string;
+      };
+    };
+    transporter?: {
+      name: string;
     };
   };
   onAccept?: () => void;
@@ -55,6 +61,11 @@ export default function TripCard({ trip, onAccept, onReject, onComplete, showAct
       <div className={styles.cardHeader} onClick={() => setIsExpanded(!isExpanded)}>
         <div className={styles.cardInfo}>
           <span className={styles.entityNumber}>Order #{trip.orders?.order_number || "N/A"}</span>
+          <div style={{ fontSize: "0.75rem", color: "#64748b", margin: "2px 0" }}>
+            <span style={{ fontWeight: 600, color: "#1a1a2e" }}>{trip.orders?.suppliers?.name || "Global"}</span>
+            <span style={{ margin: "0 6px", opacity: 0.5 }}>➔</span>
+            <span style={{ fontWeight: 600, color: "#7c3aed" }}>{trip.transporter?.name || "Driver Unassigned"}</span>
+          </div>
           <span className={`${styles.statusBadge} ${styles[statusColors[trip.status as keyof typeof statusColors]]}`}>
             {statusText[trip.status as keyof typeof statusText]}
           </span>

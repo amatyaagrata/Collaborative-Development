@@ -1,151 +1,121 @@
-// src/app/supplier/orders/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Building2, Search, RefreshCw, Loader2, Mail, Phone, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import OrderCard from "@/components/supplier/orders/OrderCard";
-import { Search } from "lucide-react";
 import { toast } from "sonner";
-import type { SupplierOrder } from "@/types/models";
-import styles from "@/components/layout/PortalLayout.module.css";
+import { Supplier } from "@/types/models";
 
-
-export default function SupplierOrders() {
-  const [orders, setOrders] = useState<SupplierOrder[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+export default function AdminSuppliersPage() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [searchQuery, setSearchQuery] = useState("");
   const supabase = createClient();
 
-  const filteredOrders = useMemo(() => {
-    let filtered = [...orders];
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(order => order.status === statusFilter);
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("organization_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (userRow?.organization_id) {
+        const { data, error } = await supabase
+          .from("suppliers")
+          .select("*")
+          .eq("organization_id", userRow.organization_id)
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+        setSuppliers(data || []);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load suppliers");
+    } finally {
+      setLoading(false);
     }
-
-    if (searchQuery) {
-      filtered = filtered.filter(order =>
-        order.organizations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    return filtered;
-  }, [orders, searchQuery, statusFilter]);
-
-  const fetchOrders = useCallback(async (): Promise<SupplierOrder[]> => {
-    // Admin Omni-View: Fetch ALL orders across all suppliers
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_items (
-          id,
-          quantity,
-          unit_price,
-          total_price,
-          products:product_id (
-            name
-          )
-        ),
-        organizations:organization_id (
-          id,
-          name,
-          address,
-          phone,
-          email
-        )
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching all orders for admin:", error);
-      return [];
-    }
-    return data as SupplierOrder[];
   }, [supabase]);
 
-  useEffect(() => {
-    const loadOrders = async () => {
-      const data = await fetchOrders();
-      setOrders(data);
-      setLoading(false);
-    };
-    loadOrders();
-  }, [fetchOrders]);
+  useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
 
-  async function updateOrderStatus(orderId: string, newStatus: string) {
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: newStatus })
-      .eq("id", orderId);
-
-    if (!error) {
-      toast.success(`Order status updated to ${newStatus}`);
-      const updatedOrders = await fetchOrders();
-      setOrders(updatedOrders);
-    }
-  }
+  const filteredSuppliers = suppliers.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.contact_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.address || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-     <>
-      <div className={styles.pageStack}>
-        <div className={styles.heroCard}>
-          <div className={styles.productsHeaderRow}>
-            <div>
-              <h2 className={styles.heroTitle}>Product List</h2>
-              <p className={styles.heroText}>Manage your supplier products in a clean, familiar inventory layout.</p>
-            </div>
-          </div>
-
-          <div className={styles.filters}>
-            <div className={styles.searchBox}>
-              <Search size={18} />
-              <input
-                className={styles.searchInput}
-                type="text"
-                placeholder="Search by organization or order number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <select 
-              className={styles.select}
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Orders</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="preparing">Preparing</option>
-              <option value="ready_for_delivery">Ready for Pickup</option>
-              <option value="delivered">Delivered</option>
-            </select>
-          </div>
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#1a1a2e", margin: "0 0 4px" }}>Suppliers</h2>
+          <p style={{ fontSize: "0.875rem", color: "#64748b", margin: 0 }}>Manage suppliers registered under your organization.</p>
         </div>
+        <button onClick={fetchSuppliers} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff", fontSize: "0.8rem", cursor: "pointer", color: "#64748b" }}>
+          <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh
+        </button>
+      </div>
 
+      <div style={{ position: "relative", marginBottom: 20 }}>
+        <Search size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+        <input 
+          type="text" 
+          placeholder="Search by name, email, or address..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }}
+        />
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e9ecf0", overflow: "hidden" }}>
         {loading ? (
-          <div className={styles.loadingState}>Loading orders...</div>
-        ) : filteredOrders.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p>No orders found</p>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: 60, gap: 10, color: "#64748b" }}>
+            <Loader2 size={22} className="spin" /> Loading suppliers...
+          </div>
+        ) : filteredSuppliers.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+            <Building2 size={40} style={{ margin: "0 auto 12px", opacity: 0.4 }} />
+            <p style={{ fontWeight: 600 }}>No suppliers found</p>
           </div>
         ) : (
-          <div className={styles.cardList}>
-            {filteredOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onStatusChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
-                showActions={true}
-              />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, padding: 20 }}>
+            {filteredSuppliers.map(supplier => (
+              <div key={supplier.id} style={{ border: "1px solid #f1f5f9", borderRadius: 14, padding: 18, background: "#fcfcfd" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1a1a2e" }}>{supplier.name}</h3>
+                  <span style={{ fontSize: "0.65rem", fontWeight: 700, background: supplier.is_active ? "#ecfdf5" : "#fef2f2", color: supplier.is_active ? "#059669" : "#dc2626", padding: "2px 8px", borderRadius: 20 }}>
+                    {supplier.is_active ? "ACTIVE" : "INACTIVE"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b" }}>
+                    <Mail size={14} /> {supplier.contact_email}
+                  </div>
+                  {supplier.contact_phone && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b" }}>
+                      <Phone size={14} /> {supplier.contact_phone}
+                    </div>
+                  )}
+                  {supplier.address && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b" }}>
+                      <MapPin size={14} /> {supplier.address}
+                    </div>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
-    </>
+      <style jsx global>{`
+        .spin { animation: rotate 1s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
   );
 }

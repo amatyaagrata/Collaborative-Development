@@ -25,13 +25,26 @@ export default function AdminProductsPage() {
   }, [])
 
   async function fetchProducts() {
-    const { data } = await supabase
-      .from('products')
-      .select('*, categories(name)')
-      .order('created_at', { ascending: false })
-    
-    if (data) setProducts(data)
-    setLoading(false)
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (userRow?.organization_id) {
+      const { data } = await supabase
+        .from('products')
+        .select('*, categories(name)')
+        .eq('organization_id', userRow.organization_id)
+        .order('created_at', { ascending: false });
+      
+      if (data) setProducts(data);
+    }
+    setLoading(false);
   }
 
   const filteredProducts = products.filter(p => 

@@ -10,7 +10,7 @@ import type { Trip, TripStats } from "@/types/models";
 import styles from "@/components/layout/PortalLayout.module.css";
 import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
 
-export default function TransporterDashboard() {
+export default function AdminDeliveriesPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -28,13 +28,38 @@ export default function TransporterDashboard() {
   }, [trips]);
 
   const fetchTrips = useCallback(async (): Promise<Trip[]> => {
-    // Admin Omni-View: Fetch ALL driver assignments
-    const { data, error } = await supabase
-      .from("driver_assignments")
-      .select(`*, orders:order_id(id, order_number, customer_name, customer_phone, delivery_address, total_amount, organizations(name, address, phone))`)
-      .order("assigned_at", { ascending: false });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
 
-    if (!error && data) return data as Trip[];
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (userRow?.organization_id) {
+      const { data, error } = await supabase
+        .from("driver_assignments")
+        .select(`
+          *, 
+          orders:order_id!inner(
+            id, 
+            order_number, 
+            customer_name, 
+            customer_phone, 
+            delivery_address, 
+            total_amount, 
+            organization_id,
+            organizations(name, address, phone),
+            suppliers:supplier_id(name)
+          ),
+          transporter:transporter_id(name)
+        `)
+        .eq("orders.organization_id", userRow.organization_id)
+        .order("assigned_at", { ascending: false });
+
+      if (!error && data) return data as unknown as Trip[];
+    }
     return [];
   }, [supabase]);
 
