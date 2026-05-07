@@ -122,7 +122,7 @@ export default function Home() {
                   </div>
                   <div className="rounded-2xl border border-zinc-100 bg-white/60 px-4 py-3">
                     <p className="font-semibold">Secure by role</p>
-                    <p className="text-zinc-600 mt-0.5">RLS policies</p>
+                    <p className="text-zinc-600 mt-0.5">Role-based access</p>
                   </div>
                   <div className="rounded-2xl border border-zinc-100 bg-white/60 px-4 py-3">
                     <p className="font-semibold">Real-time</p>
@@ -240,16 +240,6 @@ export default function Home() {
                   From supplier to warehouse to delivery, each role sees exactly
                   what they need—nothing more.
                 </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl border border-zinc-100 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-xs font-semibold text-zinc-500">Built with</p>
-                  <p className="font-bold tracking-tight">Next.js + Supabase</p>
-                </div>
-                <div className="rounded-2xl border border-zinc-100 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-xs font-semibold text-zinc-500">Security</p>
-                  <p className="font-bold tracking-tight">RLS by default</p>
-                </div>
               </div>
             </div>
 
