@@ -92,6 +92,7 @@ export default function OrderCard({
 
   const activeIndex = getActiveIndex();
   const isRejected = order.delivery_status === "rejected";
+  const displayAmount = order.total_amount || (order.order_items || []).reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
 
   return (
     <div className={styles.orderCard}>
@@ -118,7 +119,7 @@ export default function OrderCard({
         </div>
         <div className={styles.cardMeta} style={{ alignItems: "flex-end", justifyContent: "center" }}>
           <span style={{ fontWeight: 800, fontSize: "1.25rem", color: "#22054f" }}>
-            Rs. {order.total_amount.toLocaleString()}
+            Rs. {displayAmount.toLocaleString()}
           </span>
           <span style={{ color: "#6b7280", fontSize: "0.85rem" }}>
             {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

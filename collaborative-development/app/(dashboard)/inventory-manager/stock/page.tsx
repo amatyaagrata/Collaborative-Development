@@ -47,6 +47,7 @@ export default function IMStockPage() {
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     supplier_id: "",
@@ -64,29 +65,29 @@ export default function IMStockPage() {
     const { data: userData } = await supabase.auth.getUser();
     const { data: userRow } = await supabase
       .from("users")
-      .select("id")
+      .select("id, organization_id")
       .eq("auth_user_id", userData.user?.id || "")
       .single();
 
     if (!userRow) { setLoading(false); return; }
     setCurrentUserId(userRow.id);
+    setOrgId(userRow.organization_id);
 
     const { data, error } = await supabase
-      .from("purchase_orders")
+      .from("orders")
       .select(`
         id,
         order_number,
         status,
-        priority,
         notes,
         created_at,
         suppliers:supplier_id ( name ),
         order_items (
           quantity,
-          price_at_order
+          unit_price
         )
       `)
-      .eq("created_by", userRow.id)
+      .eq("user_id", userRow.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -96,12 +97,12 @@ export default function IMStockPage() {
         id: o.id,
         order_number: o.order_number,
         status: o.status,
-        priority: o.priority,
+        priority: "medium", // legacy compatibility
         notes: o.notes,
         created_at: o.created_at,
         supplier_name: o.suppliers?.name ?? "N/A",
         total_quantity: (o.order_items || []).reduce((s: number, i: any) => s + (i.quantity || 0), 0),
-        total_value: (o.order_items || []).reduce((s: number, i: any) => s + ((i.quantity || 0) * (i.price_at_order || 0)), 0),
+        total_value: (o.order_items || []).reduce((s: number, i: any) => s + ((i.quantity || 0) * (i.unit_price || 0)), 0),
       }));
       setOrders(mapped);
     }
@@ -123,19 +124,19 @@ export default function IMStockPage() {
     if (!supplierId) { setSupplierProducts([]); return; }
     setLoadingProducts(true);
     const { data, error } = await supabase
-      .from("supplier_products")
-      .select("id, price, current_stock, products:product_id(name), supplier_id")
+      .from("products")
+      .select("id, name, price, stock, supplier_id")
       .eq("supplier_id", supplierId)
-      .eq("is_available", true);
+      .eq("is_active", true);
 
     if (!error) {
       setSupplierProducts(
-        (data || []).map((sp: any) => ({
-          id: sp.id,
-          name: sp.products?.name ?? "Product",
-          price: sp.price,
-          current_stock: sp.current_stock,
-          supplier_id: sp.supplier_id,
+        (data || []).map((p: any) => ({
+          id: p.id,
+          name: p.name || "Product",
+          price: p.price || 0,
+          current_stock: p.stock || 0,
+          supplier_id: p.supplier_id,
         }))
       );
     }
@@ -178,15 +179,16 @@ export default function IMStockPage() {
     const priceAtOrder = selectedProduct?.price ?? 0;
 
     if (formMode === "add") {
-      // 1. Insert purchase_order
+      // 1. Insert order
       const { data: newOrder, error: orderErr } = await supabase
-        .from("purchase_orders")
+        .from("orders")
         .insert([{
-          created_by: currentUserId,
+          user_id: currentUserId,
+          organization_id: orgId,
           supplier_id: formData.supplier_id,
           status: "pending",
-          priority: formData.priority,
           notes: formData.notes || null,
+          total_amount: qty * priceAtOrder,
         }])
         .select()
         .single();
@@ -197,23 +199,24 @@ export default function IMStockPage() {
       const { error: itemErr } = await supabase
         .from("order_items")
         .insert([{
-          purchase_order_id: newOrder.id,
-          supplier_product_id: formData.selected_supplier_product_id,
+          order_id: newOrder.id,
+          product_id: formData.selected_supplier_product_id,
           quantity: qty,
-          price_at_order: priceAtOrder,
+          unit_price: priceAtOrder,
+          total_price: qty * priceAtOrder,
         }]);
 
       if (itemErr) {
         console.error("order_items insert failed:", itemErr);
         toast.warning("Order created but item failed to save.");
       } else {
-        toast.success("Purchase order created successfully!");
+        toast.success("Order created successfully!");
       }
     } else if (formMode === "edit" && editingId) {
-      // Only update mutable fields (status, priority, notes)
+      // Only update mutable fields (status, notes)
       const { error } = await supabase
-        .from("purchase_orders")
-        .update({ priority: formData.priority, notes: formData.notes || null })
+        .from("orders")
+        .update({ notes: formData.notes || null })
         .eq("id", editingId);
       if (error) { toast.error("Failed to update: " + error.message); return; }
       toast.success("Order updated successfully!");
@@ -239,7 +242,7 @@ export default function IMStockPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to permanently delete this order?")) {
-      const { error } = await supabase.from("purchase_orders").delete().eq("id", id);
+      const { error } = await supabase.from("orders").delete().eq("id", id);
       if (error) toast.error("Failed to delete: " + error.message);
       else { toast.success("Order deleted."); setLoading(true); fetchOrders(); }
     }
@@ -257,7 +260,7 @@ export default function IMStockPage() {
         {viewMode === "list" && (
           <>
             <div className="orders-header-row">
-              <h2 className="orders-title">Purchase Orders</h2>
+              <h2 className="orders-title">Orders</h2>
             </div>
             <div className="orders-toolbar">
               <div className="orders-search-wrapper">
@@ -340,7 +343,7 @@ export default function IMStockPage() {
 
         {viewMode === "form" && (
           <div className="orders-form-container">
-            <h3 className="orders-form-breadcrumb">{formMode === "add" ? "New Purchase Order" : "Edit Order"}</h3>
+            <h3 className="orders-form-breadcrumb">{formMode === "add" ? "New Order" : "Edit Order"}</h3>
             <div className="orders-form-card">
               {formMode === "add" && (
                 <>
