@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Package, ShoppingCart, CreditCard, LogOut, User, ChevronDown,
+  LayoutDashboard, Package, ShoppingCart, CreditCard, LogOut, User, ChevronDown, MapPin,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ const navItems = [
   { label: "Dashboard", href: "/supplier/dashboard", Icon: LayoutDashboard },
   { label: "Products",  href: "/supplier/products",  Icon: Package         },
   { label: "Orders",    href: "/supplier/orders",    Icon: ShoppingCart    },
-  { label: "Payments",  href: "/supplier/payments",  Icon: CreditCard      },
+  { label: "Routes",    href: "/supplier/routes",    Icon: MapPin          },
 ];
 
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {

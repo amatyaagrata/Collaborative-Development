@@ -167,7 +167,7 @@ export default function Home() {
                             <Image src="/assets/yellow_unbox.svg" alt="" width={22} height={22} />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold">Purchase order approved</p>
+                            <p className="text-sm font-semibold">Order approved</p>
                             <p className="text-xs text-zinc-600">Warehouse • 2m ago</p>
                           </div>
                         </div>

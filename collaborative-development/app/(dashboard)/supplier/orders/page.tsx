@@ -74,30 +74,24 @@ export default function SupplierOrders() {
       return [];
     }
 
-    // Fetch purchase_orders for this supplier, with order_items
+    // Fetch orders for this supplier, with order_items
     const { data, error } = await supabase
-      .from("purchase_orders")
+      .from("orders")
       .select(`
         *,
         order_items (
           id,
           quantity,
-          price_at_order,
-          supplier_products:supplier_product_id (
-            products:product_id ( name )
-          )
+          unit_price,
+          products:product_id ( name )
         ),
-        order_driver_assignments (
-          id,
-          status,
-          driver_id
-        )
+        organizations:organization_id ( name, address, phone )
       `)
       .eq("supplier_id", supplierId)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching purchase_orders:", error);
+      console.error("Error fetching orders:", error);
       return [];
     }
     return (data ?? []) as unknown as SupplierOrder[];
@@ -120,17 +114,13 @@ export default function SupplierOrders() {
     };
     loadData();
 
-    // Realtime: listen to both tables
+    // Realtime: listen to orders table
     const channel = supabase
       .channel("supplier_order_updates")
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, async () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, async (payload) => {
         const updated = await fetchOrders();
         setOrders(updated);
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_driver_assignments" }, async (payload) => {
-        const updated = await fetchOrders();
-        setOrders(updated);
-        if (payload.eventType === "UPDATE" && payload.new?.status === "rejected") {
+        if (payload.eventType === "UPDATE" && payload.new?.delivery_status === "rejected") {
           toast.error("Driver rejected a delivery. Please reassign.");
         }
       })
@@ -139,10 +129,10 @@ export default function SupplierOrders() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchOrders, supabase]);
 
-  /** Update purchase_order status directly */
+  /** Update order status directly */
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const { error } = await supabase
-      .from("purchase_orders")
+      .from("orders")
       .update({ status: newStatus })
       .eq("id", orderId);
 
@@ -156,43 +146,32 @@ export default function SupplierOrders() {
   }
 
   /**
-   * Assign a driver: insert into order_driver_assignments (not orders.transporter_id).
-   * Also updates purchase_orders.status → 'driver_assigned'.
+   * Assign a driver: Update orders table with transporter_id and delivery_status.
    */
   async function assignDriver(orderId: string, driverId: string) {
     if (!driverId) return;
 
-    // Upsert into order_driver_assignments
     const { error: assignErr } = await supabase
-      .from("order_driver_assignments")
-      .upsert({
-        purchase_order_id: orderId,
-        driver_id: driverId,
-        status: "pending",
-        assigned_at: new Date().toISOString(),
-      }, { onConflict: "purchase_order_id,driver_id" });
+      .from("orders")
+      .update({
+        transporter_id: driverId,
+        delivery_status: "pending_acceptance",
+        status: "driver_assigned"
+      })
+      .eq("id", orderId);
 
     if (assignErr) {
       toast.error("Failed to assign driver: " + assignErr.message);
       return;
     }
 
-    // Update purchase_order status to reflect assignment
-    await supabase
-      .from("purchase_orders")
-      .update({ status: "driver_assigned" })
-      .eq("id", orderId);
-
     toast.success("Driver assigned successfully!");
     const updatedOrders = await fetchOrders();
     setOrders(updatedOrders);
   }
 
-  // Orders where all driver assignments were rejected (need reassignment)
-  const rejectedOrders = orders.filter(o =>
-    (o as any).order_driver_assignments?.every((a: any) => a.status === "rejected") &&
-    (o as any).order_driver_assignments?.length > 0
-  );
+  // Orders where driver rejected (need reassignment)
+  const rejectedOrders = orders.filter(o => o.delivery_status === "rejected");
 
   return (
     <>
@@ -200,8 +179,8 @@ export default function SupplierOrders() {
         <div className={styles.heroCard}>
           <div className={styles.productsHeaderRow}>
             <div>
-              <h2 className={styles.heroTitle}>Purchase Orders</h2>
-              <p className={styles.heroText}>Manage and process incoming purchase orders.</p>
+              <h2 className={styles.heroTitle}>Orders</h2>
+              <p className={styles.heroText}>Manage and process incoming orders.</p>
             </div>
           </div>
 

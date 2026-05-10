@@ -8,7 +8,7 @@ export type UserRole = 'admin' | 'inventory_manager' | 'supplier' | 'transporter
 /** Map DB role strings (old and new schema) to canonical UserRole */
 export function normalizeRole(role?: string | null): UserRole {
   if (!role) return 'inventory_manager';
-  const r = role.toLowerCase().replace(/\s+/g, '_');
+  const r = role.toLowerCase().trim().replace(/\s+/g, '_');
   if (r === 'admin') return 'admin';
   if (r === 'supplier') return 'supplier';
   if (r === 'transporter' || r === 'driver') return 'transporter';
@@ -60,7 +60,7 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: 'Dashboard', href: '/supplier/dashboard', icon: 'LayoutDashboard' },
     { label: 'Products',  href: '/supplier/products',  icon: 'Package'         },
     { label: 'Orders',    href: '/supplier/orders',    icon: 'ShoppingCart'    },
-    { label: 'Payments',  href: '/supplier/payments',  icon: 'CreditCard'      },
+    { label: 'Routes',    href: '/supplier/routes',    icon: 'MapPin'          },
   ],
   transporter: [
     { label: 'Dashboard',   href: '/transporter/dashboard',   icon: 'LayoutDashboard' },
