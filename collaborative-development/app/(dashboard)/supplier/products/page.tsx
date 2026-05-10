@@ -21,7 +21,7 @@ type ProductRow = {
   category_id: string | null;
   is_active: boolean;
   created_at: string;
-  categories: { name: string } | null;
+  categories: { name: string }[] | null;
 };
 
 export default function SupplierProductsPage() {
@@ -126,7 +126,7 @@ export default function SupplierProductsPage() {
       toast.error("Failed to load products: " + error.message);
       setProducts([]);
     } else {
-      setProducts((data as ProductRow[]) || []);
+      setProducts((data as unknown as ProductRow[]) || []);
     }
     setLoading(false);
     return currentOrgId;
@@ -405,7 +405,7 @@ export default function SupplierProductsPage() {
 
                       <div className="product-info-row">
                         <span className="info-label">Category</span>
-                        <span className="info-value">{product.categories?.name || "Uncategorized"}</span>
+                        <span className="info-value">{product.categories?.[0]?.name || "Uncategorized"}</span>
                       </div>
 
                       <div className="product-info-row">

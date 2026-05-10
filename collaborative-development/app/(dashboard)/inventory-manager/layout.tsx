@@ -27,20 +27,20 @@ export default function IMLayout({ children }: { children: React.ReactNode }) {
   const [orgName, setOrgName] = useState<string>("");
 
   React.useEffect(() => {
-    const fetchOrg = async () => {
+    const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase
           .from("users")
-          .select("organizations(name)")
+          .select("name")
           .eq("auth_user_id", user.id)
           .single();
-        if (data?.organizations) {
-          setOrgName((data.organizations as any).name);
+        if (data?.name) {
+          setOrgName(data.name);
         }
       }
     };
-    fetchOrg();
+    fetchUser();
   }, [supabase]);
 
   const activeNavItem = navItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"));

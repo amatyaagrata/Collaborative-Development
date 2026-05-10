@@ -15,8 +15,9 @@
     "smoke:loop": "for i in 1 2 3; do echo \"--- smoke run $i ---\"; npm run -s smoke || exit 1; done"
   },
   "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.10.0",
-    "@supabase/supabase-js": "^2.100.1",
+    "@supabase/supabase-js": "^2.105.4",
     "lucide-react": "^1.7.0",
     "next": "16.2.1",
     "next-auth": "^4.24.14",

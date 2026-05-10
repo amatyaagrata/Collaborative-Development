@@ -59,29 +59,27 @@ export async function GET() {
 
     let roleStr: string | undefined;
 
-    // 1. Try profiles table first (new schema)
+    // 1. Primary: look up role from the users table (source of truth per schema)
     try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
+      const { data: dbUser } = await supabase
+        .from("users")
+        .select("role, is_approved")
+        .eq("auth_user_id", user.id)
         .single();
-      if (profile?.role) roleStr = profile.role;
-    } catch { /* profiles table may not exist */ }
 
-    // 2. Fallback to user_roles table (old schema)
-    if (!roleStr) {
-      try {
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .single();
-        if (roleData?.role) roleStr = roleData.role;
-      } catch { /* user_roles table may not exist */ }
-    }
+      if (dbUser?.role) {
+        // Respect approval gate — unapproved users cannot access dashboards
+        if (!dbUser.is_approved) {
+          return NextResponse.json(
+            { error: "Account pending approval. Please wait for admin approval." },
+            { status: 403 }
+          );
+        }
+        roleStr = dbUser.role;
+      }
+    } catch { /* users table query failed, fall through */ }
 
-    // 3. Fallback to user metadata
+    // 2. Fallback: user metadata (set at signup)
     if (!roleStr && user.user_metadata?.role) {
       roleStr = user.user_metadata.role as string;
     }

@@ -12,9 +12,9 @@ export async function GET() {
 
     // Fetch all data in parallel for speed
     const [productsRes, ordersRes, usersRes] = await Promise.all([
-      supabase.from("products").select("id, price, stock, name, sku, is_active, category_id, supplier_id"),
-      supabase.from("orders").select("id, status, total_amount, created_at, quantity, product_name, supplier_name, category"),
-      supabase.from("users").select("id, role, is_active"),
+      supabase.from("products").select("id, name, current_stock, min_stock_level, unit"),
+      supabase.from("purchase_orders").select("id, status, created_at, updated_at"),
+      supabase.from("users").select("id, role, is_approved"),
     ]);
 
     const products = productsRes.data || [];
@@ -23,20 +23,18 @@ export async function GET() {
 
     // ─── Activity Stats ─────────────────────────────────────
     const inventoryValue = products.reduce(
-      (sum, p) => sum + (Number(p.price) || 0) * (Number(p.stock) || 0),
+      (sum, p) => sum + (Number(p.current_stock) || 0),
       0
     );
     const totalStocks = products.reduce(
-      (sum, p) => sum + (Number(p.stock) || 0),
+      (sum, p) => sum + (Number(p.current_stock) || 0),
       0
     );
-    const pendingOrders = orders.filter(
-      (o) => o.status === "pending" || o.status === "confirmed" || o.status === "preparing"
-    );
+    const pendingOrders = orders.filter((o) => o.status === "pending");
     const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
     const stats = {
-      inventoryValue: `Rs. ${inventoryValue.toLocaleString("en-IN")}`,
+      inventoryValue: `${inventoryValue.toLocaleString("en-IN")} units`,
       totalStocks: totalStocks.toLocaleString("en-IN"),
       newOrders: pendingOrders.length.toString(),
       delivered: deliveredOrders.length.toString(),
@@ -44,10 +42,7 @@ export async function GET() {
 
     // ─── Product Summary ─────────────────────────────────────
     const quantityInHand = totalStocks;
-    const toBeReceived = pendingOrders.reduce(
-      (sum, o) => sum + (Number(o.quantity) || 0),
-      0
-    );
+    const toBeReceived = pendingOrders.length; // count of pending POs
     const total = quantityInHand + toBeReceived;
     const percentage = total > 0 ? Math.round((quantityInHand / total) * 100) : 0;
 
@@ -57,33 +52,30 @@ export async function GET() {
       percentage,
     };
 
-    // ─── Trending Products (top 4 by stock) ──────────────────
+    // ─── Trending Products (top 4 by current_stock) ──────────────────
     const trendingProducts = [...products]
-      .filter((p) => p.is_active !== false)
-      .sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
+      .sort((a, b) => (Number(b.current_stock) || 0) - (Number(a.current_stock) || 0))
       .slice(0, 4)
       .map((p, idx) => ({
         id: idx + 1,
         product: p.name || "Product",
         suppliers: "—",
-        productId: p.sku || `#${String(idx + 1).padStart(3, "0")}`,
+        productId: `#${String(idx + 1).padStart(3, "0")}`,
         category: "—",
-        price: `$${Number(p.price || 0).toFixed(0)}`,
-        quantity: Number(p.stock) || 0,
+        price: "—",
+        quantity: Number(p.current_stock) || 0,
       }));
 
-    // ─── Sales & Purchase (weekly from orders) ───────────────
+    // ─── Sales & Purchase (weekly from purchase_orders) ───────────────
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const salesByDay: Record<string, { Sales: number; Purchase: number }> = {};
     dayNames.forEach((d) => (salesByDay[d] = { Sales: 0, Purchase: 0 }));
 
     orders.forEach((o) => {
       const day = dayNames[new Date(o.created_at).getDay()];
-      const amount = Number(o.total_amount) || 0;
-      if (o.status === "delivered") {
-        salesByDay[day].Sales += amount;
-      }
-      salesByDay[day].Purchase += amount;
+      // purchase_orders has no total_amount — count orders instead
+      if (o.status === "delivered") salesByDay[day].Sales += 1;
+      salesByDay[day].Purchase += 1;
     });
 
     const salesData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
@@ -97,11 +89,11 @@ export async function GET() {
     // ─── User counts ────────────────────────────────────────
     const userCounts = {
       total: users.length,
-      active: users.filter((u) => u.is_active).length,
+      active: users.filter((u) => u.is_approved).length,
       admins: users.filter((u) => u.role === "admin").length,
       suppliers: users.filter((u) => u.role === "supplier").length,
-      transporters: users.filter((u) => u.role === "transporter").length,
-      inventoryManagers: users.filter((u) => u.role === "inventory manager").length,
+      transporters: users.filter((u) => u.role === "driver").length,
+      inventoryManagers: users.filter((u) => u.role === "inventory_manager").length,
     };
 
     return NextResponse.json(

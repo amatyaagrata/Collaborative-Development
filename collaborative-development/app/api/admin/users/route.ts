@@ -10,35 +10,17 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('auth_user_id', authUser?.id || '')
-      .single();
-
-    let query = supabase
+    const { data: users, error } = await supabase
       .from("users")
-      .select("*, organizations(name)")
+      .select("id, name, email, role, phone, is_approved, created_at, approved_at")
       .order("created_at", { ascending: false });
-
-    if (userRow?.organization_id) {
-      query = query.eq("organization_id", userRow.organization_id);
-    }
-
-    const { data: users, error } = await query;
 
     if (error) {
       console.error("[ADMIN-USERS] Error fetching users:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const formattedUsers = users?.map((user: any) => ({
-      ...user,
-      organization_name: user.organizations?.name || user.organization_name
-    })) || [];
-
-    return NextResponse.json({ users: formattedUsers }, { status: 200 });
+    return NextResponse.json({ users: users ?? [] }, { status: 200 });
   } catch (error) {
     console.error("[ADMIN-USERS] Unexpected error:", error);
     return NextResponse.json(

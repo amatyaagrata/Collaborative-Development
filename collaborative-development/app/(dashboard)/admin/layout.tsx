@@ -31,32 +31,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const supabase = createClient();
   const [showMenu, setShowMenu] = useState(false);
-  const [orgName, setOrgName] = useState<string>("");
-  const [hasOrg, setHasOrg] = useState<boolean>(false);
+  const [adminName, setAdminName] = useState<string>("");
 
   React.useEffect(() => {
-    const fetchOrg = async () => {
+    const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase
           .from("users")
-          .select("organization_id, organizations(name)")
+          .select("name")
           .eq("auth_user_id", user.id)
           .single();
-        if (data?.organizations) {
-          setOrgName((data.organizations as any).name);
-          setHasOrg(!!data.organization_id);
+        if (data?.name) {
+          setAdminName(data.name);
         }
       }
     };
-    fetchOrg();
+    fetchUser();
   }, [supabase]);
 
-  // Dynamically filter nav items: hide 'Organizations' if it's an Org Admin
-  const filteredNavItems = adminNavItems.filter(item => {
-    if (item.label === "Organizations" && hasOrg) return false;
-    return true;
-  });
+  // All nav items are always shown (no org-based filtering needed)
+  const filteredNavItems = adminNavItems;
 
   // Compute title dynamically based on current route
   const activeNavItem = filteredNavItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"));
@@ -169,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <User size={15} color="#fff" />
               </div>
               <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
-                Admin {orgName ? `| ${orgName}` : ""}
+                Admin {adminName ? `| ${adminName}` : ""}
               </span>
               <ChevronDown size={14} color="#64748b" style={{ transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
             </button>

@@ -12,7 +12,7 @@ import styles from "@/components/layout/PortalLayout.module.css";
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
-  const [transporters, setTransporters] = useState<{id: string, name: string}[]>([]);
+  const [drivers, setDrivers] = useState<{id: string, name: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,6 @@ export default function SupplierOrders() {
 
     if (searchQuery) {
       filtered = filtered.filter(order =>
-        order.organizations?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -36,144 +35,103 @@ export default function SupplierOrders() {
     return filtered;
   }, [orders, searchQuery, statusFilter]);
 
+  /**
+   * Fetch purchase_orders belonging to this supplier via the suppliers table.
+   * Schema: purchase_orders.supplier_id → suppliers.id → suppliers.user_id → users.id → users.auth_user_id
+   */
   const fetchOrders = useCallback(async (): Promise<SupplierOrder[]> => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return [];
 
-    // Step 1: Find the supplier record linked to this auth user
-    // The suppliers table has a user_id FK that links to users.id,
-    // and users.auth_user_id links to auth.users.id
+    // Resolve internal user id
     const { data: userRow } = await supabase
       .from("users")
       .select("id")
       .eq("auth_user_id", userData.user.id)
       .single();
 
-    if (!userRow) {
-      console.error("No users row found for auth user:", userData.user.id);
-      return [];
-    }
+    if (!userRow) return [];
 
+    // Resolve supplier id from the suppliers table
     const { data: supplierRow } = await supabase
       .from("suppliers")
       .select("id")
       .eq("user_id", userRow.id)
       .single();
 
-    if (!supplierRow) {
-      // Fallback: try matching by email
-      const { data: supplierByEmail } = await supabase
+    // Email fallback if supplier not matched by user_id
+    const supplierId = supplierRow?.id ?? (await (async () => {
+      const { data } = await supabase
         .from("suppliers")
         .select("id")
-        .eq("contact_email", userData.user.email)
+        .eq("contact_email", userData.user!.email)
         .single();
+      return data?.id;
+    })());
 
-      if (!supplierByEmail) {
-        console.error("No supplier record found for this user");
-        return [];
-      }
-
-      // Use the email-matched supplier
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          order_items (
-            id,
-            quantity,
-            unit_price,
-            total_price,
-            products:product_id (
-              name
-            )
-          ),
-          organizations:organization_id (
-            id,
-            name,
-            address,
-            phone,
-            email
-          )
-        `)
-        .eq("supplier_id", supplierByEmail.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching orders:", error);
-        return [];
-      }
-      return data as SupplierOrder[];
+    if (!supplierId) {
+      console.error("No supplier record found for this user");
+      return [];
     }
 
-    // Step 2: Fetch orders assigned to this supplier
+    // Fetch purchase_orders for this supplier, with order_items
     const { data, error } = await supabase
-      .from("orders")
+      .from("purchase_orders")
       .select(`
         *,
         order_items (
           id,
           quantity,
-          unit_price,
-          total_price,
-          products:product_id (
-            name
+          price_at_order,
+          supplier_products:supplier_product_id (
+            products:product_id ( name )
           )
         ),
-        organizations:organization_id (
+        order_driver_assignments (
           id,
-          name,
-          address,
-          phone,
-          email
+          status,
+          driver_id
         )
       `)
-      .eq("supplier_id", supplierRow.id)
+      .eq("supplier_id", supplierId)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching orders:", error);
+      console.error("Error fetching purchase_orders:", error);
       return [];
     }
-    return data as SupplierOrder[];
+    return (data ?? []) as unknown as SupplierOrder[];
   }, [supabase]);
 
   useEffect(() => {
-    const loadOrders = async () => {
+    const loadData = async () => {
       const data = await fetchOrders();
       setOrders(data);
-      
-      // Fetch transporters from the SAME organization only
-      const { data: currentUser } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('auth_user_id', (await supabase.auth.getUser()).data.user?.id || '')
-        .single();
 
-      if (currentUser?.organization_id) {
-        const { data: transData } = await supabase
-          .from('users')
-          .select('id, name')
-          .eq('role', 'transporter')
-          .eq('organization_id', currentUser.organization_id);
-        if (transData) {
-          setTransporters(transData);
-        }
-      }
+      // Fetch available drivers (role = 'driver' per schema)
+      const { data: driverData } = await supabase
+        .from("users")
+        .select("id, name")
+        .eq("role", "driver")
+        .eq("is_approved", true);
 
+      if (driverData) setDrivers(driverData);
       setLoading(false);
     };
-    loadOrders();
+    loadData();
 
-    // Real-time subscription: auto-refresh when orders change (e.g. transporter rejects)
+    // Realtime: listen to both tables
     const channel = supabase
       .channel("supplier_order_updates")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, async (payload) => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, async () => {
         const updated = await fetchOrders();
         setOrders(updated);
-
-        // Show a toast if a delivery was just rejected
-        if (payload.eventType === 'UPDATE' && payload.new?.delivery_status === 'rejected') {
-          toast.error(`Transporter rejected delivery for order ${payload.new?.order_number || ''}. Please reassign.`);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_driver_assignments" }, async (payload) => {
+        const updated = await fetchOrders();
+        setOrders(updated);
+        if (payload.eventType === "UPDATE" && payload.new?.status === "rejected") {
+          toast.error("Driver rejected a delivery. Please reassign.");
         }
       })
       .subscribe();
@@ -181,9 +139,10 @@ export default function SupplierOrders() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchOrders, supabase]);
 
+  /** Update purchase_order status directly */
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const { error } = await supabase
-      .from("orders")
+      .from("purchase_orders")
       .update({ status: newStatus })
       .eq("id", orderId);
 
@@ -191,23 +150,49 @@ export default function SupplierOrders() {
       toast.success(`Order status updated to ${newStatus}`);
       const updatedOrders = await fetchOrders();
       setOrders(updatedOrders);
+    } else {
+      toast.error("Failed to update: " + error.message);
     }
   }
 
-  async function assignTransporter(orderId: string, transporterId: string) {
-    const { error } = await supabase
-      .from("orders")
-      .update({ transporter_id: transporterId || null, delivery_status: transporterId ? 'pending_acceptance' : 'not_assigned' })
+  /**
+   * Assign a driver: insert into order_driver_assignments (not orders.transporter_id).
+   * Also updates purchase_orders.status → 'driver_assigned'.
+   */
+  async function assignDriver(orderId: string, driverId: string) {
+    if (!driverId) return;
+
+    // Upsert into order_driver_assignments
+    const { error: assignErr } = await supabase
+      .from("order_driver_assignments")
+      .upsert({
+        purchase_order_id: orderId,
+        driver_id: driverId,
+        status: "pending",
+        assigned_at: new Date().toISOString(),
+      }, { onConflict: "purchase_order_id,driver_id" });
+
+    if (assignErr) {
+      toast.error("Failed to assign driver: " + assignErr.message);
+      return;
+    }
+
+    // Update purchase_order status to reflect assignment
+    await supabase
+      .from("purchase_orders")
+      .update({ status: "driver_assigned" })
       .eq("id", orderId);
 
-    if (!error) {
-      toast.success("Transporter assigned successfully!");
-      const updatedOrders = await fetchOrders();
-      setOrders(updatedOrders);
-    } else {
-      toast.error("Failed to assign transporter: " + error.message);
-    }
+    toast.success("Driver assigned successfully!");
+    const updatedOrders = await fetchOrders();
+    setOrders(updatedOrders);
   }
+
+  // Orders where all driver assignments were rejected (need reassignment)
+  const rejectedOrders = orders.filter(o =>
+    (o as any).order_driver_assignments?.every((a: any) => a.status === "rejected") &&
+    (o as any).order_driver_assignments?.length > 0
+  );
 
   return (
     <>
@@ -215,8 +200,8 @@ export default function SupplierOrders() {
         <div className={styles.heroCard}>
           <div className={styles.productsHeaderRow}>
             <div>
-              <h2 className={styles.heroTitle}>Supplier Orders</h2>
-              <p className={styles.heroText}>Manage and process incoming orders from organizations.</p>
+              <h2 className={styles.heroTitle}>Purchase Orders</h2>
+              <p className={styles.heroText}>Manage and process incoming purchase orders.</p>
             </div>
           </div>
 
@@ -226,29 +211,30 @@ export default function SupplierOrders() {
               <input
                 className={styles.searchInput}
                 type="text"
-                placeholder="Search by organization or order number..."
+                placeholder="Search by order number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <select 
+            <select
               className={styles.select}
-              value={statusFilter} 
+              value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">All Orders</option>
               <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="preparing">Preparing</option>
-              <option value="ready_for_delivery">Ready for Pickup</option>
+              <option value="accepted">Accepted</option>
+              <option value="driver_assigned">Driver Assigned</option>
+              <option value="in_transit">In Transit</option>
               <option value="delivered">Delivered</option>
+              <option value="ended">Ended</option>
             </select>
           </div>
         </div>
 
         {/* REJECTED DELIVERY ALERTS */}
-        {!loading && orders.filter(o => o.delivery_status === 'rejected').length > 0 && (
+        {!loading && rejectedOrders.length > 0 && (
           <div style={{
             background: "linear-gradient(135deg, #fef2f2, #fff1f2)",
             border: "2px solid #fecaca",
@@ -259,40 +245,33 @@ export default function SupplierOrders() {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
               <AlertTriangle size={20} color="#dc2626" />
               <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#dc2626" }}>
-                Delivery Rejected ({orders.filter(o => o.delivery_status === 'rejected').length})
+                Driver Rejected ({rejectedOrders.length})
               </h3>
             </div>
             <p style={{ margin: "0 0 12px", fontSize: "0.85rem", color: "#991b1b" }}>
-              The following orders were rejected by the assigned transporter. Reassign a new driver below.
+              The following orders were rejected by the assigned driver. Reassign below.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {orders.filter(o => o.delivery_status === 'rejected').map(order => (
+              {rejectedOrders.map(order => (
                 <div key={order.id} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   background: "white", padding: "14px 16px", borderRadius: "12px",
                   border: "1px solid #fecaca", gap: "12px", flexWrap: "wrap"
                 }}>
                   <div style={{ minWidth: "180px" }}>
-                    <span style={{ fontWeight: 700, color: "#4338ca" }}>Order #{order.order_number}</span>
-                    <span style={{ marginLeft: "12px", fontSize: "0.8rem", color: "#64748b" }}>
-                      {order.organizations?.name || ""}
+                    <span style={{ fontWeight: 700, color: "#4338ca" }}>
+                      Order #{order.order_number || order.id.slice(0, 8)}
                     </span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "200px" }}>
                     <select
                       defaultValue=""
-                      onChange={(e) => {
-                        if (e.target.value) assignTransporter(order.id, e.target.value);
-                      }}
-                      style={{
-                        flex: 1, padding: "8px 12px", borderRadius: "8px",
-                        border: "1px solid #fecaca", background: "#fff",
-                        color: "#22054f", fontWeight: 600, fontSize: "0.85rem"
-                      }}
+                      onChange={(e) => { if (e.target.value) assignDriver(order.id, e.target.value); }}
+                      style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fff", color: "#22054f", fontWeight: 600, fontSize: "0.85rem" }}
                     >
                       <option value="">-- Pick a new driver --</option>
-                      {transporters.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                      {drivers.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
                   </div>
@@ -319,8 +298,8 @@ export default function SupplierOrders() {
                 <OrderCard
                   order={order}
                   onStatusChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
-                  transporters={transporters}
-                  onAssignTransporter={(transporterId) => assignTransporter(order.id, transporterId)}
+                  transporters={drivers}
+                  onAssignTransporter={(driverId) => assignDriver(order.id, driverId)}
                   showActions={true}
                 />
               </div>

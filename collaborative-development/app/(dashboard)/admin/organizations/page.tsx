@@ -7,8 +7,6 @@ import { toast } from "sonner";
 interface Organization {
   id: string;
   name: string;
-  phone: string | null;
-  address: string | null;
   created_at: string;
 }
 
@@ -17,7 +15,7 @@ export default function AdminOrganizationsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editOrg, setEditOrg] = useState<Organization | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [form, setForm] = useState({ name: "" });
   const [saving, setSaving] = useState(false);
 
   const fetchOrgs = useCallback(async () => {
@@ -50,7 +48,7 @@ export default function AdminOrganizationsPage() {
       toast.success(editOrg ? "Organization updated!" : "Organization created!");
       setShowForm(false);
       setEditOrg(null);
-      setForm({ name: "", phone: "", address: "" });
+      setForm({ name: "" });
       await fetchOrgs();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed");
@@ -61,7 +59,7 @@ export default function AdminOrganizationsPage() {
 
   const openEdit = (org: Organization) => {
     setEditOrg(org);
-    setForm({ name: org.name, phone: org.phone ?? "", address: org.address ?? "" });
+    setForm({ name: org.name });
     setShowForm(true);
   };
 
@@ -77,7 +75,7 @@ export default function AdminOrganizationsPage() {
             <button onClick={fetchOrgs} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff", fontSize: "0.8rem", cursor: "pointer", color: "#64748b" }}>
               <RefreshCw size={14} /> Refresh
             </button>
-            <button onClick={() => { setShowForm(true); setEditOrg(null); setForm({ name: "", phone: "", address: "" }); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "none", borderRadius: 10, background: "#7c3aed", fontSize: "0.8rem", cursor: "pointer", color: "#fff", fontWeight: 600 }}>
+            <button onClick={() => { setShowForm(true); setEditOrg(null); setForm({ name: "" }); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "none", borderRadius: 10, background: "#7c3aed", fontSize: "0.8rem", cursor: "pointer", color: "#fff", fontWeight: 600 }}>
               <Plus size={14} /> Add Organization
             </button>
           </div>
@@ -89,13 +87,13 @@ export default function AdminOrganizationsPage() {
             <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 480, position: "relative" }}>
               <button onClick={() => setShowForm(false)} style={{ position: "absolute", top: 16, right: 16, border: "none", background: "none", cursor: "pointer", color: "#64748b" }}><X size={20} /></button>
               <h3 style={{ margin: "0 0 20px", fontWeight: 700, color: "#1a1a2e" }}>{editOrg ? "Edit Organization" : "New Organization"}</h3>
-              {(["name", "phone", "address"] as const).map(field => (
+              {(["name"] as const).map(field => (
                 <div key={field} style={{ marginBottom: 14 }}>
                   <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: 6, textTransform: "capitalize" }}>{field}{field === "name" ? " *" : ""}</label>
                   <input
                     value={form[field]}
                     onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
-                    placeholder={field === "address" ? "123 Main St, City" : field === "phone" ? "+1 234 567 8900" : "Organization name"}
+                    placeholder={"Organization name"}
                     style={{ width: "100%", padding: "10px 14px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: "0.9rem", boxSizing: "border-box" }}
                   />
                 </div>
@@ -126,7 +124,7 @@ export default function AdminOrganizationsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e9ecf0" }}>
-                  {["Name", "Phone", "Address", "Created", "Actions"].map(h => (
+                  {["Name", "Created", "Actions"].map(h => (
                     <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                   ))}
                 </tr>
@@ -135,8 +133,6 @@ export default function AdminOrganizationsPage() {
                 {orgs.map((org, i) => (
                   <tr key={org.id} style={{ borderBottom: i < orgs.length - 1 ? "1px solid #f1f5f9" : "none" }}>
                     <td style={{ padding: "14px 16px", fontWeight: 600, color: "#1a1a2e" }}>{org.name}</td>
-                    <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#64748b" }}>{org.phone ?? "—"}</td>
-                    <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#64748b" }}>{org.address ?? "—"}</td>
                     <td style={{ padding: "14px 16px", fontSize: "0.8rem", color: "#94a3b8" }}>{new Date(org.created_at).toLocaleDateString()}</td>
                     <td style={{ padding: "14px 16px" }}>
                       <button onClick={() => openEdit(org)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", border: "none", borderRadius: 8, background: "#f1f5f9", color: "#374151", fontWeight: 600, fontSize: "0.8rem", cursor: "pointer" }}>

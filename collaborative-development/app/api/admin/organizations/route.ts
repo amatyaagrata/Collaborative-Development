@@ -19,7 +19,7 @@ export async function GET() {
 
     let query = supabase
       .from("organizations")
-      .select("id, name, phone, address, created_at")
+      .select("id, name, created_at")
       .order("created_at", { ascending: false });
 
     if (userRow?.organization_id) {
@@ -44,22 +44,25 @@ export async function GET() {
 
 /**
  * POST /api/admin/organizations
- * Body: { name: string; phone?: string; address?: string }
+ * Body: { name: string }
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phone, address } = body as { name: string; phone?: string; address?: string };
+    const { name } = body as { name: string };
 
     if (!name) {
       return NextResponse.json({ error: "Organization name is required" }, { status: 400 });
     }
 
+    // Generate slug from name
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
     const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("organizations")
-      .insert({ name, phone, address })
+      .insert({ name, slug })
       .select()
       .single();
 
@@ -79,12 +82,12 @@ export async function POST(request: Request) {
 
 /**
  * PATCH /api/admin/organizations
- * Body: { id: string; name?: string; phone?: string; address?: string }
+ * Body: { id: string; name?: string }
  */
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...updates } = body as { id: string; name?: string; phone?: string; address?: string };
+    const { id, ...updates } = body as { id: string; name?: string };
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });

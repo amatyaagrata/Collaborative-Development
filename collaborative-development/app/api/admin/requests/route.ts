@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Default demo org ID from DATABASE_SCHEMA_V3.sql
-const DEMO_ORG_ID = "a0000000-0000-0000-0000-000000000001";
-
 /**
  * GET /api/admin/requests?status=pending|approved|rejected
- * Returns access requests filtered by status.
+ * Reads from the `access_requests` table (which exists in the live DB).
  */
 export async function GET(request: Request) {
   try {
@@ -43,12 +40,13 @@ export async function GET(request: Request) {
  * Body (reject):  { id, action: "reject", rejection_reason? }
  *
  * On approve:
- *   1. Creates an auth user with the admin-supplied password
- *   2. Upserts into `users` and `user_roles` tables
- *   3. Marks the access_request as approved
+ *   1. Fetch the access_request row
+ *   2. Create a Supabase auth user (requires service_role key)
+ *   3. Insert into `users` table with is_approved = true
+ *   4. Mark access_request as approved
  *
  * On reject:
- *   1. Marks the access_request as rejected with optional reason
+ *   1. Mark access_request as rejected
  */
 export async function PATCH(request: Request) {
   try {
@@ -70,7 +68,7 @@ export async function PATCH(request: Request) {
 
     const supabase = createAdminClient();
 
-    // ── Fetch the access request ────────────────────────────────────────────
+    // ── Fetch the access request ─────────────────────────────────────────────
     const { data: accessReq, error: fetchError } = await supabase
       .from("access_requests")
       .select("*")
@@ -91,7 +89,9 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // ── REJECT ──────────────────────────────────────────────────────────────
+    const now = new Date().toISOString();
+
+    // ── REJECT ───────────────────────────────────────────────────────────────
     if (action === "reject") {
       const { error: updateError } = await supabase
         .from("access_requests")
@@ -99,22 +99,18 @@ export async function PATCH(request: Request) {
           status: "rejected",
           rejection_reason: rejection_reason ?? null,
           reviewed_by: adminUserId ?? null,
-          reviewed_at: new Date().toISOString(),
+          reviewed_at: now,
         })
         .eq("id", id);
 
       if (updateError) {
-        console.error("[ADMIN-REQUESTS] Reject update error:", updateError);
-        return NextResponse.json(
-          { error: updateError.message },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
       }
 
       return NextResponse.json({ message: "Request rejected successfully." });
     }
 
-    // ── APPROVE ─────────────────────────────────────────────────────────────
+    // ── APPROVE ──────────────────────────────────────────────────────────────
     if (!password || password.length < 6) {
       return NextResponse.json(
         { error: "A password of at least 6 characters is required to approve." },
@@ -122,37 +118,30 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Step 1: Create auth user
+    // Step 1: Create auth user via admin API (requires SUPABASE_SERVICE_ROLE_KEY)
     console.log("[ADMIN-REQUESTS] Creating auth user for:", accessReq.email);
-    const { data: authData, error: authError } =
-      await supabase.auth.admin.createUser({
-        email: accessReq.email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          name: accessReq.name,
-          role: accessReq.requested_role,
-          phone: accessReq.phone,
-        },
-      });
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: accessReq.email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        name: accessReq.name,
+        role: accessReq.requested_role,
+        phone: accessReq.phone,
+      },
+    });
 
     if (authError) {
       console.error("[ADMIN-REQUESTS] Auth user creation error:", authError);
-
-      // If user already exists in auth, try to continue gracefully
       if (
         authError.message?.toLowerCase().includes("already") ||
         authError.message?.toLowerCase().includes("duplicate")
       ) {
         return NextResponse.json(
-          {
-            error:
-              "An auth account already exists for this email. If this user was previously approved, check the users table.",
-          },
+          { error: "An account already exists for this email." },
           { status: 409 }
         );
       }
-
       return NextResponse.json({ error: authError.message }, { status: 500 });
     }
 
@@ -167,55 +156,38 @@ export async function PATCH(request: Request) {
     console.log("[ADMIN-REQUESTS] Auth user created:", authUserId);
 
     // Step 2: Upsert into `users` table
+    // Schema: users(id, auth_user_id, name, email, role, phone, is_approved, approved_at)
     const { error: userError } = await supabase.from("users").upsert(
       {
         auth_user_id: authUserId,
-        organization_id: DEMO_ORG_ID,
         name: accessReq.name,
         email: accessReq.email,
         role: accessReq.requested_role,
         phone: accessReq.phone ?? null,
-        is_active: true,
+        is_approved: true,
+        approved_at: now,
       },
       { onConflict: "auth_user_id" }
     );
 
     if (userError) {
       console.error("[ADMIN-REQUESTS] users upsert error:", userError);
-      // Non-fatal — log and continue
+      // Non-fatal — user can still log in via auth
     }
 
-    // Step 3: Upsert into `user_roles` table
-    const { error: roleError } = await supabase.from("user_roles").upsert(
-      {
-        user_id: authUserId,
-        organization_id: DEMO_ORG_ID,
-        role: accessReq.requested_role,
-      },
-      { onConflict: "user_id" }
-    );
-
-    if (roleError) {
-      console.error("[ADMIN-REQUESTS] user_roles upsert error:", roleError);
-      // Non-fatal — log and continue
-    }
-
-    // Step 4: Mark access request as approved
+    // Step 3: Mark access_request as approved
     const { error: approveError } = await supabase
       .from("access_requests")
       .update({
         status: "approved",
         reviewed_by: adminUserId ?? null,
-        reviewed_at: new Date().toISOString(),
+        reviewed_at: now,
       })
       .eq("id", id);
 
     if (approveError) {
       console.error("[ADMIN-REQUESTS] Approve update error:", approveError);
-      return NextResponse.json(
-        { error: approveError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: approveError.message }, { status: 500 });
     }
 
     console.log("[ADMIN-REQUESTS] Request approved for:", accessReq.email);

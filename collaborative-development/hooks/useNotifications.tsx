@@ -7,7 +7,7 @@ interface SendNotificationParams {
   userId?: string;
   title: string;
   message: string;
-  type: "order" | "alert" | "system";
+  type: "order_created" | "order_accepted" | "order_rejected" | "driver_assigned" | "driver_rejected" | "trip_started" | "trip_ended" | "system" | "approval";
 }
 
 export function useNotifications() {

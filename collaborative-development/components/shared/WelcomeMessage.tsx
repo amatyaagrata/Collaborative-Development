@@ -20,69 +20,54 @@ export function WelcomeMessage({ className, roleOverride }: WelcomeMessageProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const role: UserRole = normalizeRole(user.user_metadata?.role as string);
-      const displayName =
+      // Get display name and role from the users table (source of truth)
+      let displayName =
         user.user_metadata?.name ??
         user.user_metadata?.full_name ??
         user.email?.split("@")[0] ??
         "there";
 
-      // Fetch profile data
-      let isFirstLogin = false;
-      let pendingRequests = 0;
-
       try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_first_login, name")
-          .eq("id", user.id)
+        const { data: dbUser } = await supabase
+          .from("users")
+          .select("name, role")
+          .eq("auth_user_id", user.id)
           .single();
 
-        isFirstLogin = profile?.is_first_login ?? false;
+        if (dbUser?.name) displayName = dbUser.name;
 
-        if (isFirstLogin) {
-          await supabase
-            .from("profiles")
-            .update({ is_first_login: false })
-            .eq("id", user.id);
+        if (dbUser?.role) {
+          const dbRole = normalizeRole(dbUser.role);
+
+          if (dbRole === "admin") {
+            // Count unapproved users as pending for admin
+            const { count: pendingCount } = await supabase
+              .from("users")
+              .select("*", { count: "exact", head: true })
+              .eq("is_approved", false);
+
+            const pending = pendingCount ?? 0;
+            setIcon("📊");
+            const pendingText = pending > 0
+              ? ` You have ${pending} pending approval${pending > 1 ? "s" : ""}.`
+              : " No pending approvals right now.";
+            setMessage(`Welcome back, ${displayName}!${pendingText}`);
+          } else {
+            const displayRole = roleOverride ?? dbRole.replace("_", " ");
+            setIcon("👋");
+            setMessage(`Welcome back, ${displayName}! You're logged in as ${displayRole}.`);
+          }
+          return;
         }
       } catch {
-        // profiles table may not exist — treat as returning user
+        // Fall through to metadata-based message
       }
 
-      // For admin: fetch pending request count
-      if (role === "admin") {
-        try {
-          const { count } = await supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true })
-            .eq("status", "pending");
-          pendingRequests = count ?? 0;
-        } catch {
-          // ignore
-        }
-      }
-
-      // ── Pick the right message ──────────────────────────────────────────────
-
-      if (isFirstLogin) {
-        // New user — first time ever
-        setIcon("🎉");
-        setMessage(`Welcome to GoGodam! Let's get started, ${displayName}.`);
-      } else if (role === "admin") {
-        // Admin returning user with pending count
-        setIcon("📊");
-        const pendingText =
-          pendingRequests > 0
-            ? ` You have ${pendingRequests} pending request${pendingRequests > 1 ? "s" : ""}.`
-            : " No pending requests right now.";
-        setMessage(`Welcome back, ${displayName}!${pendingText}`);
-      } else {
-        // Normal returning user
-        setIcon("👋");
-        const displayRole = roleOverride ?? role.replace("_", " ");
-        setMessage(`Welcome back, ${displayName}! You're logged in as ${displayRole}.`);
-      }
+      // Fallback: use auth metadata role
+      const role: UserRole = normalizeRole(user.user_metadata?.role as string);
+      const displayRole = roleOverride ?? role.replace("_", " ");
+      setIcon("👋");
+      setMessage(`Welcome back, ${displayName}! You're logged in as ${displayRole}.`);
     }
 
     load();

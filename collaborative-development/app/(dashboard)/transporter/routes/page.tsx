@@ -14,16 +14,45 @@ export default function TransporterRoutesPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Look up internal user id
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (!userRow) return;
+
     const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("transporter_id", user.id)
-      .neq("delivery_status", "delivered") // Only show active/pending routes
-      .order("created_at", { ascending: true });
+      .from("order_driver_assignments")
+      .select(`
+        id,
+        status,
+        purchase_orders (
+          id,
+          order_number,
+          status,
+          priority,
+          created_at,
+          suppliers ( name, address )
+        )
+      `)
+      .eq("driver_id", userRow.id)
+      .in("status", ["accepted", "pending"])
+      .order("assigned_at", { ascending: true });
 
     if (!error && data) {
-      setOrders(data);
-      if (data.length > 0) setSelectedAddress(data[0].delivery_address);
+      const mapped = data
+        .filter((row: any) => row.purchase_orders && row.purchase_orders.status !== "delivered")
+        .map((row: any) => ({
+          id: row.purchase_orders.id,
+          order_number: row.purchase_orders.order_number,
+          status: row.purchase_orders.status,
+          delivery_address: row.purchase_orders.suppliers?.address ?? "",
+          supplier_name: row.purchase_orders.suppliers?.name ?? "Unknown",
+        }));
+      setOrders(mapped);
+      if (mapped.length > 0) setSelectedAddress(mapped[0].delivery_address);
     }
   };
 
@@ -86,26 +115,22 @@ export default function TransporterRoutesPage() {
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e1b4b" }}>{order.delivery_address}</div>
-                  <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#7c3aed" }}>{order.order_number}</div>
-                </div>
-                
-                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Package size={14} /> {order.product_name || "General Cargo"}
-                </div>
-                
-                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Clock size={14} /> ETA: {order.eta}
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e1b4b" }}>{order.delivery_address || order.supplier_name}</div>
+                  <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#7c3aed" }}>{order.order_number || `#${order.id.slice(0,8)}`}</div>
                 </div>
 
-                <div style={{ 
-                  marginTop: "10px", 
-                  fontSize: "0.65rem", 
-                  fontWeight: "800", 
-                  textTransform: "uppercase",
-                  color: order.delivery_status === "in_transit" ? "#7c3aed" : "#94a3b8" 
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Package size={14} /> {order.supplier_name}
+                </div>
+
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Clock size={14} /> Status: {order.status?.replace(/_/g, " ")}
+                </div>
+
+                <div style={{ marginTop: "10px", fontSize: "0.65rem", fontWeight: "800", textTransform: "uppercase",
+                  color: order.status === "in_transit" ? "#7c3aed" : "#94a3b8"
                 }}>
-                  {order.delivery_status === "not_assigned" ? "Pending" : "In Transit"}
+                  {order.status === "pending" ? "Pending" : order.status?.replace(/_/g, " ")}
                 </div>
               </div>
             ))}

@@ -14,22 +14,22 @@ export function useRealtimeOrders({ onNewOrder }: { onNewOrder: (order: Supplier
 
   useEffect(() => {
     const channel = supabase
-      .channel("orders-channel")
+      .channel("purchase-orders-channel")
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "orders",
+          table: "purchase_orders",
         },
         async (payload) => {
-          // Fetch full order details with relations
+          // Fetch full order details with items
           const { data: fullOrder } = await supabase
-            .from("orders")
+            .from("purchase_orders")
             .select(`
               *,
               order_items (*),
-              organizations (name, address, phone)
+              suppliers ( id, name, address )
             `)
             .eq("id", payload.new.id)
             .single();

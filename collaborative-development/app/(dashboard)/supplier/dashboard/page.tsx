@@ -62,14 +62,14 @@ export default function SupplierDashboardPage() {
         return;
       }
 
-      // 1. Fetch Stats
+      // 1. Fetch Stats — using purchase_orders (correct table per schema)
       const [productsRes, pendingRes, completedRes] = await Promise.all([
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
-        supabase.from("orders").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId).eq("status", "pending"),
-        supabase.from("orders").select("total_amount", { count: "exact" }).eq("supplier_id", resolvedSupplierId).eq("status", "delivered")
+        supabase.from("supplier_products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
+        supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId).eq("status", "pending"),
+        supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId).eq("status", "delivered")
       ]);
 
-      const totalEarnings = (completedRes.data || []).reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      const totalEarnings = 0; // purchase_orders has no total_amount column
 
       setStats({
         totalProducts: productsRes.count || 0,
@@ -78,10 +78,10 @@ export default function SupplierDashboardPage() {
         totalEarnings
       });
 
-      // 2. Fetch Recent Orders
+      // 2. Fetch Recent Orders from purchase_orders
       const { data: ordersData } = await supabase
-        .from("orders")
-        .select("id, order_number, status, created_at, total_amount, organizations(name)")
+        .from("purchase_orders")
+        .select("id, order_number, status, created_at, priority")
         .eq("supplier_id", resolvedSupplierId)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -89,39 +89,39 @@ export default function SupplierDashboardPage() {
       if (ordersData) {
         setRecentOrders(ordersData.map(o => ({
           id: o.id,
-          order_number: o.order_number,
-          org: (o.organizations as any)?.name || "Unknown",
+          order_number: o.order_number ?? o.id.slice(0, 8),
+          org: o.priority ?? "medium",
           date: new Date(o.created_at).toLocaleDateString(),
-          amount: o.total_amount || 0,
+          amount: 0,
           status: o.status
         })));
       }
 
-      // 3. Payment Summary (grouped by status)
+      // 3. Payment Summary grouped by status from purchase_orders
       const { data: allOrders } = await supabase
-        .from("orders")
-        .select("status, total_amount")
+        .from("purchase_orders")
+        .select("status")
         .eq("supplier_id", resolvedSupplierId);
 
       if (allOrders) {
         const summaryMap: Record<string, { amount: number; count: number }> = {
-          "pending": { amount: 0, count: 0 },
-          "preparing": { amount: 0, count: 0 },
+          "pending":   { amount: 0, count: 0 },
+          "accepted":  { amount: 0, count: 0 },
           "delivered": { amount: 0, count: 0 },
         };
 
         allOrders.forEach(o => {
-          const status = o.status.toLowerCase();
-          const key = status === "delivered" ? "delivered" : (status === "pending" ? "pending" : "preparing");
+          const key = ["delivered", "ended"].includes(o.status) ? "delivered"
+            : ["accepted", "driver_assigned", "in_transit"].includes(o.status) ? "accepted"
+            : "pending";
           if (!summaryMap[key]) summaryMap[key] = { amount: 0, count: 0 };
-          summaryMap[key].amount += (o.total_amount || 0);
           summaryMap[key].count += 1;
         });
 
         setPayments([
-          { status: "Pending", amount: summaryMap["pending"].amount, count: summaryMap["pending"].count },
-          { status: "Preparing", amount: summaryMap["preparing"].amount, count: summaryMap["preparing"].count },
-          { status: "Completed", amount: summaryMap["delivered"].amount, count: summaryMap["delivered"].count },
+          { status: "Pending",  amount: 0, count: summaryMap["pending"].count },
+          { status: "In Progress", amount: 0, count: summaryMap["accepted"].count },
+          { status: "Completed", amount: 0, count: summaryMap["delivered"].count },
         ]);
       }
 
