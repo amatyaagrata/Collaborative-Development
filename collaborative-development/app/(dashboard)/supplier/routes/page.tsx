@@ -6,19 +6,18 @@ import { MapPin, Navigation2, Clock, Package, Loader2 } from "lucide-react";
 import styles from "@/components/layout/PortalLayout.module.css";
 import { toast } from "sonner";
 
-export default function TransporterRoutesPage() {
+export default function SupplierRoutesPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedAddress, setSelectedAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  const fetchActiveRoutes = useCallback(async () => {
+  const fetchRoutes = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Look up internal user id
       const { data: userRow } = await supabase
         .from("users")
         .select("id")
@@ -26,6 +25,14 @@ export default function TransporterRoutesPage() {
         .single();
 
       if (!userRow) return;
+
+      const { data: supplierRow } = await supabase
+        .from("suppliers")
+        .select("id")
+        .eq("user_id", userRow.id)
+        .single();
+
+      if (!supplierRow) return;
 
       const { data, error } = await supabase
         .from("orders")
@@ -39,9 +46,9 @@ export default function TransporterRoutesPage() {
             address
           )
         `)
-        .eq("transporter_id", userRow.id)
-        .in("status", ["accepted", "driver_assigned", "in_transit"])
-        .order("created_at", { ascending: true });
+        .eq("supplier_id", supplierRow.id)
+        .not("status", "eq", "delivered")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -59,28 +66,33 @@ export default function TransporterRoutesPage() {
         if (firstWithAddress) setSelectedAddress(firstWithAddress.destination_address);
       }
     } catch (err) {
-      console.error("Error fetching transporter routes:", err);
-      toast.error("Failed to load active routes");
+      console.error("Error fetching routes:", err);
+      toast.error("Failed to load delivery routes");
     } finally {
       setLoading(false);
     }
   }, [supabase, selectedAddress]);
 
   useEffect(() => {
-    fetchActiveRoutes();
-  }, [fetchActiveRoutes]);
+    fetchRoutes();
+  }, [fetchRoutes]);
 
   const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(selectedAddress || "Kathmandu")}&output=embed`;
 
   return (
     <div className={styles.pageStack} style={{ padding: "20px" }}>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#2d1a5a", marginBottom: "24px" }}>
-        Active Delivery Routes
-      </h2>
+      <div style={{ marginBottom: "24px" }}>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#2d1a5a", margin: 0 }}>
+          Delivery Routes
+        </h2>
+        <p style={{ color: "#64748b", fontSize: "0.9rem", marginTop: "4px" }}>
+          Monitor the delivery destinations for your active orders.
+        </p>
+      </div>
       
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 350px", gap: "24px", height: "calc(100vh - 180px)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 350px", gap: "24px", height: "calc(100vh - 200px)" }}>
         
-        {/* LIVE MAP INTERFACE */}
+        {/* MAP INTERFACE */}
         <div style={{ position: "relative", background: "#f1f5f9", borderRadius: "20px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
           {loading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
@@ -98,19 +110,19 @@ export default function TransporterRoutesPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "#64748b" }}>
               <MapPin size={48} color="#7c3aed" />
-              <p style={{ marginTop: "12px", fontWeight: 600 }}>No active routes found</p>
+              <p style={{ marginTop: "12px", fontWeight: 600 }}>No active delivery addresses found</p>
             </div>
           )}
         </div>
 
-        {/* DAILY MANIFEST SIDEBAR */}
+        {/* ORDER LIST SIDEBAR */}
         <div style={{ background: "white", padding: "24px", borderRadius: "20px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
-          <h3 style={{ marginBottom: "20px", fontSize: "1.1rem", fontWeight: "700", color: "#1e1b4b" }}>Daily Manifest</h3>
+          <h3 style={{ marginBottom: "20px", fontSize: "1.1rem", fontWeight: "700", color: "#1e1b4b" }}>Active Orders</h3>
           
           <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px" }}>
             {!loading && orders.length === 0 && (
               <p style={{ color: "#94a3b8", fontSize: "0.9rem", textAlign: "center", marginTop: "20px" }}>
-                Active deliveries will appear here once assigned and accepted.
+                No active orders with routes to display.
               </p>
             )}
 
@@ -125,7 +137,8 @@ export default function TransporterRoutesPage() {
                   background: selectedAddress === order.destination_address ? "#f5f3ff" : "#fbfcfd", 
                   marginBottom: "12px", 
                   borderRadius: "8px",
-                  transition: "all 0.2s ease"
+                  transition: "all 0.2s ease",
+                  opacity: order.destination_address ? 1 : 0.6
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -167,7 +180,7 @@ export default function TransporterRoutesPage() {
               gap: "8px" 
             }}
           >
-            <Navigation2 size={18} /> Start Navigation
+            <Navigation2 size={18} /> View on Google Maps
           </button>
         </div>
 
