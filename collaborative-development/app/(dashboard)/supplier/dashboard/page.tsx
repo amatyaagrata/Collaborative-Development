@@ -44,7 +44,7 @@ export default function SupplierDashboardPage() {
 
       const { data: userRow } = await supabase
         .from("users")
-        .select("id, organization_id")
+        .select("id")
         .eq("auth_user_id", authUser.id)
         .single();
 
@@ -62,68 +62,54 @@ export default function SupplierDashboardPage() {
         return;
       }
 
-      // 1. Fetch Stats — using purchase_orders (correct table per schema)
-      const [productsRes, pendingRes, completedRes] = await Promise.all([
-        supabase.from("supplier_products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
-        supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId).eq("status", "pending"),
-        supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId).eq("status", "delivered")
+      // 1. Fetch Stats & Orders from V3 tables
+      const [productsRes, allOrdersRes] = await Promise.all([
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
+        supabase.from("orders").select("id, order_number, status, created_at, total_amount, organizations:organization_id(name)").eq("supplier_id", resolvedSupplierId).order("created_at", { ascending: false })
       ]);
 
-      const totalEarnings = 0; // purchase_orders has no total_amount column
+      const allOrders = allOrdersRes.data || [];
+      const pendingOrders = allOrders.filter(o => o.status === "pending").length;
+      const completedOrders = allOrders.filter(o => o.status === "delivered").length;
+      const totalEarnings = allOrders.filter(o => o.status === "delivered").reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
       setStats({
         totalProducts: productsRes.count || 0,
-        pendingOrders: pendingRes.count || 0,
-        completedOrders: completedRes.count || 0,
+        pendingOrders,
+        completedOrders,
         totalEarnings
       });
 
-      // 2. Fetch Recent Orders from purchase_orders
-      const { data: ordersData } = await supabase
-        .from("purchase_orders")
-        .select("id, order_number, status, created_at, priority")
-        .eq("supplier_id", resolvedSupplierId)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      // 2. Map Recent Orders
+      setRecentOrders(allOrders.slice(0, 5).map(o => ({
+        id: o.id,
+        order_number: o.order_number ?? o.id.slice(0, 8),
+        org: (o.organizations as any)?.name || "N/A",
+        date: new Date(o.created_at).toLocaleDateString(),
+        amount: o.total_amount || 0,
+        status: o.status
+      })));
 
-      if (ordersData) {
-        setRecentOrders(ordersData.map(o => ({
-          id: o.id,
-          order_number: o.order_number ?? o.id.slice(0, 8),
-          org: o.priority ?? "medium",
-          date: new Date(o.created_at).toLocaleDateString(),
-          amount: 0,
-          status: o.status
-        })));
-      }
+      // 3. Payment Summary
+      const summaryMap: Record<string, { amount: number; count: number }> = {
+        "pending":   { amount: 0, count: 0 },
+        "accepted":  { amount: 0, count: 0 },
+        "delivered": { amount: 0, count: 0 },
+      };
 
-      // 3. Payment Summary grouped by status from purchase_orders
-      const { data: allOrders } = await supabase
-        .from("purchase_orders")
-        .select("status")
-        .eq("supplier_id", resolvedSupplierId);
+      allOrders.forEach(o => {
+        const key = ["delivered", "ended"].includes(o.status) ? "delivered"
+          : ["accepted", "driver_assigned", "in_transit"].includes(o.status) ? "accepted"
+          : "pending";
+        summaryMap[key].count += 1;
+        summaryMap[key].amount += (o.total_amount || 0);
+      });
 
-      if (allOrders) {
-        const summaryMap: Record<string, { amount: number; count: number }> = {
-          "pending":   { amount: 0, count: 0 },
-          "accepted":  { amount: 0, count: 0 },
-          "delivered": { amount: 0, count: 0 },
-        };
-
-        allOrders.forEach(o => {
-          const key = ["delivered", "ended"].includes(o.status) ? "delivered"
-            : ["accepted", "driver_assigned", "in_transit"].includes(o.status) ? "accepted"
-            : "pending";
-          if (!summaryMap[key]) summaryMap[key] = { amount: 0, count: 0 };
-          summaryMap[key].count += 1;
-        });
-
-        setPayments([
-          { status: "Pending",  amount: 0, count: summaryMap["pending"].count },
-          { status: "In Progress", amount: 0, count: summaryMap["accepted"].count },
-          { status: "Completed", amount: 0, count: summaryMap["delivered"].count },
-        ]);
-      }
+      setPayments([
+        { status: "Pending",  amount: summaryMap["pending"].amount, count: summaryMap["pending"].count },
+        { status: "In Progress", amount: summaryMap["accepted"].amount, count: summaryMap["accepted"].count },
+        { status: "Completed", amount: summaryMap["delivered"].amount, count: summaryMap["delivered"].count },
+      ]);
 
     } catch (err) {
       console.error("Dashboard fetch error:", err);

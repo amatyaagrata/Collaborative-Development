@@ -4,14 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
-import {
-  adminStats as fallbackStats,
-  adminProductSummary as fallbackProductSummary,
-  adminTrendingProducts as fallbackTrendingProducts,
-  adminSalesData as fallbackSalesData,
-  type AdminTrendingProduct,
-  type AdminSalesDataPoint,
-} from "@/lib/data/adminDashboardData";
+import { createClient } from "@/lib/supabase/client";
 import "./dashboard.css";
 
 const AdminDashboardCharts = dynamic(
@@ -19,28 +12,87 @@ const AdminDashboardCharts = dynamic(
   { ssr: false, loading: () => <div className="admin-chart-card">Loading charts...</div> }
 );
 
-interface DashboardStats { inventoryValue: string; totalStocks: string; newOrders: string; delivered: string; }
-interface ProductSummary { quantityInHand: number; toBeReceived: number; percentage: number; }
-
 import Link from "next/link";
-import { Users, Building2, Package, ShoppingCart, Truck, DollarSign, CheckCircle, UserPlus, Plus } from "lucide-react";
+import { Users, Building2, Package, ShoppingCart, Truck, DollarSign, CheckCircle, UserPlus, Plus, Loader2 } from "lucide-react";
 import styles from "@/components/layout/PortalLayout.module.css";
 
 export default function AdminDashboardPage() {
-  const [isLive, setIsLive] = useState(false);
-
-  // Fallback mock data
-  const stats = { totalUsers: 42, totalOrgs: 12, totalProducts: 156, totalOrders: 89, activeDeliveries: 7, revenue: "124,500" };
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ 
+    totalUsers: 0, 
+    totalOrgs: 0, 
+    totalProducts: 0, 
+    totalOrders: 0, 
+    activeDeliveries: 0, 
+    revenue: 0 
+  });
   
-  const recentActivity = [
-    { id: 1, type: "signup", text: "New user John Doe signed up", time: "2h ago" },
-    { id: 2, type: "order", text: "Order #1042 placed by Org A", time: "5h ago" },
-    { id: 3, type: "delivery", text: "Delivery #D-12 arrived at warehouse", time: "1d ago" }
-  ];
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      const [usersRes, orgsRes, productsRes, ordersRes] = await Promise.all([
+        supabase.from("users").select("id", { count: "exact", head: true }),
+        supabase.from("organizations").select("id", { count: "exact", head: true }),
+        supabase.from("products").select("id", { count: "exact", head: true }),
+        supabase.from("orders").select("id, total_amount, status, delivery_status")
+      ]);
+
+      const allOrders = ordersRes.data || [];
+      const totalRevenue = allOrders
+        .filter(o => o.status === "delivered")
+        .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      
+      const activeDeliveries = allOrders
+        .filter(o => o.delivery_status === "in_transit")
+        .length;
+
+      setStats({
+        totalUsers: usersRes.count || 0,
+        totalOrgs: orgsRes.count || 0,
+        totalProducts: productsRes.count || 0,
+        totalOrders: allOrders.length,
+        activeDeliveries,
+        revenue: totalRevenue
+      });
+
+      // Fetch recent orders as activity
+      const { data: recentOrders } = await supabase
+        .from("orders")
+        .select(`
+          id,
+          order_number,
+          created_at,
+          status,
+          organizations:organization_id ( name )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (recentOrders) {
+        setRecentActivity((recentOrders as any[]).map(o => ({
+          id: o.id,
+          type: "order",
+          text: `Order #${o.order_number || o.id.slice(0, 8)} placed by ${o.organizations?.name || "Unknown Org"}`,
+          time: new Date(o.created_at).toLocaleDateString()
+        })));
+      }
+
+    } catch (err) {
+      console.error("Admin dashboard fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
-    setIsLive(true);
-  }, []);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  if (loading) return <div className={styles.loadingState}><Loader2 className="animate-spin" /> Updating admin overview...</div>;
 
   return (
     <>
@@ -70,7 +122,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className={styles.metricCard}>
             <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><DollarSign size={16} color="#7c3aed"/><h3 className={styles.metricLabel}>Revenue</h3></div>
-            <p className={styles.metricValue}>Rs. {stats.revenue}</p>
+            <p className={styles.metricValue}>Rs. {stats.revenue.toLocaleString()}</p>
           </div>
         </div>
 
@@ -81,7 +133,7 @@ export default function AdminDashboardPage() {
               <h2 className={styles.sectionTitle}>Recent Activity</h2>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px" }}>
-              {recentActivity.map(act => (
+              {recentActivity.length > 0 ? recentActivity.map(act => (
                 <div key={act.id} style={{ display: "flex", alignItems: "center", gap: "12px", paddingBottom: "16px", borderBottom: "1px solid #f1f5f9" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f3e8ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#7c3aed" }}>
                     {act.type === "signup" ? <UserPlus size={18} /> : act.type === "order" ? <ShoppingCart size={18} /> : <Truck size={18} />}
@@ -91,7 +143,9 @@ export default function AdminDashboardPage() {
                     <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>{act.time}</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className={styles.emptyState}>No recent activity found.</div>
+              )}
             </div>
           </div>
 

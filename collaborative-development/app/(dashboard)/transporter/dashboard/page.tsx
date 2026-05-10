@@ -8,41 +8,36 @@ import { toast } from "sonner";
 import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
 
 /**
- * PurchaseOrder interface aligned with the purchase_orders schema.
- * Driver assignments come from order_driver_assignments (oda).
+ * Order interface aligned with the V3 schema.
  */
-interface PurchaseOrder {
+interface Order {
   id: string;
   order_number: string | null;
-  status: 'pending' | 'accepted' | 'rejected' | 'driver_assigned' | 'in_transit' | 'delivered' | 'ended';
-  priority: 'high' | 'medium' | 'low';
+  status: string;
+  priority: string;
   created_at: string;
   updated_at: string;
   notes?: string | null;
-  // Joined from order_driver_assignments
-  assignment_id?: string;
-  assignment_status?: 'pending' | 'accepted' | 'rejected';
-  // Joined from suppliers
+  delivery_status: string;
   supplier_name?: string;
   delivery_address?: string;
 }
 
 export default function TransporterDashboard() {
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalType, setModalType] = useState<'active' | 'completed' | null>(null);
 
   const supabase = createClient();
 
   /**
-   * Fetches purchase orders assigned to the current driver via
-   * order_driver_assignments (correct schema relationship).
+   * Fetches orders assigned to the current driver directly from the orders table.
    */
   const fetchDashboardData = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return;
 
-    // Get the user's id from the users table (driver's id = users.id per schema)
+    // Get the user's id from the users table
     const { data: userRow } = await supabase
       .from("users")
       .select("id")
@@ -51,160 +46,159 @@ export default function TransporterDashboard() {
 
     if (!userRow) { setLoading(false); return; }
 
-    // Fetch assignments for this driver and join purchase_orders + suppliers
+    // Fetch orders where this user is the transporter
     const { data, error } = await supabase
-      .from("order_driver_assignments")
+      .from("orders")
       .select(`
         id,
+        order_number,
         status,
-        purchase_order_id,
-        purchase_orders (
-          id,
-          order_number,
-          status,
-          priority,
-          created_at,
-          updated_at,
-          notes,
-          suppliers (
-            name,
-            address
-          )
+        created_at,
+        updated_at,
+        notes,
+        delivery_status,
+        suppliers:supplier_id (
+          name,
+          address
         )
       `)
-      .eq("driver_id", userRow.id)
-      .order("assigned_at", { ascending: false });
+      .eq("transporter_id", userRow.id)
+      .order("created_at", { ascending: false });
 
     if (!error && data) {
-      const mapped: PurchaseOrder[] = data
-        .filter((row: any) => row.purchase_orders)
-        .map((row: any) => ({
-          id: row.purchase_orders.id,
-          order_number: row.purchase_orders.order_number,
-          status: row.purchase_orders.status,
-          priority: row.purchase_orders.priority,
-          created_at: row.purchase_orders.created_at,
-          updated_at: row.purchase_orders.updated_at,
-          notes: row.purchase_orders.notes,
-          assignment_id: row.id,
-          assignment_status: row.status,
-          supplier_name: row.purchase_orders.suppliers?.name,
-          delivery_address: row.purchase_orders.suppliers?.address,
-        }));
+      const mapped: Order[] = (data as any[]).map((o: any) => ({
+        id: o.id,
+        order_number: o.order_number,
+        status: o.status,
+        priority: "medium", // Default since priority was removed in V3
+        created_at: o.created_at,
+        updated_at: o.updated_at,
+        notes: o.notes,
+        delivery_status: o.delivery_status || "not_assigned",
+        supplier_name: o.suppliers?.name,
+        delivery_address: o.suppliers?.address,
+      }));
       setOrders(mapped);
     }
     setLoading(false);
   }, [supabase]);
 
-  /** Accept a delivery: update order_driver_assignments.status → 'accepted' */
-  const handleAccept = async (assignmentId: string, orderId: string) => {
-    try {
-      const { error: assignErr } = await supabase
-        .from("order_driver_assignments")
-        .update({ status: "accepted", responded_at: new Date().toISOString() })
-        .eq("id", assignmentId);
-
-      if (assignErr) throw assignErr;
-
-      // Also update purchase_order status to driver_assigned
-      await supabase
-        .from("purchase_orders")
-        .update({ status: "driver_assigned" })
-        .eq("id", orderId);
-
-      toast.success("Delivery accepted! You can now start transit.");
-      fetchDashboardData();
-    } catch {
-      toast.error("Failed to accept delivery");
-    }
-  };
-
-  /** Reject a delivery: update order_driver_assignments.status → 'rejected' */
-  const handleReject = async (assignmentId: string, orderId: string, orderNumber: string | null) => {
+  /** Accept a delivery: update delivery_status to 'accepted' */
+  const handleAccept = async (orderId: string) => {
     try {
       const { error } = await supabase
-        .from("order_driver_assignments")
-        .update({ status: "rejected", responded_at: new Date().toISOString() })
-        .eq("id", assignmentId);
+        .from("orders")
+        .update({ 
+          delivery_status: "accepted", 
+          status: "out_for_delivery",
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", orderId);
 
       if (error) throw error;
 
-      // Reset purchase_order status back to accepted (supplier can reassign)
-      await supabase
-        .from("purchase_orders")
-        .update({ status: "accepted" })
+      toast.success("Delivery accepted! You can now start transit.");
+      fetchDashboardData();
+    } catch (err: any) {
+      toast.error("Failed to accept delivery: " + err.message);
+    }
+  };
+
+  /** Reject a delivery: update delivery_status to 'rejected' */
+  const handleReject = async (orderId: string, orderNumber: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ 
+          delivery_status: "rejected", 
+          status: "accepted", // Reset order status so supplier can reassign
+          updated_at: new Date().toISOString() 
+        })
         .eq("id", orderId);
 
-      // Notify the supplier — using valid notification type
-      const { data: poData } = await supabase
-        .from("purchase_orders")
-        .select("created_by")
-        .eq("id", orderId)
-        .single();
-
-      if (poData?.created_by) {
-        const { data: creatorUser } = await supabase
-          .from("users")
-          .select("auth_user_id")
-          .eq("id", poData.created_by)
-          .single();
-
-        if (creatorUser?.auth_user_id) {
-          await supabase.from("notifications").insert({
-            user_id: creatorUser.auth_user_id,
-            title: "Driver Rejected Delivery",
-            message: `Driver has declined delivery for order ${orderNumber ?? orderId.slice(0, 8)}. Please reassign a driver.`,
-            type: "driver_rejected",
-          });
-        }
-      }
+      if (error) throw error;
 
       toast.success("Delivery rejected.");
       fetchDashboardData();
-    } catch {
-      toast.error("Failed to reject delivery");
+    } catch (err: any) {
+      toast.error("Failed to reject delivery: " + err.message);
+    }
+  };
+
+  /** Start Transit: update delivery_status to 'in_transit' */
+  const handleStartTransit = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ 
+          delivery_status: "in_transit",
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      toast.success("Transit started!");
+      fetchDashboardData();
+    } catch (err: any) {
+      toast.error("Failed to start transit: " + err.message);
+    }
+  };
+
+  /** Mark as Delivered: update status to 'delivered' */
+  const handleMarkDelivered = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ 
+          delivery_status: "delivered",
+          status: "delivered",
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      toast.success("Order marked as delivered!");
+      fetchDashboardData();
+    } catch (err: any) {
+      toast.error("Failed to mark delivered: " + err.message);
     }
   };
 
   /**
-   * Realtime subscription — listens to both tables for live updates.
+   * Realtime subscription
    */
   useEffect(() => {
     fetchDashboardData();
 
     const channel = supabase
       .channel("realtime_driver_dashboard")
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_driver_assignments" }, () => fetchDashboardData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, () => fetchDashboardData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchDashboardData())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [supabase, fetchDashboardData]);
 
   /**
-   * Derive stats from the joined purchase_orders data.
-   * Pending requests = assignments with status 'pending' (awaiting driver response).
-   * Active = assignment accepted + PO in_transit or driver_assigned.
-   * Completed today = PO delivered, updated today.
+   * Derive stats from live data.
    */
   const stats = useMemo(() => {
-    const pendingRequests = orders.filter((o) => o.assignment_status === "pending");
-    const inTransitOrders = orders.filter((o) => o.status === "in_transit");
-    const deliveredOrders = orders.filter((o) => o.status === "delivered");
+    const pendingRequests = orders.filter((o) => o.delivery_status === "pending_acceptance");
+    const activeList = orders.filter((o) => ["accepted", "in_transit"].includes(o.delivery_status));
+    const deliveredOrders = orders.filter((o) => o.delivery_status === "delivered");
 
-    const completedTodayOrders = deliveredOrders.filter((o) => {
+    const completedTodayList = deliveredOrders.filter((o) => {
       const completionDate = new Date(o.updated_at).toDateString();
       return completionDate === new Date().toDateString();
     });
 
-    const onTimeRate = deliveredOrders.length > 0 ? "100.0" : "100.0";
-
     return {
       pendingRequests,
-      activeList: inTransitOrders,
-      completedTodayList: completedTodayOrders,
+      activeList,
+      completedTodayList,
       totalAssigned: orders.length,
-      onTimeRate,
+      onTimeRate: "100.0",
     };
   }, [orders]);
 
@@ -244,25 +238,20 @@ export default function TransporterDashboard() {
                       <strong>Supplier:</strong> {order.supplier_name || "N/A"}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontSize: "0.9rem" }}>
-                      <Package size={16} color="#7c3aed" />
-                      <strong>Priority:</strong> {order.priority}
+                      <Navigation size={16} color="#7c3aed" />
+                      <strong>Address:</strong> {order.delivery_address || "N/A"}
                     </div>
-                    {order.notes && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#475569", fontSize: "0.9rem" }}>
-                        <strong>Notes:</strong> {order.notes}
-                      </div>
-                    )}
                   </div>
 
                   <div style={{ display: "flex", gap: "10px" }}>
                     <button
-                      onClick={() => handleAccept(order.assignment_id!, order.id)}
+                      onClick={() => handleAccept(order.id)}
                       style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "12px", border: "none", background: "#10b981", color: "white", fontWeight: "700", fontSize: "0.9rem", cursor: "pointer" }}
                     >
                       <CheckCircle size={18} /> Accept
                     </button>
                     <button
-                      onClick={() => handleReject(order.assignment_id!, order.id, order.order_number)}
+                      onClick={() => handleReject(order.id, order.order_number)}
                       style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "12px", border: "2px solid #fca5a5", background: "white", color: "#dc2626", fontWeight: "700", fontSize: "0.9rem", cursor: "pointer" }}
                     >
                       <XCircle size={18} /> Reject
@@ -309,6 +298,34 @@ export default function TransporterDashboard() {
           </div>
         </div>
 
+        {/* ACTIVE LIST (Simplified view) */}
+        {stats.activeList.length > 0 && (
+          <div style={{ marginTop: "24px" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e1b4b", marginBottom: "16px" }}>In Progress</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
+              {stats.activeList.map((order) => (
+                <div key={order.id} style={{ background: "white", padding: "20px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                    <span style={{ fontWeight: 700 }}>#{order.order_number}</span>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{order.delivery_status.toUpperCase()}</span>
+                  </div>
+                  <p style={{ margin: "0 0 16px", fontSize: "0.9rem", color: "#475569" }}>
+                    <strong>To:</strong> {order.delivery_address}
+                  </p>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {order.delivery_status === "accepted" && (
+                      <button onClick={() => handleStartTransit(order.id)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#7c3aed", color: "white", fontWeight: 600 }}>Start Transit</button>
+                    )}
+                    {order.delivery_status === "in_transit" && (
+                      <button onClick={() => handleMarkDelivered(order.id)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#10b981", color: "white", fontWeight: 600 }}>Mark Delivered</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* MODAL */}
         {modalType && (
           <div
@@ -333,7 +350,6 @@ export default function TransporterDashboard() {
                   <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left' }}>
                     <th style={{ padding: '12px', color: '#64748b' }}>Order #</th>
                     <th style={{ padding: '12px', color: '#64748b' }}>Supplier</th>
-                    <th style={{ padding: '12px', color: '#64748b' }}>Priority</th>
                     <th style={{ padding: '12px', color: '#64748b' }}>Status</th>
                   </tr>
                 </thead>
@@ -342,15 +358,14 @@ export default function TransporterDashboard() {
                     <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '12px', fontWeight: '600' }}>{order.order_number || `#${order.id.slice(0, 8)}`}</td>
                       <td style={{ padding: '12px' }}>{order.supplier_name || "N/A"}</td>
-                      <td style={{ padding: '12px', textTransform: 'capitalize' }}>{order.priority}</td>
                       <td style={{ padding: '12px' }}>
                         <span style={{
                           padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem',
-                          backgroundColor: order.status === 'in_transit' ? '#f5f3ff' : '#ecfdf5',
-                          color: order.status === 'in_transit' ? '#7c3aed' : '#10b981',
+                          backgroundColor: order.delivery_status === 'in_transit' ? '#f5f3ff' : '#ecfdf5',
+                          color: order.delivery_status === 'in_transit' ? '#7c3aed' : '#10b981',
                           textTransform: 'capitalize'
                         }}>
-                          {order.status.replace(/_/g, ' ')}
+                          {order.delivery_status.replace(/_/g, ' ')}
                         </span>
                       </td>
                     </tr>
