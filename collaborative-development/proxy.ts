@@ -81,9 +81,12 @@ export async function proxy(request: NextRequest) {
 
   // Logged-in user on a public route → redirect to their dashboard
   if (isPublicRoute && user) {
-    const role = await fetchUserRole(supabase, user.id);
-    const redirectUrl = getRoleRedirect(role);
-    return NextResponse.redirect(new URL(redirectUrl, request.url));
+    const hasAccess = await checkUserApproval(supabase, user.id);
+    if (hasAccess) {
+      const role = await fetchUserRole(supabase, user.id);
+      const redirectUrl = getRoleRedirect(role);
+      return NextResponse.redirect(new URL(redirectUrl, request.url));
+    }
   }
 
   // Not logged in on public route → allow through

@@ -68,6 +68,16 @@ export async function getSession(): Promise<SessionData | null> {
     if (roleRow?.role) role = normalizeRole(roleRow.role);
   } catch { /* user_roles table fallback */ }
 
+  try {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (userRow?.role) role = normalizeRole(userRow.role);
+  } catch { /* legacy users table fallback */ }
+
   // Final fallback: read from Supabase auth metadata
   if (user.user_metadata?.role) {
     role = normalizeRole(user.user_metadata.role as string);
