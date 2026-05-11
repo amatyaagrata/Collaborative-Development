@@ -31,27 +31,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const supabase = createClient();
   const [showMenu, setShowMenu] = useState(false);
-  const [adminName, setAdminName] = useState<string>("");
+  const [orgName, setOrgName] = useState<string>("");
+  const [hasOrg, setHasOrg] = useState<boolean>(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
 
   React.useEffect(() => {
-    const fetchUser = async () => {
+    const fetchOrgAndRequests = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase
+        // Fetch org info
+        const { data: userData } = await supabase
           .from("users")
-          .select("name")
+          .select("organization_id, organizations(name)")
           .eq("auth_user_id", user.id)
           .single();
-        if (data?.name) {
-          setAdminName(data.name);
+        if (userData?.organizations) {
+          setOrgName((userData.organizations as any).name);
+          setHasOrg(!!userData.organization_id);
+        }
+
+        // Fetch pending requests count via API for security/RLS bypass
+        const res = await fetch("/api/admin/requests?counts=true");
+        const json = await res.json();
+        if (json.counts) {
+          setPendingRequestsCount(json.counts.pending);
         }
       }
     };
-    fetchUser();
+    fetchOrgAndRequests();
   }, [supabase]);
 
-  // All nav items are always shown (no org-based filtering needed)
-  const filteredNavItems = adminNavItems;
+  // Dynamically filter nav items: hide 'Organizations' if it's an Org Admin
+  const filteredNavItems = adminNavItems.filter(item => {
+    if (item.label === "Organizations" && hasOrg) return false;
+    return true;
+  });
 
   // Compute title dynamically based on current route
   const activeNavItem = filteredNavItems.find(item => pathname === item.href || pathname.startsWith(item.href + "/"));
@@ -110,13 +124,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <Icon size={17} />
                 <span>{label}</span>
-                {label === "Requests" && (
+                {label === "Requests" && pendingRequestsCount > 0 && (
                   <span style={{
                     marginLeft: "auto", minWidth: 18, height: 18, borderRadius: 9,
                     background: "#7c3aed", color: "#fff", fontSize: "0.65rem",
                     fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
                     padding: "0 5px",
-                  }} id="requests-badge" />
+                  }} id="requests-badge">
+                    {pendingRequestsCount}
+                  </span>
                 )}
               </Link>
             );
@@ -164,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <User size={15} color="#fff" />
               </div>
               <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
-                Admin {adminName ? `| ${adminName}` : ""}
+                Admin {orgName ? `| ${orgName}` : ""}
               </span>
               <ChevronDown size={14} color="#64748b" style={{ transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
             </button>

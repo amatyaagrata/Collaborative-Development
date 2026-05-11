@@ -173,18 +173,47 @@ export default function RequestAccess() {
     name: "",
     phoneNumber: "",
     reason: "",
+    organizationId: "",
   });
   const [errors, setErrors] = useState({
     email: "",
     name: "",
     phoneNumber: "",
     reason: "",
+    organizationId: "",
   });
   const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  
+  // OTP States
+  const [otpSent, setOtpSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+
+  // Organizations State
+  const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(true);
+
+  useEffect(() => {
+    async function fetchOrgs() {
+      try {
+        const response = await fetch("/api/organizations");
+        const data = await response.json();
+        if (response.ok && data.organizations) {
+          setOrganizations(data.organizations);
+        }
+      } catch (error) {
+        console.error("Failed to fetch organizations:", error);
+      } finally {
+        setLoadingOrgs(false);
+      }
+    }
+    fetchOrgs();
+  }, []);
 
   // Validation functions
   const validateEmail = (email: string) => {
@@ -260,17 +289,76 @@ export default function RequestAccess() {
       name: nameError,
       phoneNumber: phoneError,
       reason: "",
+      organizationId: !formData.organizationId ? "Please select an organization" : "",
     });
 
     if (emailError) { toast.error(emailError); return false; }
     if (nameError) { toast.error(nameError); return false; }
     if (phoneError) { toast.error(phoneError); return false; }
+    if (!formData.organizationId) { toast.error("Please select an organization"); return false; }
     if (!agreeToTerms) {
       toast.error("Please read and accept the Terms and Conditions to continue");
       setShowTermsModal(true);
       return false;
     }
+    if (!isEmailVerified) {
+      toast.error("Please verify your email address first.");
+      return false;
+    }
     return true;
+  };
+
+  const handleSendOTP = async () => {
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      toast.error(emailError);
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send code");
+
+      setOtpSent(true);
+      toast.success("Verification code sent to your email!");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (otpCode.length < 6) {
+      toast.error("Please enter the verification code");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, token: otpCode }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Verification failed");
+
+      setIsEmailVerified(true);
+      toast.success("Email verified successfully!");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -292,6 +380,7 @@ export default function RequestAccess() {
           requested_role: selectedRole,
           phone: formData.phoneNumber,
           reason: formData.reason,
+          organization_id: formData.organizationId,
           terms_accepted: true,
         }),
       });
@@ -404,6 +493,10 @@ export default function RequestAccess() {
                   <Link href="/login" className="text-primary font-bold">
                     Sign in
                   </Link>
+                  <span className="mx-2 text-zinc-300">|</span>
+                  <Link href="/register-org" className="text-primary font-bold">
+                    Create your organization
+                  </Link>
                 </p>
               </div>
 
@@ -467,6 +560,45 @@ export default function RequestAccess() {
                     </p>
                   </div>
 
+                  {/* Organization Selector */}
+                  <div className="space-y-2.5">
+                    <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      Select Organization *
+                    </label>
+
+                    <div className="relative">
+                      <select
+                        name="organizationId"
+                        value={formData.organizationId}
+                        onChange={handleChange}
+                        disabled={loadingOrgs}
+                        className={`w-full px-4 py-3.5 rounded-xl border border-zinc-200 focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all appearance-none ${
+                          formData.organizationId ? "bg-white text-zinc-700" : "bg-zinc-50 text-zinc-400"
+                        } font-medium cursor-pointer`}
+                      >
+                        <option value="" disabled>
+                          {loadingOrgs ? "Loading organizations..." : "Choose an organization"}
+                        </option>
+                        {organizations.map((org) => (
+                          <option key={org.id} value={org.id} className="text-zinc-700">
+                            {org.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
+                        <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                    {errors.organizationId && (
+                      <p className="text-xs text-red-500 mt-1">{errors.organizationId}</p>
+                    )}
+                  </div>
+
                   {/* Full Name */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -502,17 +634,71 @@ export default function RequestAccess() {
                       </svg>
                       Email Address *
                     </label>
-                    <Input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="Enter your email"
-                      required
-                      className="w-full px-4 py-3.5 rounded-xl border border-zinc-200 focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                    />
+                    <div className="relative">
+                      <Input
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="Enter your email"
+                        required
+                        disabled={otpSent || isEmailVerified}
+                        className={`w-full px-4 py-3.5 rounded-xl border border-zinc-200 focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium ${isEmailVerified ? "bg-green-50 border-green-200" : ""}`}
+                      />
+                      {isEmailVerified && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                     {errors.email && (
                       <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+                    )}
+                    
+                    {!isEmailVerified && !otpSent && (
+                      <button
+                        type="button"
+                        onClick={handleSendOTP}
+                        disabled={otpLoading}
+                        className="mt-2 text-sm font-bold text-primary hover:underline flex items-center gap-1"
+                      >
+                        {otpLoading ? "Sending..." : "Send Verification Code"}
+                      </button>
+                    )}
+
+                    {otpSent && !isEmailVerified && (
+                      <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-3">
+                        <label className="text-[12px] font-bold text-zinc-600 uppercase tracking-wider">
+                          Enter Verification Code
+                        </label>
+                        <div className="flex gap-3">
+                          <Input
+                            type="text"
+                            maxLength={8}
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                            placeholder="12345678"
+                            className="text-center tracking-[0.3em] font-bold text-lg"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleVerifyOTP}
+                            disabled={otpLoading}
+                            className="bg-primary hover:bg-[#4d00cc] text-white px-6"
+                          >
+                            {otpLoading ? "..." : "Verify"}
+                          </Button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setOtpSent(false)}
+                          className="text-[11px] text-zinc-400 hover:text-primary underline font-medium"
+                        >
+                          Change email address
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -587,8 +773,12 @@ export default function RequestAccess() {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    className="w-full bg-primary hover:bg-[#4d00cc] text-white font-semibold py-3.5 px-4 rounded-2xl transition-all duration-200 active:scale-[0.99] shadow-sm shadow-primary/20 mt-4"
-                    disabled={loading}
+                    className={`w-full font-semibold py-3.5 px-4 rounded-2xl transition-all duration-200 active:scale-[0.99] shadow-sm mt-4 ${
+                      !isEmailVerified 
+                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed shadow-none" 
+                        : "bg-primary hover:bg-[#4d00cc] text-white shadow-primary/20"
+                    }`}
+                    disabled={loading || !isEmailVerified}
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">

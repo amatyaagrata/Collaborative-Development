@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { validateEmailExistence } from "@/lib/email-validation";
 
 const ALLOWED_ROLES = ["supplier", "transporter", "inventory manager"] as const;
 
@@ -19,13 +20,14 @@ function normalizeRole(role?: string): (typeof ALLOWED_ROLES)[number] {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, requested_role, reason, terms_accepted } =
+    const { name, email, phone, requested_role, reason, organization_id, terms_accepted } =
       body as {
         name: string;
         email: string;
         phone?: string;
         requested_role?: string;
         reason?: string;
+        organization_id?: string;
         terms_accepted?: boolean;
       };
 
@@ -37,10 +39,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const emailValidation = await validateEmailExistence(email);
+    if (!emailValidation.valid) {
       return NextResponse.json(
-        { error: "Please provide a valid email address." },
+        { error: emailValidation.reason || "Please provide a valid and existing email address." },
         { status: 400 }
       );
     }
@@ -78,6 +80,7 @@ export async function POST(request: Request) {
       phone: phone?.trim() || null,
       requested_role: normalizedRole,
       reason: reason?.trim() || null,
+      organization_id: organization_id || null,
       terms_accepted: true,
       terms_accepted_at: new Date().toISOString(),
       status: "pending",

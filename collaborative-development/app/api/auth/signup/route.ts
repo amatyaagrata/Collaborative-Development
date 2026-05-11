@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient, hasAdminClientConfig } from "@/lib/supabase/admin";
+import { validateEmailExistence } from "@/lib/email-validation";
 
 const ALLOWED_ROLES = ["admin", "supplier", "transporter", "inventory manager"] as const;
 
@@ -14,35 +15,9 @@ function isMissingTableError(error: { code?: string; message?: string }) {
   return error.code === "PGRST205" || error.message?.toLowerCase().includes("could not find the table");
 }
 
-function getAuthErrorStatus(error: { code?: string; message?: string; status?: number }) {
-  if (typeof error.status === "number" && error.status >= 400 && error.status < 600) {
-    return error.status;
-  }
-
-  const message = error.message?.toLowerCase() ?? "";
-
-  if (error.code === "validation_failed" || message.includes("invalid")) {
-    return 400;
-  }
-
-  if (message.includes("rate limit") || message.includes("too many requests")) {
-    return 429;
-  }
-
-  return 500;
-}
-
 export async function POST(request: Request) {
   try {
-    console.log("[SIGNUP-API] Request received");
     const body = await request.json();
-    console.log("[SIGNUP-API] Body received:", {
-      email: body.email,
-      name: body.name,
-      role: body.role,
-      organization_name: body.organization_name,
-    });
-
     const {
       auth_user_id,
       email,
@@ -62,241 +37,132 @@ export async function POST(request: Request) {
     };
 
     if (!email || !name) {
-      console.error("[SIGNUP-API] Missing required fields:", { email, name });
+      return NextResponse.json({ error: "email and name are required." }, { status: 400 });
+    }
+
+    // Email validation
+    const emailValidation = await validateEmailExistence(email);
+    if (!emailValidation.valid) {
       return NextResponse.json(
-        { error: "email and name are required." },
+        { error: emailValidation.reason || "Invalid email address." },
         { status: 400 }
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and either NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY.",
-        },
-        { status: 500 }
-      );
-    }
-
     const hasAdminConfig = hasAdminClientConfig();
-    console.log("[SIGNUP-API] Creating Supabase client...", { hasAdminConfig });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    
     const supabase = hasAdminConfig
       ? createAdminClient()
-      : createClient(supabaseUrl, supabaseAnonKey, {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-          },
-        });
-    console.log("[SIGNUP-API] Supabase client created successfully");
+      : createClient(supabaseUrl, supabaseAnonKey);
 
     const normalizedRole = normalizeRole(role);
-    console.log("[SIGNUP-API] Role validation:", { requested: role, normalized: normalizedRole });
     const warnings: string[] = [];
     let resolvedAuthUserId = auth_user_id;
 
     if (!resolvedAuthUserId) {
-      if (!password || password.length < 6) {
-        return NextResponse.json(
-          { error: "password with at least 6 characters is required when auth_user_id is not provided." },
-          { status: 400 }
-        );
-      }
-
-      console.log("[SIGNUP-API] No auth_user_id provided. Creating auth user...");
+      console.log("[SIGNUP-API] Checking for existing auth account...");
+      
       const createAuthResult = hasAdminConfig
         ? await supabase.auth.admin.createUser({
             email,
-            password,
+            password: password || Math.random().toString(36).slice(-10),
             email_confirm: true,
-            user_metadata: {
-              name,
-              role: normalizedRole,
-              organization_name,
-              phone,
-            },
+            user_metadata: { name, role: normalizedRole, organization_name, phone },
           })
         : await supabase.auth.signUp({
             email,
-            password,
-            options: {
-              data: {
-                name,
-                role: normalizedRole,
-                organization_name,
-                phone,
-              },
-            },
+            password: password!,
+            options: { data: { name, role: normalizedRole, organization_name, phone } },
           });
 
-      const { data: createdUserData, error: createAuthError } = createAuthResult;
+      const { data: authData, error: authError } = createAuthResult;
 
-      if (createAuthError) {
-        console.error("[SIGNUP-API] Auth user creation failed:", createAuthError);
-        const msg = createAuthError.message.toLowerCase();
-        if (msg.includes("already") || msg.includes("duplicate")) {
-          return NextResponse.json(
-            {
-              error: "An account with this email already exists. Please log in instead.",
-              code: createAuthError.code,
-            },
-            { status: 409 }
-          );
+      if (authError) {
+        const msg = authError.message.toLowerCase();
+        // Self-healing: if user exists, find them
+        if (msg.includes("already") || msg.includes("duplicate") || authError.status === 409) {
+          if (hasAdminConfig) {
+            const { data: { users } } = await (supabase.auth as any).admin.listUsers();
+            const existingUser = users.find((u: any) => u.email === email);
+            if (existingUser) resolvedAuthUserId = existingUser.id;
+          }
         }
-        return NextResponse.json(
-          {
-            error: `Auth user creation failed: ${createAuthError.message}`,
-            code: createAuthError.code,
-          },
-          { status: getAuthErrorStatus(createAuthError) }
-        );
-      }
 
-      resolvedAuthUserId = createdUserData.user?.id;
-      if (!resolvedAuthUserId) {
-        return NextResponse.json(
-          { error: "Auth user was created but no user id was returned." },
-          { status: 500 }
-        );
-      }
-      console.log("[SIGNUP-API] Auth user created:", resolvedAuthUserId);
-
-      if (!hasAdminConfig) {
-        warnings.push(
-          "SUPABASE_SERVICE_ROLE_KEY is not configured, so profile tables were not updated automatically."
-        );
+        if (!resolvedAuthUserId) {
+          return NextResponse.json({ error: authError.message }, { status: authError.status || 400 });
+        }
+      } else {
+        resolvedAuthUserId = authData.user?.id;
       }
     }
 
-    // Step 1: Try to upsert organization (new schema) or fall back (old schema)
+    if (!resolvedAuthUserId) {
+      return NextResponse.json({ error: "Could not resolve user ID." }, { status: 500 });
+    }
+
+    // Step 1: Organization handling
+    let organizationId: string | undefined;
     if (hasAdminConfig) {
-      let organizationId: string | undefined;
-
-      // Try new schema: organizations table
       try {
-        console.log("[SIGNUP-API] Step 1/3: Checking for organizations table...");
         const orgName = organization_name || "Default Organization";
-        const orgSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
         const { data: existingOrg } = await supabase
           .from("organizations")
           .select("id")
           .eq("name", orgName)
-          .single();
+          .maybeSingle();
 
         if (existingOrg) {
           organizationId = existingOrg.id;
-          console.log("[SIGNUP-API] Found existing organization:", organizationId);
         } else {
-          const { data: newOrg, error: orgError } = await supabase
+          const { data: newOrg } = await supabase
             .from("organizations")
-            .insert({ name: orgName, slug: orgSlug })
+            .insert({ name: orgName, slug: orgName.toLowerCase().replace(/\s+/g, "-") })
             .select("id")
             .single();
-
-          if (orgError) {
-            console.warn("[SIGNUP-API] Org creation failed (may be old schema):", orgError.message);
-          } else {
-            organizationId = newOrg.id;
-            console.log("[SIGNUP-API] Created new organization:", organizationId);
-          }
+          organizationId = newOrg?.id;
         }
       } catch (e) {
-        console.warn("[SIGNUP-API] Organizations table not available, using old schema", e);
+        console.warn("[SIGNUP-API] Org step skipped", e);
       }
 
-      // Step 2: Upsert user record
-      console.log("[SIGNUP-API] Step 2/3: Upserting user record...");
-      const userPayload: Record<string, unknown> = {
-        auth_user_id: resolvedAuthUserId,
-        name,
-        email,
-        role: normalizedRole,
-        phone,
-      };
-      if (organizationId) {
-        userPayload.organization_id = organizationId;
-      } else {
-        userPayload.organization_name = organization_name;
-      }
-
-      const { data: userData, error: userError } = await supabase
+      // Step 2: Users table
+      const { error: userError } = await supabase
         .from("users")
-        .upsert(userPayload, { onConflict: "auth_user_id" })
-        .select();
+        .upsert({
+          auth_user_id: resolvedAuthUserId,
+          name,
+          email,
+          role: normalizedRole,
+          phone,
+          organization_id: organizationId,
+        });
 
-      if (userError) {
+      if (userError && !isMissingTableError(userError)) {
         console.error("[SIGNUP-API] User upsert error:", userError);
-        if (isMissingTableError(userError)) {
-          warnings.push("users table not found; profile record was skipped.");
-        } else {
-          return NextResponse.json(
-            {
-              error: `User record creation failed: ${userError.message}`,
-              code: userError.code,
-              details: userError.details,
-            },
-            { status: 500 }
-          );
-        }
       }
 
-      console.log("[SIGNUP-API] User record upserted successfully:", userData);
-
-      // Step 3: Upsert user_roles record
-      console.log("[SIGNUP-API] Step 3/3: Upserting user_roles record...");
-      const rolePayload: Record<string, unknown> = {
-        user_id: resolvedAuthUserId,
-        role: normalizedRole,
-      };
-      if (organizationId) {
-        rolePayload.organization_id = organizationId;
-      } else {
-        rolePayload.organization_name = organization_name;
-      }
-
-      const { data: roleData, error: roleError } = await supabase
+      // Step 3: Roles table
+      const { error: roleError } = await supabase
         .from("user_roles")
-        .upsert(rolePayload, { onConflict: "user_id" })
-        .select();
+        .upsert({
+          user_id: resolvedAuthUserId,
+          role: normalizedRole,
+          organization_id: organizationId,
+        });
 
-      if (roleError) {
-        console.error("[SIGNUP-API] User roles upsert error:", roleError);
-        if (isMissingTableError(roleError)) {
-          warnings.push("user_roles table not found; role record was skipped.");
-        } else {
-          return NextResponse.json(
-            {
-              error: `User role record creation failed: ${roleError.message}`,
-              code: roleError.code,
-              details: roleError.details,
-            },
-            { status: 500 }
-          );
-        }
+      if (roleError && !isMissingTableError(roleError)) {
+        console.error("[SIGNUP-API] Role upsert error:", roleError);
       }
-
-      console.log("[SIGNUP-API] User roles record upserted successfully:", roleData);
     }
-    console.log("[SIGNUP-API] Signup completed successfully for user:", resolvedAuthUserId);
 
-    return NextResponse.json(
-      {
-        message: warnings.length ? "Signup completed with warnings." : "Profile created successfully.",
-        user_id: resolvedAuthUserId,
-        role: normalizedRole,
-        email,
-        name,
-        warnings,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      message: "Success",
+      user_id: resolvedAuthUserId,
+      role: normalizedRole,
+    }, { status: 200 });
+
   } catch (error) {
     console.error("[SIGNUP-API] Unexpected error:", error);
     return NextResponse.json(

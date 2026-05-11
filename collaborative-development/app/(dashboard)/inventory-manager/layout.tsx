@@ -15,7 +15,7 @@ interface IMLayoutProps { title: string; children: React.ReactNode; }
 const navItems = [
   { label: "Dashboard", href: "/inventory-manager/dashboard", Icon: LayoutDashboard },
   { label: "Products",  href: "/inventory-manager/products",  Icon: Package         },
-  { label: "Stock",     href: "/inventory-manager/stock",     Icon: ShoppingCart    },
+  { label: "Orders",    href: "/inventory-manager/stock",     Icon: ShoppingCart    },
   { label: "Reports",   href: "/inventory-manager/reports",   Icon: FileText        },
 ];
 

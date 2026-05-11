@@ -27,47 +27,66 @@ export function WelcomeMessage({ className, roleOverride }: WelcomeMessageProps)
         user.email?.split("@")[0] ??
         "there";
 
+      // Fetch the user's record from the users table to check when they were added
+      let isNewToOrg = false;
+      let orgName = "";
+      let pendingRequests = 0;
+
       try {
-        const { data: dbUser } = await supabase
+        const { data: userRecord } = await supabase
           .from("users")
-          .select("name, role")
+          .select("created_at, organization_id, organizations(name)")
           .eq("auth_user_id", user.id)
           .single();
 
-        if (dbUser?.name) displayName = dbUser.name;
+        if (userRecord) {
+          // If the user record was created within the last 24 hours, treat as new
+          const createdAt = new Date(userRecord.created_at);
+          const hoursAgo = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+          isNewToOrg = hoursAgo < 24;
 
-        if (dbUser?.role) {
-          const dbRole = normalizeRole(dbUser.role);
-
-          if (dbRole === "admin") {
-            // Count unapproved users as pending for admin
-            const { count: pendingCount } = await supabase
-              .from("users")
-              .select("*", { count: "exact", head: true })
-              .eq("is_approved", false);
-
-            const pending = pendingCount ?? 0;
-            setIcon("📊");
-            const pendingText = pending > 0
-              ? ` You have ${pending} pending approval${pending > 1 ? "s" : ""}.`
-              : " No pending approvals right now.";
-            setMessage(`Welcome back, ${displayName}!${pendingText}`);
-          } else {
-            const displayRole = roleOverride ?? dbRole.replace("_", " ");
-            setIcon("👋");
-            setMessage(`Welcome back, ${displayName}! You're logged in as ${displayRole}.`);
+          if (userRecord.organizations) {
+            orgName = (userRecord.organizations as any).name ?? "";
           }
-          return;
         }
       } catch {
-        // Fall through to metadata-based message
+        // users table query failed — treat as returning user
       }
 
-      // Fallback: use auth metadata role
-      const role: UserRole = normalizeRole(user.user_metadata?.role as string);
-      const displayRole = roleOverride ?? role.replace("_", " ");
-      setIcon("👋");
-      setMessage(`Welcome back, ${displayName}! You're logged in as ${displayRole}.`);
+      // For admin: fetch pending request count via API
+      if (role === "admin") {
+        try {
+          const res = await fetch("/api/admin/requests?counts=true");
+          const json = await res.json();
+          if (json.counts) {
+            pendingRequests = json.counts.pending;
+          }
+        } catch (error) {
+          console.error("[WelcomeMessage] Failed to fetch requests count:", error);
+        }
+      }
+
+      // ── Pick the right message ──────────────────────────────────────────────
+
+      if (isNewToOrg) {
+        // New user to this organization
+        setIcon("🎉");
+        const orgText = orgName ? ` ${orgName}` : " GoGodam";
+        setMessage(`Welcome to${orgText}, ${displayName}! Let's get you started.`);
+      } else if (role === "admin") {
+        // Admin returning user with pending count
+        setIcon("📊");
+        const pendingText =
+          pendingRequests > 0
+            ? ` You have ${pendingRequests} pending request${pendingRequests > 1 ? "s" : ""}.`
+            : " No pending requests right now.";
+        setMessage(`Welcome back, ${displayName}!${pendingText}`);
+      } else {
+        // Normal returning user
+        setIcon("👋");
+        const displayRole = roleOverride ?? role.replace("_", " ");
+        setMessage(`Welcome back, ${displayName}! You're logged in as ${displayRole}.`);
+      }
     }
 
     load();

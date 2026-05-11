@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // UI displays: 'admin' | 'inventory_manager' | 'supplier' | 'transporter'
 type UserRole = 'admin' | 'inventory_manager' | 'supplier' | 'transporter';
 
-const PUBLIC_ROUTES = ['/', '/login', '/signup', '/request-access'];
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/request-access', '/register-org'];
 
 const ROLE_REDIRECTS: Record<UserRole, string> = {
   admin: '/admin/dashboard',

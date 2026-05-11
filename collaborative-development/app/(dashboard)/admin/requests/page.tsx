@@ -255,10 +255,11 @@ export default function AdminRequestsPage() {
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/requests?status=${statusFilter}`);
+      const res = await fetch(`/api/admin/requests?status=${statusFilter}&counts=true`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to fetch requests");
       setRequests(json.requests ?? []);
+      if (json.counts) setCounts(json.counts);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load requests");
     } finally {
@@ -270,17 +271,7 @@ export default function AdminRequestsPage() {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Fetch counts for each status
-  useEffect(() => {
-    const fetchCounts = async () => {
-      const supabase = createClient();
-      const { count: pending } = await supabase.from('access_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
-      const { count: approved } = await supabase.from('access_requests').select('id', { count: 'exact', head: true }).eq('status', 'approved');
-      const { count: rejected } = await supabase.from('access_requests').select('id', { count: 'exact', head: true }).eq('status', 'rejected');
-      setCounts({ pending: pending || 0, approved: approved || 0, rejected: rejected || 0 });
-    };
-    fetchCounts();
-  }, [requests]);
+
 
   // Filter requests by search term
   const filteredRequests = requests.filter(req =>
@@ -307,7 +298,7 @@ export default function AdminRequestsPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Approval failed");
       
-      toast.success(`✅ ${approveTarget.name}'s account has been created!`);
+      toast.success(`${approveTarget.name}'s account has been created!`);
       console.log(`📧 Credentials for ${approveTarget.email}: Password: ${password}`);
       
       setApproveTarget(null);
@@ -336,7 +327,7 @@ export default function AdminRequestsPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Rejection failed");
-      toast.success(`❌ Request from ${rejectTarget.name} rejected.`);
+      toast.success(`Request from ${rejectTarget.name} rejected.`);
       setRejectTarget(null);
       await fetchRequests();
     } catch (err) {

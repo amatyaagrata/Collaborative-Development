@@ -110,10 +110,38 @@ export default function SupplierProductsPage() {
     setSupplierId(resolvedSupplierId);
 
     if (!resolvedSupplierId) {
-      toast.error("No supplier profile found. Ask your admin to create one.");
-      setProducts([]);
-      setLoading(false);
-      return null;
+      // Auto-create supplier profile if user has supplier role but no profile yet
+      if (userRow) {
+        console.log("[SUPPLIER-PRODUCTS] No supplier profile found. Auto-creating...");
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { data: newSupplier, error: createError } = await supabase
+          .from("suppliers")
+          .insert({
+            user_id: userRow.id,
+            organization_id: currentOrgId,
+            name: authUser?.user_metadata?.name ?? authUser?.email?.split("@")[0] ?? "Supplier",
+            contact_email: authUser?.email ?? "",
+            contact_phone: authUser?.user_metadata?.phone ?? null,
+          })
+          .select("id")
+          .single();
+
+        if (createError) {
+          console.error("[SUPPLIER-PRODUCTS] Failed to auto-create supplier:", createError);
+          toast.error("No supplier profile found. Ask your admin to create one.");
+          setProducts([]);
+          setLoading(false);
+          return null;
+        }
+
+        resolvedSupplierId = newSupplier.id;
+        toast.success("Supplier profile created automatically!");
+      } else {
+        toast.error("No supplier profile found. Ask your admin to create one.");
+        setProducts([]);
+        setLoading(false);
+        return null;
+      }
     }
 
     const { data, error } = await supabase

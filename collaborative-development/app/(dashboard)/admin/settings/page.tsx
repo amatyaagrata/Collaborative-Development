@@ -58,6 +58,20 @@ export default function AdminSettingsPage() {
       }
 
       if (user && email && email !== (user.email || "")) {
+        // Validate email existence via our new API
+        const valRes = await fetch("/api/auth/validate-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const valData = await valRes.json();
+        
+        if (!valData.valid) {
+          toast.error(valData.reason || "This email address does not seem to exist.");
+          setIsLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.updateUser({ email });
         if (error) toast.error("Failed to update email: " + error.message);
         else toast.success("Verification email sent! Please check your inbox.");

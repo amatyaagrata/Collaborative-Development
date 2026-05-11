@@ -3,6 +3,23 @@
 -- Run this in the Supabase SQL Editor
 -- ============================================================
 
+-- Create the organizations table (if it doesn't exist)
+CREATE TABLE IF NOT EXISTS public.organizations (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  name        TEXT        UNIQUE NOT NULL,
+  slug        TEXT        UNIQUE NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+
+-- Allow reading organizations
+CREATE POLICY "Anyone can read organizations"
+  ON public.organizations
+  FOR SELECT
+  USING (true);
+
 -- Create the access_requests table
 CREATE TABLE IF NOT EXISTS public.access_requests (
   id               UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -10,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.access_requests (
   email            TEXT        UNIQUE NOT NULL,
   phone            TEXT,
   requested_role   TEXT        NOT NULL DEFAULT 'inventory manager',
+  organization_id  UUID        REFERENCES public.organizations(id),
   reason           TEXT,
   terms_accepted   BOOLEAN     NOT NULL DEFAULT false,
   terms_accepted_at TIMESTAMPTZ DEFAULT now(),
@@ -40,3 +58,4 @@ CREATE POLICY "Service role full access"
 -- Index for fast status filtering
 CREATE INDEX IF NOT EXISTS idx_access_requests_status ON public.access_requests(status);
 CREATE INDEX IF NOT EXISTS idx_access_requests_email  ON public.access_requests(email);
+CREATE INDEX IF NOT EXISTS idx_access_requests_org_id ON public.access_requests(organization_id);

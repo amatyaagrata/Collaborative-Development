@@ -36,6 +36,8 @@ export async function GET() {
     const stats = {
       inventoryValue: `${inventoryValue.toLocaleString("en-IN")} units`,
       totalStocks: totalStocks.toLocaleString("en-IN"),
+      totalProducts: products.length,
+      totalOrders: orders.length,
       newOrders: pendingOrders.length.toString(),
       delivered: deliveredOrders.length.toString(),
     };
