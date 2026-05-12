@@ -13,6 +13,8 @@ import styles from "@/components/layout/PortalLayout.module.css";
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [drivers, setDrivers] = useState<{id: string, name: string}[]>([]);
+  const [vehiclesByDriver, setVehiclesByDriver] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [reassignSelection, setReassignSelection] = useState<Record<string, { driverId: string; vehicleId: string }>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function SupplierOrders() {
     })());
 
     if (!supplierId) {
-      console.error("No supplier record found for this user");
+      console.warn("[SupplierOrders] No supplier record found for this user. Email:", userData.user!.email);
       return [];
     }
 
@@ -85,17 +87,44 @@ export default function SupplierOrders() {
           unit_price,
           products:product_id ( name )
         ),
-        organizations:organization_id ( name, address, phone )
+        organizations ( name, address, phone ),
+        vehicle:vehicle_id ( id, license_plate, model )
       `)
       .eq("supplier_id", supplierId)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching orders:", error);
+      console.error("[SupplierOrders] Error fetching orders:", error);
       return [];
     }
+    
+    console.log("[SupplierOrders] Fetched orders count:", data?.length);
     return (data ?? []) as unknown as SupplierOrder[];
   }, [supabase]);
+
+  const loadVehiclesForDriver = useCallback(async (driverId: string) => {
+    if (!driverId) return;
+    if (vehiclesByDriver[driverId]) return;
+
+    const { data, error } = await supabase
+      .from("vehicles")
+      .select("id, license_plate, model, status")
+      .eq("transporter_id", driverId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Failed to load vehicles: " + error.message);
+      return;
+    }
+
+    const options = (data ?? [])
+      .map((v: any) => ({
+        id: v.id as string,
+        name: `${v.license_plate}${v.model ? ` • ${v.model}` : ""}${v.status ? ` (${v.status})` : ""}`,
+      }));
+
+    setVehiclesByDriver((prev) => ({ ...prev, [driverId]: options }));
+  }, [supabase, vehiclesByDriver]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -148,13 +177,14 @@ export default function SupplierOrders() {
   /**
    * Assign a driver: Update orders table with transporter_id and delivery_status.
    */
-  async function assignDriver(orderId: string, driverId: string) {
+  async function assignDriver(orderId: string, driverId: string, vehicleId?: string) {
     if (!driverId) return;
 
     const { error: assignErr } = await supabase
       .from("orders")
       .update({
         transporter_id: driverId,
+        vehicle_id: vehicleId ?? null,
         delivery_status: "pending_acceptance",
         status: "driver_assigned"
       })
@@ -242,17 +272,46 @@ export default function SupplierOrders() {
                       Order #{order.order_number || order.id.slice(0, 8)}
                     </span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "200px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: "260px", flexWrap: "wrap" }}>
                     <select
-                      defaultValue=""
-                      onChange={(e) => { if (e.target.value) assignDriver(order.id, e.target.value); }}
-                      style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fff", color: "#22054f", fontWeight: 600, fontSize: "0.85rem" }}
+                      value={reassignSelection[order.id]?.driverId || ""}
+                      onChange={async (e) => {
+                        const nextDriverId = e.target.value;
+                        setReassignSelection((prev) => ({ ...prev, [order.id]: { driverId: nextDriverId, vehicleId: "" } }));
+                        if (nextDriverId) await loadVehiclesForDriver(nextDriverId);
+                      }}
+                      style={{ flex: 1, minWidth: "220px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fff", color: "#22054f", fontWeight: 600, fontSize: "0.85rem" }}
                     >
                       <option value="">-- Pick a new driver --</option>
                       {drivers.map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
+                    <select
+                      value={reassignSelection[order.id]?.vehicleId || ""}
+                      onChange={(e) => setReassignSelection((prev) => ({ ...prev, [order.id]: { driverId: prev[order.id]?.driverId || "", vehicleId: e.target.value } }))}
+                      disabled={!reassignSelection[order.id]?.driverId}
+                      style={{ flex: 1, minWidth: "240px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fff", color: "#22054f", fontWeight: 600, fontSize: "0.85rem", opacity: reassignSelection[order.id]?.driverId ? 1 : 0.7 }}
+                    >
+                      <option value="">
+                        {reassignSelection[order.id]?.driverId ? "-- Pick vehicle --" : "-- Select driver first --"}
+                      </option>
+                      {(vehiclesByDriver[reassignSelection[order.id]?.driverId || ""] || []).map(v => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        const driverId = reassignSelection[order.id]?.driverId;
+                        const vehicleId = reassignSelection[order.id]?.vehicleId;
+                        if (!driverId) return;
+                        assignDriver(order.id, driverId, vehicleId || undefined);
+                      }}
+                      disabled={!reassignSelection[order.id]?.driverId}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: reassignSelection[order.id]?.driverId ? "#10b981" : "#94a3b8", color: "white", fontWeight: 800, cursor: reassignSelection[order.id]?.driverId ? "pointer" : "not-allowed" }}
+                    >
+                      Assign
+                    </button>
                   </div>
                 </div>
               ))}
@@ -278,7 +337,17 @@ export default function SupplierOrders() {
                   order={order}
                   onStatusChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
                   transporters={drivers}
-                  onAssignTransporter={(driverId) => assignDriver(order.id, driverId)}
+                  vehiclesByTransporter={vehiclesByDriver}
+                  onLoadVehicles={loadVehiclesForDriver}
+                  onAssignTransporter={async (driverId, vehicleId) => {
+                    if (!driverId) return;
+                    const options = vehiclesByDriver[driverId];
+                    if (options && options.length > 0 && !vehicleId) {
+                      toast.error("Please select a vehicle for this driver.");
+                      return;
+                    }
+                    await assignDriver(order.id, driverId, vehicleId);
+                  }}
                   showActions={true}
                 />
               </div>
