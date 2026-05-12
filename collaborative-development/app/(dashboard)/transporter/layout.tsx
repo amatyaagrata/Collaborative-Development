@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Truck, MapPin, Car, LogOut, User, ChevronDown,
+  LayoutDashboard, Truck, MapPin, Car, LogOut, User, ChevronDown, ClipboardList,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
