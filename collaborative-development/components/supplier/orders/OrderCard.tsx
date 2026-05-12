@@ -27,15 +27,22 @@ interface OrderCardProps {
       };
     }>;
     transporter_id?: string;
+    vehicle_id?: string | null;
     delivery_status?: string;
     transporter?: {
       name: string;
+    };
+    vehicle?: {
+      license_plate?: string;
+      model?: string;
     };
   };
   onView?: () => void;
   onStatusChange?: (status: string) => void;
   transporters?: { id: string; name: string }[];
-  onAssignTransporter?: (transporterId: string) => void;
+  vehiclesByTransporter?: Record<string, { id: string; name: string }[]>;
+  onLoadVehicles?: (transporterId: string) => void | Promise<void>;
+  onAssignTransporter?: (transporterId: string, vehicleId?: string) => void;
   showActions?: boolean;
 }
 
@@ -44,10 +51,14 @@ export default function OrderCard({
   onView, 
   onStatusChange, 
   transporters,
+  vehiclesByTransporter,
+  onLoadVehicles,
   onAssignTransporter,
   showActions = false 
 }: OrderCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedTransporterId, setSelectedTransporterId] = useState(order.transporter_id || "");
+  const [selectedVehicleId, setSelectedVehicleId] = useState(order.vehicle_id || "");
 
   const statusColors = {
     pending: "badge-warning",
@@ -188,8 +199,13 @@ export default function OrderCard({
                 <div style={{ flex: 1, minWidth: '200px' }}>
                   <select
                     style={{ width: '100%', padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(34,5,79,0.1)', background: '#f9f8fc', color: '#22054f', fontWeight: 600, fontSize: '0.9rem' }}
-                    value={order.transporter_id || ""}
-                    onChange={(e) => onAssignTransporter(e.target.value)}
+                    value={selectedTransporterId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setSelectedTransporterId(nextId);
+                      setSelectedVehicleId("");
+                      if (nextId) onLoadVehicles?.(nextId);
+                    }}
                   >
                     <option value="">-- Select a Transporter --</option>
                     {transporters.map(t => (
@@ -197,6 +213,44 @@ export default function OrderCard({
                     ))}
                   </select>
                 </div>
+
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <select
+                    disabled={!selectedTransporterId}
+                    style={{ width: '100%', padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(34,5,79,0.1)', background: selectedTransporterId ? '#f9f8fc' : '#f1f5f9', color: '#22054f', fontWeight: 600, fontSize: '0.9rem', opacity: selectedTransporterId ? 1 : 0.7 }}
+                    value={selectedVehicleId}
+                    onChange={(e) => setSelectedVehicleId(e.target.value)}
+                  >
+                    <option value="">
+                      {selectedTransporterId ? "-- Select Vehicle --" : "-- Select driver first --"}
+                    </option>
+                    {(vehiclesByTransporter?.[selectedTransporterId] || []).map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => onAssignTransporter(selectedTransporterId, selectedVehicleId || undefined)}
+                  disabled={!selectedTransporterId}
+                  style={{
+                    background: selectedTransporterId ? "#10b981" : "#94a3b8",
+                    color: "white",
+                    border: "none",
+                    padding: "10px 14px",
+                    borderRadius: "10px",
+                    fontWeight: 800,
+                    cursor: selectedTransporterId ? "pointer" : "not-allowed",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                  title={!selectedTransporterId ? "Select a driver first" : "Assign driver + vehicle"}
+                >
+                  <Check size={16} />
+                  Assign
+                </button>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.75rem', color: '#8a849c', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Status:
