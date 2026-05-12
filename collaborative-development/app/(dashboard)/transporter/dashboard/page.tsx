@@ -90,7 +90,7 @@ export default function TransporterDashboard() {
         .from("orders")
         .update({ 
           delivery_status: "accepted", 
-          status: "out_for_delivery",
+          status: "accepted",
           updated_at: new Date().toISOString() 
         })
         .eq("id", orderId);
@@ -132,6 +132,7 @@ export default function TransporterDashboard() {
         .from("orders")
         .update({ 
           delivery_status: "in_transit",
+          status: "in_transit",
           updated_at: new Date().toISOString() 
         })
         .eq("id", orderId);
