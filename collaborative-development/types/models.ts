@@ -70,6 +70,20 @@ export interface Product {
   supplier_products?: SupplierProduct[];
 }
 
+export interface Vehicle {
+  id: string;
+  organization_id?: string;
+  license_plate: string;
+  model: string;
+  status: 'Active' | 'Pending' | 'In Transit' | string;
+  health: 'Good' | 'Checkup' | 'Critical' | string;
+  battery_level?: string | null;
+  fuel_level?: string | null;
+  transporter_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface SupplierProduct {
   id: string;
   supplier_id: string;
@@ -113,9 +127,14 @@ export interface SupplierOrder {
   supplier_id?: string;
   items_count?: number;
   transporter_id?: string;
+  vehicle_id?: string | null;
   delivery_status?: string;
   transporter?: {
     name: string;
+  };
+  vehicle?: {
+    license_plate?: string;
+    model?: string;
   };
   organizations: {
     name: string;
