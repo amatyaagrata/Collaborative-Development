@@ -31,11 +31,12 @@ export function WelcomeMessage({ className, roleOverride }: WelcomeMessageProps)
       let isNewToOrg = false;
       let orgName = "";
       let pendingRequests = 0;
+      let role: string = "inventory_manager";
 
       try {
         const { data: userRecord } = await supabase
           .from("users")
-          .select("created_at, organization_id, organizations(name)")
+          .select("created_at, organization_id, role, organizations(name)")
           .eq("auth_user_id", user.id)
           .single();
 
@@ -44,6 +45,8 @@ export function WelcomeMessage({ className, roleOverride }: WelcomeMessageProps)
           const createdAt = new Date(userRecord.created_at);
           const hoursAgo = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
           isNewToOrg = hoursAgo < 24;
+
+          role = normalizeRole(userRecord.role);
 
           if (userRecord.organizations) {
             orgName = (userRecord.organizations as any).name ?? "";
