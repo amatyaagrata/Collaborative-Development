@@ -161,6 +161,25 @@ CREATE INDEX idx_prod_sup ON products(supplier_id);
 CREATE INDEX idx_prod_cat ON products(category_id);
 
 -- ============================================================
+-- 6.5 VEHICLES (Transporter Fleet)
+-- ============================================================
+CREATE TABLE vehicles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid REFERENCES organizations(id) ON DELETE CASCADE,
+  license_plate text NOT NULL,
+  model text NOT NULL,
+  status text NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Pending', 'In Transit')),
+  health text NOT NULL DEFAULT 'Good' CHECK (health IN ('Good', 'Checkup', 'Critical')),
+  battery_level text DEFAULT '100%',
+  fuel_level text DEFAULT '100%',
+  transporter_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_veh_org ON vehicles(organization_id);
+CREATE INDEX idx_veh_trans ON vehicles(transporter_id);
+
+-- ============================================================
 -- 7. ORDERS
 -- ============================================================
 CREATE TABLE orders (
@@ -177,6 +196,7 @@ CREATE TABLE orders (
   
   -- Transporter Extensibility
   transporter_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  vehicle_id uuid REFERENCES vehicles(id) ON DELETE SET NULL,
   delivery_status text DEFAULT 'not_assigned' CHECK (delivery_status IN ('not_assigned', 'in_transit', 'delivered')),
   
   -- Legacy App Fields

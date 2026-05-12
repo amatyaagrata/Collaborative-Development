@@ -31,6 +31,12 @@ ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT 
 CREATE INDEX IF NOT EXISTS idx_vehicles_org ON public.vehicles(organization_id);
 CREATE INDEX IF NOT EXISTS idx_vehicles_trans ON public.vehicles(transporter_id);
 
+-- Link an assigned delivery vehicle (selected by supplier during assignment)
+ALTER TABLE public.orders
+ADD COLUMN IF NOT EXISTS vehicle_id uuid REFERENCES public.vehicles(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_ord_vehicle ON public.orders(vehicle_id);
+
 -- Enable RLS
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 
