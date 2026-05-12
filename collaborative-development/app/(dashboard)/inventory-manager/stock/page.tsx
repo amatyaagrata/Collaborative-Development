@@ -7,7 +7,7 @@ import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import "./orders.css";
 
 interface Order { id: string; product_name: string; supplier_name: string; custom_product_id: string; category: string; total_price: number; quantity: number; created_at?: string; }
-interface Product { id: string; name: string; price: number; stock: number; supplier_id?: string; categories?: { name?: string }[] | { name?: string } | null; }
+interface Product { id: string; name: string; price: number; stock: number; supplier_id?: string; sku?: string; categories?: { name?: string }[] | { name?: string } | null; }
 interface SupplierOption { id: string; name: string; }
 
 function getCategoryName(product: Product): string {
@@ -26,6 +26,7 @@ export default function IMStockPage() {
   const [viewMode, setViewMode] = useState<"list" | "form">("list");
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({ product_name: "", supplier_name: "", supplier_id: "", custom_product_id: "", category: "", total_price: "", quantity: "", selected_product_id: "" });
 
@@ -77,6 +78,7 @@ export default function IMStockPage() {
       .single();
 
     if (currentUser?.organization_id) {
+      setCurrentOrgId(currentUser.organization_id);
       const { data, error } = await supabase
         .from("suppliers")
         .select("id, name")
@@ -159,7 +161,39 @@ export default function IMStockPage() {
     if (formData.supplier_id) payload.supplier_id = formData.supplier_id;
 
     if (formMode === "add") {
-      const { data: newOrder, error } = await supabase.from("orders").insert([{ ...payload, status: "pending" }]).select().single();
+      // Ensure organization_id is present; fallback to fetching if state is null
+      let orgId = currentOrgId;
+      if (!orgId) {
+        const { data: userData } = await supabase.auth.getUser();
+        const { data: orgRow } = await supabase
+          .from('users')
+          .select('organization_id')
+          .eq('auth_user_id', userData.user?.id || '')
+          .single();
+        orgId = orgRow?.organization_id ?? null;
+      }
+      const { data: newOrder, error } = await supabase.from("orders").insert([{
+        ...payload,
+        status: "pending",
+        organization_id: orgId
+      }]).select().single();
+      if (error) { toast.error("Failed to add order: " + error.message); return; }
+
+      if (formData.selected_product_id) {
+        const { error: itemError } = await supabase.from("order_items").insert([
+          {
+            order_id: newOrder.id,
+            product_id: formData.selected_product_id,
+            quantity: quantity,
+            unit_price: total_price,
+            total_price: total_price * quantity
+          }
+        ]);
+        if (itemError) console.error("Failed to add order item:", itemError);
+      }
+
+      toast.success("Order added successfully!");
+    } else if (formMode === "edit" && editingId !== null) {
       if (error) { toast.error("Failed to add order: " + error.message); return; }
       
       if (formData.selected_product_id) {
