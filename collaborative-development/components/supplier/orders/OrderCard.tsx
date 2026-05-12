@@ -51,19 +51,23 @@ export default function OrderCard({
 
   const statusColors = {
     pending: "badge-warning",
+    accepted: "badge-info",
+    driver_assigned: "badge-info",
+    in_transit: "badge-primary",
     confirmed: "badge-info",
     preparing: "badge-primary",
     ready_for_delivery: "badge-success",
     out_for_delivery: "badge-success",
     delivered: "badge-secondary",
+    ended: "badge-secondary",
+    rejected: "badge-warning",
   };
+  const statusColorKey = (order.status as keyof typeof statusColors);
+  const statusColorClass = statusColors[statusColorKey] ?? "badge-secondary";
 
   /* ── Unified steps: order lifecycle + delivery lifecycle ── */
   const unifiedSteps = [
     { key: "pending",             label: "Pending",           type: "order" },
-    { key: "confirmed",           label: "Confirmed",         type: "order" },
-    { key: "preparing",           label: "Preparing",         type: "order" },
-    { key: "ready_for_delivery",  label: "Ready",             type: "order" },
     { key: "assigned",            label: "Assigned",          type: "delivery" },
     { key: "accepted",            label: "Accepted",          type: "delivery" },
     { key: "in_transit",          label: "In Transit",        type: "delivery" },
@@ -75,19 +79,12 @@ export default function OrderCard({
     const ds = order.delivery_status || "not_assigned";
     const os = order.status;
 
-    if (ds === "delivered" || os === "delivered") return 7;
-    if (ds === "in_transit") return 6;
-    if (ds === "accepted" || os === "out_for_delivery") return 5;
-    if (ds === "pending_acceptance") return 4;
+    if (ds === "delivered" || os === "delivered") return 4;
+    if (ds === "in_transit" || os === "in_transit") return 3;
+    if (ds === "accepted" || os === "accepted") return 2;
+    if (ds === "pending_acceptance" || os === "driver_assigned") return 1;
 
-    // Order-only statuses
-    const orderMap: Record<string, number> = {
-      ready_for_delivery: 3,
-      preparing: 2,
-      confirmed: 1,
-      pending: 0,
-    };
-    return orderMap[os] ?? 0;
+    return 0;
   };
 
   const activeIndex = getActiveIndex();
@@ -100,7 +97,7 @@ export default function OrderCard({
         <div className={styles.cardInfo}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span className={styles.entityNumber}>Order #{order.order_number}</span>
-            <span className={`${styles.statusBadge} ${styles[statusColors[order.status as keyof typeof statusColors]]}`}>
+            <span className={`${styles.statusBadge} ${styles[statusColorClass]}`}>
               {order.status.replace(/_/g, " ").toUpperCase()}
             </span>
             {isRejected && (
@@ -230,7 +227,7 @@ export default function OrderCard({
                     const isDeliveryStep = step.type === "delivery" || step.type === "both";
                     const isOrderStep = step.type === "order";
                     /* A rejected step shows at the 'assigned' position */
-                    const isRejectedStep = isRejected && idx === 4;
+                    const isRejectedStep = isRejected && idx === 1;
                     const canClick = isOrderStep && idx > activeIndex;
 
                     return (
@@ -275,7 +272,7 @@ export default function OrderCard({
                             fontSize: "0.5rem", color: "#a78bfa", fontWeight: 600,
                             marginTop: "-4px"
                           }}>
-                            (driver)
+                            (transporter)
                           </span>
                         )}
                       </div>
