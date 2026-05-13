@@ -87,14 +87,14 @@ export default function SupplierOrders() {
           unit_price,
           products:product_id ( name )
         ),
-        organizations ( name, address, phone ),
+        organizations:organization_id ( name, address, phone ),
         vehicle:vehicle_id ( id, license_plate, model )
       `)
       .eq("supplier_id", supplierId)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("[SupplierOrders] Error fetching orders:", error);
+      console.error("[SupplierOrders] Error fetching orders:", error.message, error.details, error.hint);
       return [];
     }
     
@@ -131,12 +131,12 @@ export default function SupplierOrders() {
       const data = await fetchOrders();
       setOrders(data);
 
-      // Fetch available drivers (role = 'driver' per schema)
+      // Fetch available transporters (role = 'transporter' per schema)
       const { data: driverData } = await supabase
         .from("users")
         .select("id, name")
-        .eq("role", "driver")
-        .eq("is_approved", true);
+        .eq("role", "transporter")
+        .eq("is_active", true);
 
       if (driverData) setDrivers(driverData);
       setLoading(false);
