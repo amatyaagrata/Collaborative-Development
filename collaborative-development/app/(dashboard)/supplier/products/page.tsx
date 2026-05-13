@@ -21,7 +21,7 @@ type ProductRow = {
   category_id: string | null;
   is_active: boolean;
   created_at: string;
-  categories: { name: string }[] | null;
+  categories: { name: string } | null;
 };
 
 export default function SupplierProductsPage() {
@@ -57,13 +57,18 @@ export default function SupplierProductsPage() {
     });
   }, [products, searchQuery]);
 
-  const fetchCategories = useCallback(async (currentOrgId: string) => {
+  const fetchCategories = useCallback(async (currentOrgId: string, currentSupplierId?: string | null) => {
     if (!currentOrgId) return;
-    const { data, error } = await supabase
+    let query = supabase
       .from("categories")
       .select("id,name")
-      .eq("organization_id", currentOrgId)
-      .order("name", { ascending: true });
+      .eq("organization_id", currentOrgId);
+
+    if (currentSupplierId) {
+      query = query.eq("supplier_id", currentSupplierId);
+    }
+
+    const { data, error } = await query.order("name", { ascending: true });
 
     if (error) {
       toast.error("Failed to load categories: " + error.message);
@@ -157,14 +162,14 @@ export default function SupplierProductsPage() {
       setProducts((data as unknown as ProductRow[]) || []);
     }
     setLoading(false);
-    return currentOrgId;
+    return { orgId: currentOrgId, supplierId: resolvedSupplierId };
   }, [supabase]);
 
   useEffect(() => {
     const init = async () => {
-      const resolvedOrgId = await fetchProducts();
-      if (resolvedOrgId) {
-        fetchCategories(resolvedOrgId);
+      const result = await fetchProducts();
+      if (result?.orgId) {
+        fetchCategories(result.orgId, result.supplierId);
       }
     };
     init();
@@ -218,7 +223,7 @@ export default function SupplierProductsPage() {
 
     const { data, error } = await supabase
       .from("categories")
-      .insert([{ name, organization_id: orgId }])
+      .insert([{ name, organization_id: orgId, supplier_id: supplierId }])
       .select("id,name")
       .single();
 
@@ -433,7 +438,11 @@ export default function SupplierProductsPage() {
 
                       <div className="product-info-row">
                         <span className="info-label">Category</span>
-                        <span className="info-value">{product.categories?.[0]?.name || "Uncategorized"}</span>
+                        <span className="info-value">
+                          {Array.isArray(product.categories) 
+                            ? product.categories[0]?.name 
+                            : (product.categories as any)?.name || "Uncategorized"}
+                        </span>
                       </div>
 
                       <div className="product-info-row">
