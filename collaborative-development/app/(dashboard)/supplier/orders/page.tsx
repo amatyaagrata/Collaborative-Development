@@ -85,10 +85,10 @@ export default function SupplierOrders() {
           id,
           quantity,
           unit_price,
-          products:product_id ( name )
+          products:products!product_id ( name )
         ),
-        organizations:organization_id ( name, address, phone ),
-        vehicle:vehicle_id ( id, license_plate, model )
+        organizations:organizations!organization_id ( name, address, phone ),
+        vehicle:vehicles!vehicle_id ( id, license_plate, model )
       `)
       .eq("supplier_id", supplierId)
       .order("created_at", { ascending: false });

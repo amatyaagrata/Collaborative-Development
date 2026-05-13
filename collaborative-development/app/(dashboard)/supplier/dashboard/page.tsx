@@ -65,7 +65,7 @@ export default function SupplierDashboardPage() {
       // 1. Fetch Stats & Orders from V3 tables
       const [productsRes, allOrdersRes] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
-        supabase.from("orders").select("id, order_number, status, created_at, total_amount, organizations:organization_id(name)").eq("supplier_id", resolvedSupplierId).order("created_at", { ascending: false })
+        supabase.from("orders").select("id, order_number, status, created_at, total_amount, organizations:organizations!organization_id(name)").eq("supplier_id", resolvedSupplierId).order("created_at", { ascending: false })
       ]);
 
       const allOrders = allOrdersRes.data || [];
