@@ -81,14 +81,13 @@ export default function SupplierOrders() {
       .from("orders")
       .select(`
         *,
-        order_items (
+        order_items(
           id,
           quantity,
           unit_price,
-          products:products!product_id ( name )
+          products(name)
         ),
-        organizations:organizations!organization_id ( name, address, phone ),
-        vehicle:vehicles!vehicle_id ( id, license_plate, model )
+        organizations(name,address,phone)
       `)
       .eq("supplier_id", supplierId)
       .order("created_at", { ascending: false });

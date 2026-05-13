@@ -79,13 +79,12 @@ export default function TransporterWorkPage() {
         delivery_status,
         delivery_address,
         total_amount,
-        organizations:organizations!organization_id ( name, address, phone ),
-        suppliers:suppliers!supplier_id ( name ),
-        vehicle:vehicles!vehicle_id ( license_plate, model ),
-        order_items (
+        organizations(name, address, phone),
+        suppliers(name),
+        order_items(
           quantity,
           unit_price,
-          products:products!product_id ( name )
+          products(name)
         )
       `)
       .eq("transporter_id", userRow.id)
