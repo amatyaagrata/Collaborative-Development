@@ -5,7 +5,7 @@ import { Search, Package, Calendar, Hash } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import "./product.css";
 
-interface Product { id: string; name: string; category_id: string | null; categories?: { name: string }; price: number; stock: number; created_at: string; }
+interface Product { id: string; name: string; category_id: string | null; categories?: { name: string }; price: number; stock: number; created_at: string; deliveredQty?: number; }
 
 export default function IMProductsPage() {
   const supabase = createClient();
@@ -18,18 +18,58 @@ export default function IMProductsPage() {
     const { data: userData } = await supabase.auth.getUser();
     const { data: userRow } = await supabase
       .from('users')
-      .select('organization_id')
+      .select('id, organization_id')
       .eq('auth_user_id', userData.user?.id || '')
       .single();
 
     if (userRow?.organization_id) {
-      const { data: prodData } = await supabase
-        .from("products")
-        .select("*, categories(name)")
+      // Step 1: Get orders placed by THIS IM that have been delivered
+      const { data: deliveredOrders } = await supabase
+        .from("orders")
+        .select("id")
         .eq("organization_id", userRow.organization_id)
-        .order("created_at", { ascending: false });
+        .eq("user_id", userRow.id)
+        .or("delivery_status.eq.delivered,status.eq.delivered");
 
-      if (prodData) setProducts(prodData);
+      if (deliveredOrders && deliveredOrders.length > 0) {
+        const orderIds = deliveredOrders.map(o => o.id);
+
+        // Step 2: Get product IDs and quantities from delivered order items
+        const { data: orderItems } = await supabase
+          .from("order_items")
+          .select("product_id, quantity")
+          .in("order_id", orderIds);
+
+        // Aggregate delivered quantities per product
+        const productQtyMap: Record<string, number> = {};
+        (orderItems || []).forEach(item => {
+          if (item.product_id) {
+            productQtyMap[item.product_id] = (productQtyMap[item.product_id] || 0) + (item.quantity || 0);
+          }
+        });
+
+        const productIds = Object.keys(productQtyMap);
+
+        if (productIds.length > 0) {
+          // Step 3: Fetch only those delivered products
+          const { data: prodData } = await supabase
+            .from("products")
+            .select("*, categories(name)")
+            .in("id", productIds)
+            .order("created_at", { ascending: false });
+
+          if (prodData) {
+            setProducts(prodData.map(p => ({
+              ...p,
+              deliveredQty: productQtyMap[p.id] || 0,
+            })));
+          }
+        } else {
+          setProducts([]);
+        }
+      } else {
+        setProducts([]);
+      }
     }
     setLoading(false);
   }, [supabase]);
@@ -53,8 +93,8 @@ export default function IMProductsPage() {
       <div className="products-content">
         <div className="products-header-row">
           <div>
-            <h2 className="products-title">Products</h2>
-            <p className="products-subtitle">View your product inventory</p>
+            <h2 className="products-title">Inventory</h2>
+            <p className="products-subtitle">Products received from delivered orders</p>
           </div>
         </div>
 
@@ -69,8 +109,8 @@ export default function IMProductsPage() {
           <div className="stat-card">
             <div className="stat-icon"><Package size={24} /></div>
             <div className="stat-info">
-              <h3>{products.reduce((sum, p) => sum + p.stock, 0)}</h3>
-              <p>Total Stock Units</p>
+              <h3>{products.reduce((sum, p) => sum + (p.deliveredQty || p.stock), 0)}</h3>
+              <p>Total Delivered Units</p>
             </div>
           </div>
           <div className="stat-card warning">
@@ -101,7 +141,8 @@ export default function IMProductsPage() {
         ) : filteredProducts.length === 0 ? (
           <div className="empty-state">
             <Package size={48} />
-            <p>No products found</p>
+            <p>No delivered products yet</p>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 4 }}>Products will appear here once orders are delivered by a transporter.</p>
           </div>
         ) : (
           <div className="products-grid">
