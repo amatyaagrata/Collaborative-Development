@@ -33,7 +33,7 @@ interface OrderCardProps {
       name: string;
     };
     vehicle?: {
-      plate_number?: string;
+      license_plate?: string;
       model?: string;
     };
   };

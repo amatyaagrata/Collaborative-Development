@@ -108,7 +108,7 @@ export default function SupplierOrders() {
     const { data, error } = await supabase
       .from("vehicles")
       .select("*")
-      .eq("driver_id", driverId);
+      .eq("transporter_id", driverId);
 
     if (error) {
       console.error("[SupplierOrders] Error loading vehicles:", error);
@@ -118,7 +118,7 @@ export default function SupplierOrders() {
     const options = (data ?? [])
       .map((v: any) => ({
         id: v.id as string,
-        name: `${v.plate_number || 'Vehicle'} • ${v.model || v.id.slice(0, 8)}`,
+        name: `${v.license_plate || 'Vehicle'} • ${v.model || v.id.slice(0, 8)}`,
       }));
 
     setVehiclesByDriver((prev) => ({ ...prev, [driverId]: options }));

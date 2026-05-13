@@ -81,6 +81,7 @@ export default function TransporterWorkPage() {
         total_amount,
         organizations(name, address, phone),
         suppliers(name),
+        vehicles(license_plate, model),
         order_items(
           quantity,
           unit_price,
@@ -109,8 +110,8 @@ export default function TransporterWorkPage() {
       organization_address: row.organizations?.address ?? "N/A",
       organization_phone: row.organizations?.phone ?? "N/A",
       supplier_name: row.suppliers?.name ?? "N/A",
-      vehicle_plate: row.vehicle?.plate_number ?? "",
-      vehicle_model: row.vehicle?.model ?? "",
+      vehicle_plate: row.vehicles?.license_plate ?? "",
+      vehicle_model: row.vehicles?.model ?? "",
       items: (row.order_items || []).map((item: any) => ({
         name: item.products?.name || "Unknown Product",
         quantity: item.quantity,
