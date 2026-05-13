@@ -11,7 +11,7 @@ import { toast } from "sonner";
  */
 interface Vehicle {
   id: string;
-  license_plate: string;
+  plate_number: string;
   model: string;
   battery_level: string | null;
   fuel_level: string | null;
@@ -27,7 +27,7 @@ export default function TransporterVehiclesPage() {
   const [transporterId, setTransporterId] = useState<string | null>(null);
 
   const [newVehicle, setNewVehicle] = useState({
-    license_plate: "",
+    plate_number: "",
     model: "",
   });
 
@@ -53,7 +53,7 @@ export default function TransporterVehiclesPage() {
       const { data, error } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("transporter_id", userRow.id)
+        .eq("driver_id", userRow.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -68,12 +68,12 @@ export default function TransporterVehiclesPage() {
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transporterId) { toast.error("User session not loaded"); return; }
-    if (!newVehicle.license_plate.trim()) { toast.error("License plate is required"); return; }
+    if (!newVehicle.plate_number.trim()) { toast.error("Plate number is required"); return; }
     if (!newVehicle.model.trim()) { toast.error("Vehicle model/name is required"); return; }
 
     const { error } = await supabase.from("vehicles").insert([{
-      transporter_id: transporterId,
-      license_plate: newVehicle.license_plate.trim().toUpperCase(),
+      driver_id: transporterId,
+      plate_number: newVehicle.plate_number.trim().toUpperCase(),
       model: newVehicle.model.trim(),
     }]);
 
@@ -81,7 +81,7 @@ export default function TransporterVehiclesPage() {
       toast.error("Error: " + error.message);
     } else {
       toast.success("Vehicle added to fleet");
-      setNewVehicle({ license_plate: "", model: "" });
+      setNewVehicle({ plate_number: "", model: "" });
       setShowAddForm(false);
       fetchVehicles();
     }
@@ -110,8 +110,8 @@ export default function TransporterVehiclesPage() {
               <input
                 required
                 placeholder="e.g. BA 1 PA 1234"
-                value={newVehicle.license_plate}
-                onChange={e => setNewVehicle({ ...newVehicle, license_plate: e.target.value })}
+                value={newVehicle.plate_number}
+                onChange={e => setNewVehicle({ ...newVehicle, plate_number: e.target.value })}
                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
               />
             </div>
@@ -145,7 +145,7 @@ export default function TransporterVehiclesPage() {
               </div>
 
               <div style={{ marginBottom: "20px" }}>
-                <h3 style={{ fontSize: "1.3rem", fontWeight: "800", color: "#1e1b4b", margin: 0 }}>{v.license_plate}</h3>
+                <h3 style={{ fontSize: "1.3rem", fontWeight: "800", color: "#1e1b4b", margin: 0 }}>{v.plate_number}</h3>
                 <p style={{ color: "#64748b", margin: "4px 0 0", fontSize: "0.85rem" }}>{v.model}</p>
               </div>
 
