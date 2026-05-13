@@ -25,21 +25,78 @@ import styles from "@/components/layout/PortalLayout.module.css";
 
 export default function IMDashboardPage() {
   const supabase = createClient();
-  const { data: products, loading: productsLoading } = useProducts();
-  
-  const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const lowStock = products.filter(p => p.stock > 0 && p.stock <= 10).length;
-    const outOfStock = products.filter(p => p.stock === 0).length;
-    const totalValue = products.reduce((acc, p) => acc + p.price * p.stock, 0);
-    return { totalProducts, lowStock, outOfStock, totalValue };
-  }, [products]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ totalProducts: 0, lowStock: 0, outOfStock: 0, totalValue: 0 });
+  const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
-  const lowStockItems = useMemo(() => {
-    return products.filter(p => p.stock <= 10).sort((a, b) => a.stock - b.stock);
-  }, [products]);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-  if (productsLoading) {
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .single();
+
+        if (!userRow) return;
+
+        // Fetch delivered orders for THIS manager
+        const { data: deliveredOrders } = await supabase
+          .from("orders")
+          .select(`
+            id,
+            order_items (
+              quantity,
+              products (
+                id,
+                name,
+                sku,
+                price
+              )
+            )
+          `)
+          .eq("user_id", userRow.id)
+          .eq("delivery_status", "delivered");
+
+        // Aggregate stock
+        const productMap = new Map<string, any>();
+        (deliveredOrders || []).forEach((order: any) => {
+          (order.order_items || []).forEach((item: any) => {
+            const p = item.products;
+            if (!p) return;
+            if (productMap.has(p.id)) {
+              productMap.get(p.id).stock += item.quantity;
+            } else {
+              productMap.set(p.id, { ...p, stock: item.quantity });
+            }
+          });
+        });
+
+        const inventory = Array.from(productMap.values());
+        const totalProducts = inventory.length;
+        const lowStock = inventory.filter(p => p.stock > 0 && p.stock <= 10).length;
+        const outOfStock = inventory.filter(p => p.stock === 0).length;
+        const totalValue = inventory.reduce((acc, p) => acc + p.price * p.stock, 0);
+
+        setStats({ totalProducts, lowStock, outOfStock, totalValue });
+        setLowStockItems(inventory.filter(p => p.stock <= 10).sort((a, b) => a.stock - b.stock));
+        setProducts(inventory);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [supabase]);
+
+  if (loading) {
     return (
       <>
         <div className={styles.loadingState}>Loading dashboard...</div>

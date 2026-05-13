@@ -13,10 +13,10 @@ import { toast } from "sonner";
 interface IMLayoutProps { title: string; children: React.ReactNode; }
 
 const navItems = [
-  { label: "Dashboard", href: "/inventory-manager/dashboard", Icon: LayoutDashboard },
-  { label: "Products",  href: "/inventory-manager/products",  Icon: Package         },
-  { label: "Orders",    href: "/inventory-manager/stock",     Icon: ShoppingCart    },
-  { label: "Reports",   href: "/inventory-manager/reports",   Icon: FileText        },
+  { label: "Dashboard",       href: "/inventory-manager/dashboard", Icon: LayoutDashboard },
+  { label: "Inventory",       href: "/inventory-manager/products",  Icon: Package         },
+  { label: "Purchase Orders", href: "/inventory-manager/stock",     Icon: ShoppingCart    },
+  { label: "Reports",         href: "/inventory-manager/reports",   Icon: FileText        },
 ];
 
 export default function IMLayout({ children }: { children: React.ReactNode }) {

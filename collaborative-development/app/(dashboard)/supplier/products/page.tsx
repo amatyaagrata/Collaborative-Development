@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Package, Plus, Search } from "lucide-react";
+import { Package, Plus, Search, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./products.css";
 
@@ -452,22 +452,52 @@ export default function SupplierProductsPage() {
 
                       <div className="product-info-row">
                         <span className="info-label">Stock Quantity</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <input 
-                            type="number" 
-                            min="0"
-                            className="form-input-styled" 
-                            style={{ width: "80px", height: "32px", padding: "0 8px" }}
-                            defaultValue={product.stock || 0}
-                            disabled={!!updatingStock[product.id]}
-                            onBlur={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val !== product.stock) {
-                                setProductStock(product.id, val);
-                              }
-                            }}
-                          />
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <input 
+                              type="number" 
+                              min="0"
+                              className="form-input-styled" 
+                              style={{ 
+                                width: "80px", 
+                                height: "32px", 
+                                padding: "0 8px",
+                                border: product.stock <= (product.min_stock_level || 0) ? "1.5px solid #ef4444" : "1px solid #e2e8f0",
+                                color: product.stock <= (product.min_stock_level || 0) ? "#dc2626" : "inherit",
+                                fontWeight: product.stock <= (product.min_stock_level || 0) ? 700 : 400
+                              }}
+                              defaultValue={product.stock || 0}
+                              disabled={!!updatingStock[product.id]}
+                              onBlur={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val !== product.stock) {
+                                  setProductStock(product.id, val);
+                                }
+                              }}
+                            />
+                            {product.stock <= (product.min_stock_level || 0) && (
+                              <span style={{ 
+                                display: "inline-flex", 
+                                alignItems: "center", 
+                                gap: "4px", 
+                                background: "#fef2f2", 
+                                color: "#dc2626", 
+                                padding: "2px 8px", 
+                                borderRadius: "12px", 
+                                fontSize: "0.7rem", 
+                                fontWeight: 700,
+                                border: "1px solid #fecaca"
+                              }}>
+                                <AlertCircle size={12} /> LOW STOCK
+                              </span>
+                            )}
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="product-info-row">
+                        <span className="info-label">Min. Stock Level</span>
+                        <span className="info-value">{product.min_stock_level || 0} units</span>
                       </div>
 
                       <div className="product-info-row">
