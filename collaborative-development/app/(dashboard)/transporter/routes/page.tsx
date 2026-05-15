@@ -15,45 +15,86 @@ export default function TransporterRoutesPage() {
   const fetchActiveRoutes = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error("Auth error:", authError);
+        setLoading(false);
+        return;
+      }
 
-      // Look up internal user id
-      const { data: userRow } = await supabase
-        .from("users")
+      console.log("Transporter user:", user.email);
+
+      // Get the driver ID from users table
+      const { data: driverData, error: driverError } = await supabase
+        .from("drivers")
         .select("id")
-        .eq("auth_user_id", user.id)
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (!userRow) return;
+      if (driverError) {
+        console.error("Driver fetch error:", driverError);
+        setLoading(false);
+        return;
+      }
 
-      const { data, error } = await supabase
-        .from("orders")
+      if (!driverData) {
+        console.log("No driver profile found for user");
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log("Driver ID found:", driverData.id);
+
+      // Fetch active assignments for this driver from order_driver_assignments
+      const { data: assignments, error: assignError } = await supabase
+        .from("order_driver_assignments")
         .select(`
           id,
-          order_number,
           status,
-          created_at,
-          organizations:organization_id (
-            name,
-            address
+          purchase_order_id,
+          assigned_at,
+          purchase_orders:purchase_order_id (
+            id,
+            order_number,
+            status,
+            total_amount,
+            expected_delivery_date,
+            organizations:org_id (
+              name,
+              address
+            )
           )
         `)
-        .eq("transporter_id", userRow.id)
-        .in("status", ["accepted", "driver_assigned", "in_transit"])
-        .order("created_at", { ascending: true });
+        .eq("driver_id", driverData.id)
+        .in("status", ["accepted", "pending"])
+        .order("assigned_at", { ascending: true });
 
-      if (error) throw error;
+      if (assignError) {
+        console.error("Assignments fetch error:", assignError);
+        toast.error("Failed to load active routes");
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
 
-      const mapped = (data || []).map((o: any) => ({
-        id: o.id,
-        order_number: o.order_number ?? o.id.slice(0, 8),
-        status: o.status,
-        destination_name: o.organizations?.name || "N/A",
-        destination_address: o.organizations?.address || "",
-      }));
+      console.log("Assignments found:", assignments?.length || 0);
+
+      // Map the data
+      const mapped = (assignments || [])
+        .filter(a => a.purchase_orders)
+        .map((a: any) => ({
+          id: a.purchase_order_id,
+          order_number: a.purchase_orders.order_number ?? a.purchase_order_id.slice(0, 8),
+          status: a.purchase_orders.status,
+          destination_name: a.purchase_orders.organizations?.name || "N/A",
+          destination_address: a.purchase_orders.organizations?.address || "",
+          assignment_status: a.status,
+          assigned_at: a.assigned_at,
+        }));
 
       setOrders(mapped);
+      
       if (mapped.length > 0 && !selectedAddress) {
         const firstWithAddress = mapped.find(m => m.destination_address);
         if (firstWithAddress) setSelectedAddress(firstWithAddress.destination_address);
@@ -70,7 +111,9 @@ export default function TransporterRoutesPage() {
     fetchActiveRoutes();
   }, [fetchActiveRoutes]);
 
-  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(selectedAddress || "Kathmandu")}&output=embed`;
+  const mapUrl = selectedAddress 
+    ? `https://www.google.com/maps?q=${encodeURIComponent(selectedAddress)}&output=embed`
+    : "";
 
   return (
     <div className={styles.pageStack} style={{ padding: "20px" }}>
@@ -99,6 +142,7 @@ export default function TransporterRoutesPage() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "#64748b" }}>
               <MapPin size={48} color="#7c3aed" />
               <p style={{ marginTop: "12px", fontWeight: 600 }}>No active routes found</p>
+              <p style={{ fontSize: "0.85rem", marginTop: "4px" }}>Select a delivery from the manifest</p>
             </div>
           )}
         </div>
@@ -109,9 +153,12 @@ export default function TransporterRoutesPage() {
           
           <div style={{ flex: 1, overflowY: "auto", paddingRight: "4px" }}>
             {!loading && orders.length === 0 && (
-              <p style={{ color: "#94a3b8", fontSize: "0.9rem", textAlign: "center", marginTop: "20px" }}>
-                Active deliveries will appear here once assigned and accepted.
-              </p>
+              <div style={{ textAlign: "center", marginTop: "20px" }}>
+                <Package size={40} style={{ margin: "0 auto 12px", color: "#cbd5e1" }} />
+                <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                  Active deliveries will appear here once assigned and accepted.
+                </p>
+              </div>
             )}
 
             {orders.map((order) => (

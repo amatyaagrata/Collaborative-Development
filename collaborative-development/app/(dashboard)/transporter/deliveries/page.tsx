@@ -17,8 +17,6 @@ interface WorkOrder {
   status: string;
   created_at: string;
   updated_at: string;
-  delivery_status: string;
-  delivery_address: string;
   total_amount: number;
   organization_name: string;
   organization_address: string;
@@ -26,6 +24,8 @@ interface WorkOrder {
   supplier_name: string;
   vehicle_plate: string;
   vehicle_model: string;
+  driver_name: string;
+  assignment_status: string;
   items: Array<{
     name: string;
     quantity: number;
@@ -38,10 +38,10 @@ type FilterTab = "all" | "pending" | "active" | "completed";
 /* ── Stepper Steps ───────────────────────────────────────────── */
 
 const STEPS = [
-  { key: "pending_acceptance", label: "Pending" },
-  { key: "accepted",          label: "Accepted" },
-  { key: "in_transit",        label: "In Transit" },
-  { key: "delivered",         label: "Delivered" },
+  { key: "pending", label: "Pending" },
+  { key: "accepted", label: "Accepted" },
+  { key: "in_transit", label: "In Transit" },
+  { key: "delivered", label: "Delivered" },
 ];
 
 /* ── Page Component ──────────────────────────────────────────── */
@@ -57,122 +57,183 @@ export default function TransporterWorkPage() {
   /* ── Fetch ─────────────────────────────────────────────────── */
 
   const fetchOrders = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!userRow) return;
-
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        id,
-        order_number,
-        status,
-        created_at,
-        updated_at,
-        delivery_status,
-        delivery_address,
-        total_amount,
-        organizations(name, address, phone),
-        suppliers(name),
-        vehicles(license_plate, model),
-        order_items(
-          quantity,
-          unit_price,
-          products(name)
-        )
-      `)
-      .eq("transporter_id", userRow.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error(error);
-      toast.error("Failed to load work orders");
-      return;
-    }
-
-    const mapped: WorkOrder[] = (data ?? []).map((row: any) => ({
-      id: row.id,
-      order_number: row.order_number,
-      status: row.status,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      delivery_status: row.delivery_status || "not_assigned",
-      delivery_address: row.delivery_address || row.organizations?.address || "N/A",
-      total_amount: row.total_amount || 0,
-      organization_name: row.organizations?.name ?? "N/A",
-      organization_address: row.organizations?.address ?? "N/A",
-      organization_phone: row.organizations?.phone ?? "N/A",
-      supplier_name: row.suppliers?.name ?? "N/A",
-      vehicle_plate: row.vehicles?.license_plate ?? "",
-      vehicle_model: row.vehicles?.model ?? "",
-      items: (row.order_items || []).map((item: any) => ({
-        name: item.products?.name || "Unknown Product",
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-      })),
-    }));
-
-    setOrders(mapped);
-  }, [supabase]);
-
-  /* ── Status Update (via server API to bypass RLS) ───────────── */
-
-  const updateDeliveryStatus = async (
-    orderId: string,
-    nextDeliveryStatus: "accepted" | "rejected" | "in_transit" | "delivered"
-  ) => {
-    console.log("[Delivery Update] orderId:", orderId, "status:", nextDeliveryStatus);
-
     try {
-      const res = await fetch("/api/delivery-status", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, deliveryStatus: nextDeliveryStatus }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        console.error("[Delivery Update] API error:", result);
-        toast.error("Update failed: " + (result.error || "Unknown error"));
+      setLoading(true);
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error("Auth error:", authError);
+        setLoading(false);
         return;
       }
 
-      console.log("[Delivery Update] Success:", result);
+      console.log("Transporter user:", user.email);
 
-      const labels: Record<string, string> = {
-        accepted: "Delivery accepted!",
-        rejected: "Delivery rejected.",
-        in_transit: "Transit started!",
-        delivered: "Order marked as delivered!",
-      };
-      toast.success(labels[nextDeliveryStatus]);
-      fetchOrders();
-    } catch (err: any) {
-      console.error("[Delivery Update] Fetch error:", err);
-      toast.error("Update failed: " + err.message);
+      // Get driver ID from drivers table
+      const { data: driverData, error: driverError } = await supabase
+        .from("drivers")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (driverError) {
+        console.error("Driver fetch error:", driverError);
+        setLoading(false);
+        return;
+      }
+
+      if (!driverData) {
+        console.log("No driver profile found");
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log("Driver found:", driverData);
+
+      // Fetch assignments from order_driver_assignments
+      const { data: assignments, error: assignError } = await supabase
+        .from("order_driver_assignments")
+        .select(`
+          id,
+          status,
+          purchase_order_id,
+          assigned_at,
+          purchase_orders:purchase_order_id (
+            id,
+            order_number,
+            status,
+            total_amount,
+            created_at,
+            updated_at,
+            suppliers:supplier_id (
+              name
+            ),
+            organizations:org_id (
+              name,
+              address,
+              phone
+            ),
+            order_items(
+              quantity,
+              unit_price,
+              products(
+                name
+              )
+            )
+          )
+        `)
+        .eq("driver_id", driverData.id)
+        .order("assigned_at", { ascending: false });
+
+      if (assignError) {
+        console.error("Assignments fetch error:", assignError);
+        toast.error("Failed to load work orders");
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log("Assignments found:", assignments?.length || 0);
+
+      // Get vehicle info
+      const { data: vehicleData } = await supabase
+        .from("vehicles")
+        .select("license_plate, model")
+        .eq("driver_id", driverData.id)
+        .maybeSingle();
+
+      // Map the data
+      const mapped: WorkOrder[] = (assignments || [])
+        .filter(a => a.purchase_orders)
+        .map((a: any) => ({
+          id: a.purchase_order_id,
+          order_number: a.purchase_orders.order_number,
+          status: a.purchase_orders.status,
+          assignment_status: a.status,
+          created_at: a.purchase_orders.created_at,
+          updated_at: a.purchase_orders.updated_at,
+          total_amount: a.purchase_orders.total_amount || 0,
+          organization_name: a.purchase_orders.organizations?.name ?? "N/A",
+          organization_address: a.purchase_orders.organizations?.address ?? "N/A",
+          organization_phone: a.purchase_orders.organizations?.phone ?? "N/A",
+          supplier_name: a.purchase_orders.suppliers?.name ?? "N/A",
+          vehicle_plate: vehicleData?.license_plate ?? "",
+          vehicle_model: vehicleData?.model ?? "",
+          driver_name: driverData.name,
+          items: (a.purchase_orders.order_items || []).map((item: any) => ({
+            name: item.products?.name || "Unknown Product",
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+          })),
+        }));
+
+      setOrders(mapped);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      toast.error("Failed to load work orders");
+    } finally {
+      setLoading(false);
     }
+  }, [supabase]);
+
+  /* ── Status Update ─────────────────────────────────────────── */
+
+  const updateAssignmentStatus = async (
+    orderId: string,
+    nextStatus: "accepted" | "rejected" | "in_transit" | "delivered"
+  ) => {
+    // Update the assignment status
+    let assignmentStatus = nextStatus;
+    if (nextStatus === "in_transit") assignmentStatus = "in_transit";
+    if (nextStatus === "delivered") assignmentStatus = "delivered";
+    
+    const { error: assignError } = await supabase
+      .from("order_driver_assignments")
+      .update({ 
+        status: assignmentStatus,
+        responded_at: new Date().toISOString()
+      })
+      .eq("purchase_order_id", orderId);
+
+    if (assignError) {
+      toast.error("Update failed: " + assignError.message);
+      return;
+    }
+
+    // Also update the purchase order status if needed
+    let poStatus = "";
+    if (nextStatus === "accepted") poStatus = "accepted";
+    if (nextStatus === "rejected") poStatus = "rejected";
+    if (nextStatus === "in_transit") poStatus = "in_transit";
+    if (nextStatus === "delivered") poStatus = "delivered";
+
+    if (poStatus) {
+      await supabase
+        .from("purchase_orders")
+        .update({ status: poStatus })
+        .eq("id", orderId);
+    }
+
+    const labels: Record<string, string> = {
+      accepted: "Delivery accepted!",
+      rejected: "Delivery rejected.",
+      in_transit: "Transit started!",
+      delivered: "Order marked as delivered!",
+    };
+    
+    toast.success(labels[nextStatus]);
+    fetchOrders();
   };
 
   /* ── Realtime ──────────────────────────────────────────────── */
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await fetchOrders();
-      setLoading(false);
-    })();
+    fetchOrders();
 
     const channel = supabase
       .channel("realtime_transporter_work")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchOrders())
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_driver_assignments" }, () => fetchOrders())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -181,37 +242,35 @@ export default function TransporterWorkPage() {
   /* ── Filtering ─────────────────────────────────────────────── */
 
   const filteredOrders = useMemo(() => {
-    const visible = orders.filter(o => o.delivery_status !== "not_assigned");
     switch (activeTab) {
       case "pending":
-        return visible.filter(o => o.delivery_status === "pending_acceptance");
+        return orders.filter(o => o.assignment_status === "pending");
       case "active":
-        return visible.filter(o => ["accepted", "in_transit"].includes(o.delivery_status));
+        return orders.filter(o => ["accepted", "in_transit"].includes(o.assignment_status));
       case "completed":
-        return visible.filter(o => ["delivered", "rejected"].includes(o.delivery_status));
+        return orders.filter(o => ["delivered", "rejected"].includes(o.assignment_status));
       default:
-        return visible;
+        return orders;
     }
   }, [orders, activeTab]);
 
   /* ── Counts for tabs ───────────────────────────────────────── */
 
   const counts = useMemo(() => {
-    const visible = orders.filter(o => o.delivery_status !== "not_assigned");
     return {
-      all: visible.length,
-      pending: visible.filter(o => o.delivery_status === "pending_acceptance").length,
-      active: visible.filter(o => ["accepted", "in_transit"].includes(o.delivery_status)).length,
-      completed: visible.filter(o => ["delivered", "rejected"].includes(o.delivery_status)).length,
+      all: orders.length,
+      pending: orders.filter(o => o.assignment_status === "pending").length,
+      active: orders.filter(o => ["accepted", "in_transit"].includes(o.assignment_status)).length,
+      completed: orders.filter(o => ["delivered", "rejected"].includes(o.assignment_status)).length,
     };
   }, [orders]);
 
   /* ── Step Index Helper ─────────────────────────────────────── */
 
-  const getStepIndex = (ds: string) => {
-    if (ds === "delivered") return 3;
-    if (ds === "in_transit") return 2;
-    if (ds === "accepted") return 1;
+  const getStepIndex = (status: string) => {
+    if (status === "delivered") return 3;
+    if (status === "in_transit") return 2;
+    if (status === "accepted") return 1;
     return 0;
   };
 
@@ -299,8 +358,8 @@ export default function TransporterWorkPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {filteredOrders.map(order => {
           const isExpanded = expandedId === order.id;
-          const stepIndex = getStepIndex(order.delivery_status);
-          const isRejected = order.delivery_status === "rejected";
+          const stepIndex = getStepIndex(order.assignment_status);
+          const isRejected = order.assignment_status === "rejected";
 
           return (
             <div
@@ -310,7 +369,7 @@ export default function TransporterWorkPage() {
                 borderRadius: "20px",
                 border: isRejected
                   ? "2px solid #fecaca"
-                  : order.delivery_status === "pending_acceptance"
+                  : order.assignment_status === "pending"
                   ? "2px solid #fed7aa"
                   : "1px solid #f1f5f9",
                 boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
@@ -342,19 +401,19 @@ export default function TransporterWorkPage() {
                       fontWeight: 800,
                       textTransform: "uppercase",
                       background: isRejected ? "#fef2f2"
-                        : order.delivery_status === "pending_acceptance" ? "#fff7ed"
-                        : order.delivery_status === "accepted" ? "#ede9fe"
-                        : order.delivery_status === "in_transit" ? "#dbeafe"
-                        : order.delivery_status === "delivered" ? "#dcfce7"
+                        : order.assignment_status === "pending" ? "#fff7ed"
+                        : order.assignment_status === "accepted" ? "#ede9fe"
+                        : order.assignment_status === "in_transit" ? "#dbeafe"
+                        : order.assignment_status === "delivered" ? "#dcfce7"
                         : "#f1f5f9",
                       color: isRejected ? "#dc2626"
-                        : order.delivery_status === "pending_acceptance" ? "#c2410c"
-                        : order.delivery_status === "accepted" ? "#6d28d9"
-                        : order.delivery_status === "in_transit" ? "#1d4ed8"
-                        : order.delivery_status === "delivered" ? "#166534"
+                        : order.assignment_status === "pending" ? "#c2410c"
+                        : order.assignment_status === "accepted" ? "#6d28d9"
+                        : order.assignment_status === "in_transit" ? "#1d4ed8"
+                        : order.assignment_status === "delivered" ? "#166534"
                         : "#475569",
                     }}>
-                      {isRejected ? "Rejected" : order.delivery_status.replace(/_/g, " ")}
+                      {isRejected ? "Rejected" : order.assignment_status}
                     </span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "16px", color: "#64748b", fontSize: "0.85rem", flexWrap: "wrap" }}>
@@ -362,7 +421,7 @@ export default function TransporterWorkPage() {
                       <Building2 size={14} color="#7c3aed" /> {order.organization_name}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <MapPin size={14} color="#7c3aed" /> {order.delivery_address}
+                      <MapPin size={14} color="#7c3aed" /> {order.organization_address}
                     </span>
                   </div>
                 </div>
@@ -426,10 +485,10 @@ export default function TransporterWorkPage() {
 
               {/* ── Action Buttons (always visible) ──────────── */}
               <div style={{ padding: "0 24px 20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                {order.delivery_status === "pending_acceptance" && (
+                {order.assignment_status === "pending" && (
                   <>
                     <button
-                      onClick={(e) => { e.stopPropagation(); updateDeliveryStatus(order.id, "accepted"); }}
+                      onClick={(e) => { e.stopPropagation(); updateAssignmentStatus(order.id, "accepted"); }}
                       style={{
                         flex: 1, minWidth: "140px",
                         display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
@@ -442,7 +501,7 @@ export default function TransporterWorkPage() {
                       <CheckCircle size={18} /> Accept Delivery
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); updateDeliveryStatus(order.id, "rejected"); }}
+                      onClick={(e) => { e.stopPropagation(); updateAssignmentStatus(order.id, "rejected"); }}
                       style={{
                         flex: 1, minWidth: "140px",
                         display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
@@ -457,9 +516,9 @@ export default function TransporterWorkPage() {
                   </>
                 )}
 
-                {order.delivery_status === "accepted" && (
+                {order.assignment_status === "accepted" && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); updateDeliveryStatus(order.id, "in_transit"); }}
+                    onClick={(e) => { e.stopPropagation(); updateAssignmentStatus(order.id, "in_transit"); }}
                     style={{
                       flex: 1, minWidth: "200px",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
@@ -472,9 +531,9 @@ export default function TransporterWorkPage() {
                   </button>
                 )}
 
-                {order.delivery_status === "in_transit" && (
+                {order.assignment_status === "in_transit" && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); updateDeliveryStatus(order.id, "delivered"); }}
+                    onClick={(e) => { e.stopPropagation(); updateAssignmentStatus(order.id, "delivered"); }}
                     style={{
                       flex: 1, minWidth: "200px",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
@@ -487,7 +546,7 @@ export default function TransporterWorkPage() {
                   </button>
                 )}
 
-                {order.delivery_status === "delivered" && (
+                {order.assignment_status === "delivered" && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: "8px",
                     padding: "10px 20px", borderRadius: "12px",
@@ -498,7 +557,7 @@ export default function TransporterWorkPage() {
                   </div>
                 )}
 
-                {order.delivery_status === "rejected" && (
+                {order.assignment_status === "rejected" && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: "8px",
                     padding: "10px 20px", borderRadius: "12px",
