@@ -83,89 +83,43 @@ export default function TransporterDashboard() {
     setLoading(false);
   }, [supabase]);
 
-  /** Accept a delivery: update delivery_status to 'accepted' */
-  const handleAccept = async (orderId: string) => {
+  /** Shared helper: update delivery status via server API (bypasses RLS) */
+  const updateDeliveryViaAPI = async (orderId: string, deliveryStatus: string, successMsg: string) => {
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ 
-          delivery_status: "accepted", 
-          status: "accepted",
-          updated_at: new Date().toISOString() 
-        })
-        .eq("id", orderId);
-
-      if (error) throw error;
-
-      toast.success("Delivery accepted! You can now start transit.");
+      const res = await fetch("/api/delivery-status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, deliveryStatus }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        toast.error("Update failed: " + (result.error || "Unknown error"));
+        return;
+      }
+      toast.success(successMsg);
       fetchDashboardData();
     } catch (err: any) {
-      toast.error("Failed to accept delivery: " + err.message);
+      console.error("[updateDeliveryViaAPI] Error:", err);
+      toast.error("Update failed: " + err.message);
     }
   };
 
-  /** Reject a delivery: update delivery_status to 'rejected' */
-  const handleReject = async (orderId: string, orderNumber: string | null) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ 
-          delivery_status: "rejected", 
-          status: "accepted", // Reset order status so supplier can reassign
-          updated_at: new Date().toISOString() 
-        })
-        .eq("id", orderId);
+  /** Accept a delivery */
+  const handleAccept = (orderId: string) =>
+    updateDeliveryViaAPI(orderId, "accepted", "Delivery accepted! You can now start transit.");
 
-      if (error) throw error;
+  /** Reject a delivery */
+  const handleReject = (orderId: string, _orderNumber: string | null) =>
+    updateDeliveryViaAPI(orderId, "rejected", "Delivery rejected.");
 
-      toast.success("Delivery rejected.");
-      fetchDashboardData();
-    } catch (err: any) {
-      toast.error("Failed to reject delivery: " + err.message);
-    }
-  };
+  /** Start Transit */
+  const handleStartTransit = (orderId: string) =>
+    updateDeliveryViaAPI(orderId, "in_transit", "Transit started!");
 
-  /** Start Transit: update delivery_status to 'in_transit' */
-  const handleStartTransit = async (orderId: string) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ 
-          delivery_status: "in_transit",
-          status: "in_transit",
-          updated_at: new Date().toISOString() 
-        })
-        .eq("id", orderId);
+  /** Mark as Delivered */
+  const handleMarkDelivered = (orderId: string) =>
+    updateDeliveryViaAPI(orderId, "delivered", "Order marked as delivered!");
 
-      if (error) throw error;
-
-      toast.success("Transit started!");
-      fetchDashboardData();
-    } catch (err: any) {
-      toast.error("Failed to start transit: " + err.message);
-    }
-  };
-
-  /** Mark as Delivered: update status to 'delivered' */
-  const handleMarkDelivered = async (orderId: string) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ 
-          delivery_status: "delivered",
-          status: "delivered",
-          updated_at: new Date().toISOString() 
-        })
-        .eq("id", orderId);
-
-      if (error) throw error;
-
-      toast.success("Order marked as delivered!");
-      fetchDashboardData();
-    } catch (err: any) {
-      toast.error("Failed to mark delivered: " + err.message);
-    }
-  };
 
   /**
    * Realtime subscription

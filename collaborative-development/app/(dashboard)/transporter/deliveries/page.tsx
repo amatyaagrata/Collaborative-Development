@@ -122,37 +122,43 @@ export default function TransporterWorkPage() {
     setOrders(mapped);
   }, [supabase]);
 
-  /* ── Status Update ─────────────────────────────────────────── */
+  /* ── Status Update (via server API to bypass RLS) ───────────── */
 
   const updateDeliveryStatus = async (
     orderId: string,
     nextDeliveryStatus: "accepted" | "rejected" | "in_transit" | "delivered"
   ) => {
-    const update: Record<string, string> = {
-      delivery_status: nextDeliveryStatus,
-      updated_at: new Date().toISOString(),
-    };
+    console.log("[Delivery Update] orderId:", orderId, "status:", nextDeliveryStatus);
 
-    if (nextDeliveryStatus === "accepted")   update.status = "accepted";
-    if (nextDeliveryStatus === "rejected")   update.status = "accepted";
-    if (nextDeliveryStatus === "in_transit") update.status = "in_transit";
-    if (nextDeliveryStatus === "delivered")  update.status = "delivered";
+    try {
+      const res = await fetch("/api/delivery-status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, deliveryStatus: nextDeliveryStatus }),
+      });
 
-    const { error } = await supabase.from("orders").update(update).eq("id", orderId);
+      const result = await res.json();
 
-    if (error) {
-      toast.error("Update failed: " + error.message);
-      return;
+      if (!res.ok) {
+        console.error("[Delivery Update] API error:", result);
+        toast.error("Update failed: " + (result.error || "Unknown error"));
+        return;
+      }
+
+      console.log("[Delivery Update] Success:", result);
+
+      const labels: Record<string, string> = {
+        accepted: "Delivery accepted!",
+        rejected: "Delivery rejected.",
+        in_transit: "Transit started!",
+        delivered: "Order marked as delivered!",
+      };
+      toast.success(labels[nextDeliveryStatus]);
+      fetchOrders();
+    } catch (err: any) {
+      console.error("[Delivery Update] Fetch error:", err);
+      toast.error("Update failed: " + err.message);
     }
-
-    const labels: Record<string, string> = {
-      accepted: "Delivery accepted!",
-      rejected: "Delivery rejected.",
-      in_transit: "Transit started!",
-      delivered: "Order marked as delivered!",
-    };
-    toast.success(labels[nextDeliveryStatus]);
-    fetchOrders();
   };
 
   /* ── Realtime ──────────────────────────────────────────────── */
