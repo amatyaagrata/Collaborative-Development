@@ -35,7 +35,7 @@ const users = [
 ];
 
 async function createAuthUsers() {
-  console.log('🚀 Creating Auth users...\n');
+  console.log('Creating Auth users...\n');
 
   let created = 0;
   let updated = 0;
@@ -66,7 +66,7 @@ async function createAuthUsers() {
 
         if (error) throw error;
 
-        console.log(`  ✅ Updated: ${user.email}`);
+        console.log(`  Updated: ${user.email}`);
         updated++;
       } else {
         // Create new user
@@ -83,7 +83,7 @@ async function createAuthUsers() {
 
         if (error) throw error;
 
-        console.log(`  ✅ Created: ${user.email}`);
+        console.log(`  Created: ${user.email}`);
         created++;
       }
 
@@ -100,26 +100,26 @@ async function createAuthUsers() {
         }, { onConflict: 'email' });
 
       if (userTableError) {
-        console.log(`  ⚠️  Warning: Could not update users table: ${userTableError.message}`);
+        console.log(`  Warning: Could not update users table: ${userTableError.message}`);
       }
 
     } catch (error) {
-      console.error(`  ❌ Failed: ${user.email}`, error.message);
+      console.error(`  Failed: ${user.email}`, error.message);
       failed++;
     }
   }
 
   console.log('\n' + '='.repeat(50));
-  console.log(`\n📊 Summary:`);
-  console.log(`   ✅ Created: ${created}`);
-  console.log(`   🔄 Updated: ${updated}`);
-  console.log(`   ❌ Failed: ${failed}`);
-  console.log(`   📧 Total users: ${users.length}`);
+  console.log(`\nSummary:`);
+  console.log(`   Created: ${created}`);
+  console.log(`   Updated: ${updated}`);
+  console.log(`   Failed: ${failed}`);
+  console.log(`   Total users: ${users.length}`);
 
-  console.log('\n🎉 Setup complete! You can now login with these credentials:\n');
+  console.log('\nSetup complete! You can now login with these credentials:\n');
   console.log('Store Admin: admin@allinonestore.com / StoreAdmin2025!');
   console.log('Cafe Admin: admin@cafe.com / CafeAdmin2025!');
-  console.log('\n📍 Login at: http://localhost:3000/login');
+  console.log('\nLogin at: http://localhost:3000/login');
 }
 
 createAuthUsers();
