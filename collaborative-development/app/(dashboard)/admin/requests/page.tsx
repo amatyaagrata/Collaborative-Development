@@ -50,7 +50,7 @@ const addAnimationStyles = () => {
   }
 };
 
-/* ── Approve Modal ─────────────────────────────────────────────────────────── */
+/* Approve Modal */
 function ApproveModal({
   request,
   onClose,
@@ -158,18 +158,18 @@ function ApproveModal({
               alignSelf: "flex-start",
             }}
           >
-            🔄 Generate Random Password
+            Generate Random Password
           </button>
 
           <p style={{ fontSize: "0.75rem", color: "#94a3b8", margin: 0, lineHeight: 1.4 }}>
-            ⚠️ Share this password with the user securely. They can change it after logging in.
+            Share this password with the user securely. They can change it after logging in.
           </p>
         </div>
 
         <div style={{ borderTop: "1px solid #e9ecf0", padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button onClick={onClose} disabled={loading} style={cancelBtn}>Cancel</button>
           <button onClick={handleSubmit} disabled={loading || !password || !confirm} style={approveBtn}>
-            {loading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <CheckCircle size={14} />}
+            {loading ? <Loader2 size={14} className="spin" /> : <CheckCircle size={14} />}
             {loading ? " Approving..." : " Approve & Create Account"}
           </button>
         </div>
@@ -178,7 +178,7 @@ function ApproveModal({
   );
 }
 
-/* ── Reject Modal ──────────────────────────────────────────────────────────── */
+/* Reject Modal */
 function RejectModal({
   request,
   onClose,
@@ -218,7 +218,7 @@ function RejectModal({
         <div style={{ borderTop: "1px solid #e9ecf0", padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button onClick={onClose} disabled={loading} style={cancelBtn}>Cancel</button>
           <button onClick={() => onConfirm(reason)} disabled={loading} style={rejectBtn}>
-            {loading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <XCircle size={14} />}
+            {loading ? <Loader2 size={14} className="spin" /> : <XCircle size={14} />}
             {loading ? " Rejecting..." : " Reject Request"}
           </button>
         </div>
@@ -227,7 +227,7 @@ function RejectModal({
   );
 }
 
-/* ── Main Page ─────────────────────────────────────────────────────────────── */
+/* Main Page */
 export default function AdminRequestsPage() {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -238,6 +238,7 @@ export default function AdminRequestsPage() {
   const [adminUserId, setAdminUserId] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState("");
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const supabase = createClient();
 
   // Add animation styles
   useEffect(() => {
@@ -246,11 +247,20 @@ export default function AdminRequestsPage() {
 
   // Get the current admin's user ID for auditing
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setAdminUserId(data.user.id);
-    });
-  }, []);
+    const getAdminUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Get the user record from users table
+        const { data: userRecord } = await supabase
+          .from("users")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .single();
+        if (userRecord) setAdminUserId(userRecord.id);
+      }
+    };
+    getAdminUser();
+  }, [supabase]);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -271,8 +281,6 @@ export default function AdminRequestsPage() {
     fetchRequests();
   }, [fetchRequests]);
 
-
-
   // Filter requests by search term
   const filteredRequests = requests.filter(req =>
     req.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -280,7 +288,7 @@ export default function AdminRequestsPage() {
     (req.reason && req.reason.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  /* ── Approve handler ── */
+  /* Approve handler */
   const handleApprove = async (password: string) => {
     if (!approveTarget) return;
     try {
@@ -299,7 +307,7 @@ export default function AdminRequestsPage() {
       if (!res.ok) throw new Error(json.error || "Approval failed");
       
       toast.success(`${approveTarget.name}'s account has been created!`);
-      console.log(`📧 Credentials for ${approveTarget.email}: Password: ${password}`);
+      console.log(`Credentials for ${approveTarget.email}: Password: ${password}`);
       
       setApproveTarget(null);
       await fetchRequests();
@@ -310,7 +318,7 @@ export default function AdminRequestsPage() {
     }
   };
 
-  /* ── Reject handler ── */
+  /* Reject handler */
   const handleReject = async (reason: string) => {
     if (!rejectTarget) return;
     try {
@@ -545,7 +553,7 @@ export default function AdminRequestsPage() {
   );
 }
 
-/* ── Shared Styles ─────────────────────────────────────────────────────────── */
+/* Shared Styles */
 const overlay: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 50,
   display: "flex", alignItems: "center", justifyContent: "center",
