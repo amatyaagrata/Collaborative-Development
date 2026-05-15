@@ -15,37 +15,62 @@ export default function AdminSuppliersPage() {
   const fetchSuppliers = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
 
-      const { data: userRow } = await supabase
+      // Step 1: Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error("Auth error:", authError);
+        return;
+      }
+
+      console.log("Logged in user:", user.email);
+
+      // Step 2: Get user's organization - FIXED: use 'org_id' not 'organization_id'
+      const { data: userRow, error: userError } = await supabase
         .from("users")
-        .select("organization_id")
+        .select("org_id")  // Changed from "organization_id"
         .eq("auth_user_id", user.id)
         .single();
 
-      if (userRow?.organization_id) {
+      if (userError) {
+        console.error("User fetch error:", userError);
+        return;
+      }
+
+      console.log("User org_id:", userRow?.org_id);
+
+      // Step 3: Fetch suppliers for this organization - FIXED: use 'org_id' not 'organization_id'
+      if (userRow?.org_id) {
         const { data, error } = await supabase
           .from("suppliers")
           .select("*")
-          .eq("organization_id", userRow.organization_id)
+          .eq("org_id", userRow.org_id)  // Changed from "organization_id"
           .order("name", { ascending: true });
 
         if (error) throw error;
+
+        console.log("Suppliers found:", data?.length || 0);
         setSuppliers(data || []);
+      } else {
+        console.log("No org_id found for user");
+        setSuppliers([]);
       }
     } catch (err) {
+      console.error("Fetch suppliers error:", err);
       toast.error(err instanceof Error ? err.message : "Failed to load suppliers");
     } finally {
       setLoading(false);
     }
   }, [supabase]);
 
-  useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
-  const filteredSuppliers = suppliers.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.contact_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  // FIXED: Check for undefined properties
+  const filteredSuppliers = suppliers.filter(s =>
+    (s.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+    (s.contact_email?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
     (s.address || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -56,16 +81,20 @@ export default function AdminSuppliersPage() {
           <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#1a1a2e", margin: "0 0 4px" }}>Suppliers</h2>
           <p style={{ fontSize: "0.875rem", color: "#64748b", margin: 0 }}>Manage suppliers registered under your organization.</p>
         </div>
-        <button onClick={fetchSuppliers} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff", fontSize: "0.8rem", cursor: "pointer", color: "#64748b" }}>
+        <button
+          onClick={fetchSuppliers}
+          disabled={loading}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff", fontSize: "0.8rem", cursor: "pointer", color: "#64748b" }}
+        >
           <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh
         </button>
       </div>
 
       <div style={{ position: "relative", marginBottom: 20 }}>
         <Search size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
-        <input 
-          type="text" 
-          placeholder="Search by name, email, or address..." 
+        <input
+          type="text"
+          placeholder="Search by name, email, or address..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }}
@@ -81,6 +110,7 @@ export default function AdminSuppliersPage() {
           <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
             <Building2 size={40} style={{ margin: "0 auto 12px", opacity: 0.4 }} />
             <p style={{ fontWeight: 600 }}>No suppliers found</p>
+            <p style={{ fontSize: "0.8rem", marginTop: 8 }}>Add suppliers to get started</p>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, padding: 20 }}>
@@ -94,7 +124,7 @@ export default function AdminSuppliersPage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b" }}>
-                    <Mail size={14} /> {supplier.contact_email}
+                    <Mail size={14} /> {supplier.contact_email || "No email"}
                   </div>
                   {supplier.contact_phone && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b" }}>
