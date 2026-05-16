@@ -6,7 +6,7 @@ export async function GET() {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data: users } = await supabase.from('users').select('id, email, role, organization_id, auth_user_id');
+  const { data: users } = await supabase.from('users').select('id, email, role, org_id, auth_user_id');
   const { data: roles } = await supabase.from('user_roles').select('*');
   const { data: suppliers } = await supabase.from('suppliers').select('*');
   const { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(5);
@@ -16,7 +16,7 @@ export async function GET() {
     .select(`
       *,
       order_items ( id, quantity, unit_price, total_price, products:product_id (name) ),
-      organizations:organization_id ( id, name, address, phone, email )
+      organizations:org_id ( id, name, address, phone, email )
     `)
     .limit(1);
 

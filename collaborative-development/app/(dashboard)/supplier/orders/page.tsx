@@ -188,7 +188,32 @@ export default function SupplierOrders() {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      setOrders(data || []);
+      const mapped: PurchaseOrder[] = (data || []).map((order: any) => {
+        const suppliers = Array.isArray(order.suppliers) ? order.suppliers[0] : order.suppliers;
+        const organizations = Array.isArray(order.organizations) ? order.organizations[0] : order.organizations;
+        
+        return {
+          id: order.id,
+          order_number: order.order_number,
+          status: order.status,
+          priority: order.priority,
+          total_amount: order.total_amount,
+          expected_delivery_date: order.expected_delivery_date,
+          notes: order.notes,
+          created_at: order.created_at,
+          supplier_id: order.supplier_id,
+          suppliers: suppliers || { name: "N/A", email: "N/A" },
+          organizations: organizations || { name: "N/A", address: "N/A", phone: "N/A" },
+          order_items: (order.order_items || []).map((item: any) => ({
+            id: item.id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            products: (Array.isArray(item.products) ? item.products[0] : item.products) || { id: "", name: "Unknown", selling_price: 0 },
+          }))
+        };
+      });
+      setOrders(mapped);
     } catch (err) {
       console.error("Error fetching orders:", err);
       toast.error("Failed to load orders");

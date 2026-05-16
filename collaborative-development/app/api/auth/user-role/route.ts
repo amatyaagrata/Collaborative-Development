@@ -79,7 +79,7 @@ export async function GET(request: Request) {
       // Also check users table for orgs (fallback)
       const { data: userRecords } = await adminClient
         .from("users")
-        .select("role, organization_id, organizations(id, name)")
+        .select("role, org_id, organizations:org_id(id, name)")
         .eq("auth_user_id", user.id);
 
       // Merge and deduplicate by organization_id
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
           .from("users")
           .select("role, is_approved")
           .eq("auth_user_id", user.id)
-          .eq("organization_id", chosenOrgId)
+          .eq("org_id", chosenOrgId)
           .maybeSingle();
         if (userData?.role) {
           if (!userData.is_approved) {

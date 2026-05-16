@@ -57,28 +57,48 @@ export default function IMProductsPage() {
         return;
       }
 
-      // SHOW ALL PRODUCTS - Not just from delivered orders
+      // ONLY SHOW PRODUCTS THAT HAVE BEEN DELIVERED VIA PURCHASE ORDERS
       const { data: prodData, error: prodError } = await supabase
         .from("products")
         .select(`
           id,
           name,
+          category_id,
           selling_price,
           current_stock,
           min_stock_level,
           created_at,
-          categories:category_id (name)
+          categories:category_id (name),
+          order_items!inner(
+            purchase_orders!inner(status)
+          )
         `)
         .eq("org_id", userRow.org_id)
+        .eq("order_items.purchase_orders.status", "delivered")
         .order("created_at", { ascending: false });
 
       if (prodError) {
-        console.error("Products fetch error:", prodError);
-        toast.error("Failed to load products");
-        setProducts([]);
+        // If error is PGRST204 (No results because of !inner), it's not a real error for the user
+        if (prodError.code === 'PGRST204' || prodError.message?.includes('0 rows')) {
+          setProducts([]);
+        } else {
+          console.error("Products fetch error:", prodError);
+          toast.error("Failed to load products");
+          setProducts([]);
+        }
       } else {
         console.log("Products loaded:", prodData?.length || 0);
-        setProducts(prodData || []);
+        const mapped = (prodData || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          category_id: p.category_id,
+          selling_price: p.selling_price,
+          current_stock: p.current_stock,
+          min_stock_level: p.min_stock_level,
+          created_at: p.created_at,
+          categories: Array.isArray(p.categories) ? p.categories[0] : p.categories
+        })) as Product[];
+        setProducts(mapped);
       }
 
     } catch (err) {
