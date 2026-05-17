@@ -177,7 +177,7 @@ export default function TransporterVehiclesPage() {
         </div>
       )}
 
-      {loading && <p style={{ textAlign: "center", color: "#94a3b8" }}>Loading fleet...</p>}
+      {loading && <p style={{ textAlign: "center", color: "#94a3b8" }}>Loading vehicles...</p>}
 
       {/* Registered fleet vehicles */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" }}>
