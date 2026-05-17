@@ -15,11 +15,11 @@ const DELIVERY_TO_ORDER_STATUS: Record<DeliveryStatus, string> = {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { orderId, deliveryStatus } = body;
+    const { assignmentId, orderId, deliveryStatus } = body;
 
-    if (!orderId || !deliveryStatus) {
+    if (!assignmentId || !deliveryStatus) {
       return NextResponse.json(
-        { error: "Missing orderId or deliveryStatus" },
+        { error: "Missing assignmentId or deliveryStatus" },
         { status: 400 }
       );
     }
@@ -41,12 +41,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Use admin client to look up the user and verify they are a transporter
+    // 2. Use admin client to look up the user
     const admin = createAdminClient();
 
     const { data: userRow, error: userErr } = await admin
       .from("users")
-      .select("id, role, organization_id")
+      .select("id, role, org_id")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -57,61 +57,72 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    if (userRow.role !== "transporter") {
+    if (userRow.role !== "driver" && userRow.role !== "transporter") {
       return NextResponse.json(
         { error: "Only transporters can update delivery status" },
         { status: 403 }
       );
     }
 
-    // 3. Verify the order belongs to this transporter
-    const { data: order, error: orderErr } = await admin
-      .from("orders")
-      .select("id, transporter_id, organization_id, delivery_status")
-      .eq("id", orderId)
+    // 3. Get driver profile
+    const { data: driverRow, error: driverErr } = await admin
+      .from("drivers")
+      .select("id")
+      .eq("user_id", userRow.id)
       .single();
 
-    if (orderErr || !order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
-      );
+    if (driverErr || !driverRow) {
+      return NextResponse.json({ error: "Driver profile not found" }, { status: 403 });
     }
 
-    if (order.transporter_id !== userRow.id) {
-      return NextResponse.json(
-        { error: "This order is not assigned to you" },
-        { status: 403 }
-      );
+    // 4. Verify assignment belongs to this driver
+    const { data: assignment, error: assignmentErr } = await admin
+      .from("order_driver_assignments")
+      .select("id, driver_id, purchase_order_id")
+      .eq("id", assignmentId)
+      .single();
+
+    if (assignmentErr || !assignment) {
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
-    if (order.organization_id !== userRow.organization_id) {
-      return NextResponse.json(
-        { error: "Organization mismatch" },
-        { status: 403 }
-      );
+    if (assignment.driver_id !== driverRow.id) {
+      return NextResponse.json({ error: "This assignment is not yours" }, { status: 403 });
     }
 
-    // 4. Perform the update using admin client (bypasses RLS)
-    const { data: updated, error: updateErr } = await admin
-      .from("orders")
+    // 5. Perform the update using admin client (bypasses RLS)
+    const { data: updatedAssign, error: updateAssignErr } = await admin
+      .from("order_driver_assignments")
       .update({
-        delivery_status: deliveryStatus,
-        status: DELIVERY_TO_ORDER_STATUS[deliveryStatus as DeliveryStatus],
+        status: deliveryStatus,
+        responded_at: new Date().toISOString()
       })
-      .eq("id", orderId)
+      .eq("id", assignmentId)
       .select()
       .single();
 
-    if (updateErr) {
-      console.error("[delivery-status API] Update error:", updateErr);
-      return NextResponse.json(
-        { error: updateErr.message },
-        { status: 500 }
-      );
+    if (updateAssignErr) throw updateAssignErr;
+    if (!updatedAssign) {
+      return NextResponse.json({ error: "Failed to update assignment. No rows matched." }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, order: updated });
+    // 6. Sync purchase order status
+    const poStatus = DELIVERY_TO_ORDER_STATUS[deliveryStatus as DeliveryStatus];
+    if (orderId) {
+      const { error: poErr } = await admin
+        .from("purchase_orders")
+        .update({ status: poStatus || deliveryStatus })
+        .eq("id", orderId);
+      if (poErr) console.error("PO sync error:", poErr);
+    } else if (assignment.purchase_order_id) {
+      const { error: poErr } = await admin
+        .from("purchase_orders")
+        .update({ status: poStatus || deliveryStatus })
+        .eq("id", assignment.purchase_order_id);
+      if (poErr) console.error("PO sync error:", poErr);
+    }
+
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("[delivery-status API] Unexpected error:", err);
     return NextResponse.json(

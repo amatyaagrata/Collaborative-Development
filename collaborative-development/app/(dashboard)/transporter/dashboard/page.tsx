@@ -12,6 +12,7 @@ import { WelcomeMessage } from "@/components/shared/WelcomeMessage";
  */
 interface Order {
   id: string;
+  assignment_id?: string;
   order_number: string | null;
   status: string;
   priority: string;
@@ -31,94 +32,134 @@ export default function TransporterDashboard() {
   const supabase = createClient();
 
   /**
-   * Fetches orders assigned to the current driver directly from the orders table.
+   * Fetches orders assigned to the current driver directly from the order_driver_assignments table.
    */
   const fetchDashboardData = useCallback(async () => {
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData.user) return;
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return;
 
-    // Get the user's id from the users table
-    const { data: userRow } = await supabase
+    // First get the user's id from the users table (public.users)
+    const { data: userRow, error: userErr } = await supabase
       .from("users")
       .select("id")
-      .eq("auth_user_id", authData.user.id)
+      .eq("auth_user_id", user.id)
       .single();
 
-    if (!userRow) { setLoading(false); return; }
+    if (userErr || !userRow) {
+      setLoading(false);
+      return;
+    }
 
-    // Fetch orders where this user is the transporter
-    const { data, error } = await supabase
-      .from("orders")
+    // Get driver ID from drivers table
+    const { data: driverData, error: driverError } = await supabase
+      .from("drivers")
+      .select("id")
+      .eq("user_id", userRow.id)
+      .maybeSingle();
+
+    if (driverError || !driverData) {
+      setLoading(false);
+      return;
+    }
+
+    // Fetch assignments from order_driver_assignments
+    const { data: assignments, error } = await supabase
+      .from("order_driver_assignments")
       .select(`
         id,
-        order_number,
         status,
-        created_at,
-        updated_at,
-        notes,
-        delivery_status,
-        suppliers:supplier_id (
-          name,
-          address
-        )
+        purchase_order_id,
+        assigned_at
       `)
-      .eq("transporter_id", userRow.id)
-      .order("created_at", { ascending: false });
+      .eq("driver_id", driverData.id)
+      .order("assigned_at", { ascending: false });
 
-    if (!error && data) {
-      const mapped: Order[] = (data as any[]).map((o: any) => ({
-        id: o.id,
-        order_number: o.order_number,
-        status: o.status,
-        priority: "medium", // Default since priority was removed in V3
-        created_at: o.created_at,
-        updated_at: o.updated_at,
-        notes: o.notes,
-        delivery_status: o.delivery_status || "not_assigned",
-        supplier_name: o.suppliers?.name,
-        delivery_address: o.suppliers?.address,
-      }));
+    if (!error && assignments) {
+      const poIds = assignments.map((a: any) => a.purchase_order_id).filter(Boolean);
+      
+      let mapped: Order[] = [];
+      if (poIds.length > 0) {
+        const { data: purchaseOrders } = await supabase
+          .from("purchase_orders")
+          .select(`
+            id,
+            order_number,
+            status,
+            created_at,
+            updated_at,
+            notes,
+            suppliers:supplier_id (
+              name
+            ),
+            organizations:org_id (
+              address
+            )
+          `)
+          .in("id", poIds);
+
+        if (purchaseOrders) {
+          mapped = assignments.map((a: any) => {
+            const po = purchaseOrders.find(p => p.id === a.purchase_order_id);
+            if (!po) return null;
+            return {
+              id: a.purchase_order_id,
+              assignment_id: a.id,
+              order_number: po.order_number,
+              status: po.status,
+              priority: "medium",
+              created_at: po.created_at,
+              updated_at: po.updated_at,
+              notes: po.notes,
+              delivery_status: a.status,
+              supplier_name: (po.suppliers as any)?.name || (po.suppliers as any)?.[0]?.name || "N/A",
+              delivery_address: (po.organizations as any)?.address || (po.organizations as any)?.[0]?.address || "N/A",
+            };
+          }).filter(Boolean) as Order[];
+        }
+      }
       setOrders(mapped);
     }
     setLoading(false);
   }, [supabase]);
 
-  /** Shared helper: update delivery status via server API (bypasses RLS) */
-  const updateDeliveryViaAPI = async (orderId: string, deliveryStatus: string, successMsg: string) => {
+  /** Shared helper: update delivery status directly */
+  const updateDeliveryStatus = async (orderId: string, assignmentId: string, deliveryStatus: string, successMsg: string) => {
     try {
       const res = await fetch("/api/delivery-status", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, deliveryStatus }),
+        body: JSON.stringify({ assignmentId, orderId, deliveryStatus }),
       });
+      
       const result = await res.json();
       if (!res.ok) {
         toast.error("Update failed: " + (result.error || "Unknown error"));
         return;
       }
+
       toast.success(successMsg);
       fetchDashboardData();
     } catch (err: any) {
-      console.error("[updateDeliveryViaAPI] Error:", err);
+      console.error("[updateDeliveryStatus] Error:", err);
       toast.error("Update failed: " + err.message);
     }
   };
 
   /** Accept a delivery */
-  const handleAccept = (orderId: string) =>
-    updateDeliveryViaAPI(orderId, "accepted", "Delivery accepted! You can now start transit.");
+  const handleAccept = (orderId: string, assignmentId: string) =>
+    updateDeliveryStatus(orderId, assignmentId!, "accepted", "Delivery accepted! You can now start transit.");
 
   /** Reject a delivery */
-  const handleReject = (orderId: string, _orderNumber: string | null) =>
-    updateDeliveryViaAPI(orderId, "rejected", "Delivery rejected.");
+  const handleReject = (orderId: string, assignmentId: string | undefined) =>
+    updateDeliveryStatus(orderId, assignmentId!, "rejected", "Delivery rejected.");
 
   /** Start Transit */
-  const handleStartTransit = (orderId: string) =>
-    updateDeliveryViaAPI(orderId, "in_transit", "Transit started!");
+  const handleStartTransit = (orderId: string, assignmentId: string) =>
+    updateDeliveryStatus(orderId, assignmentId, "in_transit", "Transit started!");
 
   /** Mark as Delivered */
-  const handleMarkDelivered = (orderId: string) =>
-    updateDeliveryViaAPI(orderId, "delivered", "Order marked as delivered!");
+  const handleMarkDelivered = (orderId: string, assignmentId: string) =>
+    updateDeliveryStatus(orderId, assignmentId, "delivered", "Order marked as delivered!");
 
 
   /**
@@ -129,7 +170,7 @@ export default function TransporterDashboard() {
 
     const channel = supabase
       .channel("realtime_driver_dashboard")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchDashboardData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_driver_assignments" }, () => fetchDashboardData())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -139,7 +180,7 @@ export default function TransporterDashboard() {
    * Derive stats from live data.
    */
   const stats = useMemo(() => {
-    const pendingRequests = orders.filter((o) => o.delivery_status === "pending_acceptance");
+    const pendingRequests = orders.filter((o) => o.delivery_status === "pending");
     const activeList = orders.filter((o) => ["accepted", "in_transit"].includes(o.delivery_status));
     const deliveredOrders = orders.filter((o) => o.delivery_status === "delivered");
 
@@ -200,13 +241,13 @@ export default function TransporterDashboard() {
 
                   <div style={{ display: "flex", gap: "10px" }}>
                     <button
-                      onClick={() => handleAccept(order.id)}
+                      onClick={() => handleAccept(order.id, order.assignment_id!)}
                       style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "12px", border: "none", background: "#10b981", color: "white", fontWeight: "700", fontSize: "0.9rem", cursor: "pointer" }}
                     >
                       <CheckCircle size={18} /> Accept
                     </button>
                     <button
-                      onClick={() => handleReject(order.id, order.order_number)}
+                      onClick={() => handleReject(order.id, order.assignment_id)}
                       style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "12px", border: "2px solid #fca5a5", background: "white", color: "#dc2626", fontWeight: "700", fontSize: "0.9rem", cursor: "pointer" }}
                     >
                       <XCircle size={18} /> Reject
@@ -269,10 +310,10 @@ export default function TransporterDashboard() {
                   </p>
                   <div style={{ display: "flex", gap: "8px" }}>
                     {order.delivery_status === "accepted" && (
-                      <button onClick={() => handleStartTransit(order.id)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#7c3aed", color: "white", fontWeight: 600 }}>Start Transit</button>
+                      <button onClick={() => handleStartTransit(order.id, order.assignment_id!)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#7c3aed", color: "white", fontWeight: 600 }}>Start Transit</button>
                     )}
                     {order.delivery_status === "in_transit" && (
-                      <button onClick={() => handleMarkDelivered(order.id)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#10b981", color: "white", fontWeight: 600 }}>Mark Delivered</button>
+                      <button onClick={() => handleMarkDelivered(order.id, order.assignment_id!)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#10b981", color: "white", fontWeight: 600 }}>Mark Delivered</button>
                     )}
                   </div>
                 </div>
@@ -310,7 +351,7 @@ export default function TransporterDashboard() {
                 </thead>
                 <tbody>
                   {modalData.map((order) => (
-                    <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={order.assignment_id || order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '12px', fontWeight: '600' }}>{order.order_number || `#${order.id.slice(0, 8)}`}</td>
                       <td style={{ padding: '12px' }}>{order.supplier_name || "N/A"}</td>
                       <td style={{ padding: '12px' }}>

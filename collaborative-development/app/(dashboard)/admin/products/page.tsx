@@ -73,7 +73,11 @@ export default function AdminProductsPage() {
           console.error('Products fetch error:', productsError);
         } else {
           console.log('Products found:', data?.length || 0);
-          setProducts(data || []);
+          const mapped = (data || []).map((p: any) => ({
+            ...p,
+            categories: Array.isArray(p.categories) ? p.categories[0] : p.categories
+          })) as Product[];
+          setProducts(mapped);
         }
       }
     } catch (err) {

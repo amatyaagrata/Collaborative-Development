@@ -103,11 +103,11 @@ export default function IMStockPage() {
         console.error("Orders fetch error:", error);
         toast.error("Failed to load orders: " + error.message);
       } else {
-        const transformedOrders = (data || []).map(order => ({
+        const transformedOrders = (data || []).map((order: any) => ({
           id: order.id,
           order_number: order.order_number || order.id.slice(0, 8),
           product_name: "Purchase Order",
-          supplier_name: order.suppliers?.name || "Unknown",
+          supplier_name: (order.suppliers as any)?.name || (order.suppliers as any)?.[0]?.name || "Unknown Supplier",
           custom_product_id: order.order_number || order.id.slice(0, 8),
           category: "Purchase Order",
           total_amount: order.total_amount || 0,

@@ -24,11 +24,23 @@ export default function TransporterRoutesPage() {
 
       console.log("Transporter user:", user.email);
 
+      // First get the user's id from the users table (public.users)
+      const { data: userRow, error: userErr } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (userErr || !userRow) {
+        setLoading(false);
+        return;
+      }
+
       // Get the driver ID from users table
       const { data: driverData, error: driverError } = await supabase
         .from("drivers")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", userRow.id)
         .maybeSingle();
 
       if (driverError) {
@@ -53,18 +65,7 @@ export default function TransporterRoutesPage() {
           id,
           status,
           purchase_order_id,
-          assigned_at,
-          purchase_orders:purchase_order_id (
-            id,
-            order_number,
-            status,
-            total_amount,
-            expected_delivery_date,
-            organizations:org_id (
-              name,
-              address
-            )
-          )
+          assigned_at
         `)
         .eq("driver_id", driverData.id)
         .in("status", ["accepted", "pending"])
@@ -80,18 +81,42 @@ export default function TransporterRoutesPage() {
 
       console.log("Assignments found:", assignments?.length || 0);
 
-      // Map the data
-      const mapped = (assignments || [])
-        .filter(a => a.purchase_orders)
-        .map((a: any) => ({
-          id: a.purchase_order_id,
-          order_number: a.purchase_orders.order_number ?? a.purchase_order_id.slice(0, 8),
-          status: a.purchase_orders.status,
-          destination_name: a.purchase_orders.organizations?.name || "N/A",
-          destination_address: a.purchase_orders.organizations?.address || "",
-          assignment_status: a.status,
-          assigned_at: a.assigned_at,
-        }));
+      const poIds = assignments?.map((a: any) => a.purchase_order_id).filter(Boolean) || [];
+      let mapped: any[] = [];
+
+      if (poIds.length > 0) {
+        const { data: purchaseOrders, error: poError } = await supabase
+          .from("purchase_orders")
+          .select(`
+            id,
+            order_number,
+            status,
+            total_amount,
+            expected_delivery_date,
+            organizations:org_id (
+              name,
+              address
+            )
+          `)
+          .in("id", poIds);
+
+        if (!poError && purchaseOrders) {
+          mapped = assignments.map((a: any) => {
+            const po = purchaseOrders.find(p => p.id === a.purchase_order_id);
+            if (!po) return null;
+            return {
+              id: a.purchase_order_id,
+              assignment_id: a.id,
+              order_number: po.order_number ?? a.purchase_order_id.slice(0, 8),
+              status: po.status,
+              destination_name: (po.organizations as any)?.name || (po.organizations as any)?.[0]?.name || "N/A",
+              destination_address: (po.organizations as any)?.address || (po.organizations as any)?.[0]?.address || "",
+              assignment_status: a.status,
+              assigned_at: a.assigned_at,
+            };
+          }).filter(Boolean);
+        }
+      }
 
       setOrders(mapped);
       
@@ -163,7 +188,7 @@ export default function TransporterRoutesPage() {
 
             {orders.map((order) => (
               <div 
-                key={order.id} 
+                key={order.assignment_id || order.id} 
                 onClick={() => order.destination_address && setSelectedAddress(order.destination_address)}
                 style={{ 
                   padding: "16px", 

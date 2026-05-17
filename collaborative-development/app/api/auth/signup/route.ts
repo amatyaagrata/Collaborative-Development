@@ -136,7 +136,7 @@ export async function POST(request: Request) {
           email,
           role: normalizedRole,
           phone,
-          organization_id: organizationId,
+          org_id: organizationId,
         });
 
       if (userError && !isMissingTableError(userError)) {

@@ -11,11 +11,10 @@ import { toast } from "sonner";
  */
 interface Vehicle {
   id: string;
-  license_plate: string;
+  plate_number: string;
   model: string;
-  battery_level: string | null;
-  fuel_level: string | null;
-  transporter_id: string | null;
+  vehicle_type: string;
+  driver_id: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -27,8 +26,9 @@ export default function TransporterVehiclesPage() {
   const [transporterId, setTransporterId] = useState<string | null>(null);
 
   const [newVehicle, setNewVehicle] = useState({
-    license_plate: "",
+    plate_number: "",
     model: "",
+    vehicle_type: "truck",
   });
 
   const supabase = createClient();
@@ -39,28 +39,33 @@ export default function TransporterVehiclesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Resolve internal user id from the users table (this is transporter_id)
+      // Resolve internal user id from the users table
       const { data: userRow } = await supabase
         .from("users")
-        .select("id, organization_id")
+        .select("id, org_id")
         .eq("auth_user_id", user.id)
         .single();
 
       if (!userRow) return;
-      
-      const { data: orgData } = await supabase
-        .from("organizations")
+
+      // Now resolve the actual driver_id from the drivers table
+      const { data: driverRow } = await supabase
+        .from("drivers")
         .select("id")
-        .eq("id", userRow.organization_id)
+        .eq("user_id", userRow.id)
         .single();
 
-      setTransporterId(userRow.id);
-      const orgId = orgData?.id || userRow.organization_id;
+      if (!driverRow) {
+        toast.error("Driver profile not found");
+        return;
+      }
+      
+      setTransporterId(driverRow.id);
 
       const { data, error } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("transporter_id", userRow.id)
+        .eq("driver_id", driverRow.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -75,29 +80,39 @@ export default function TransporterVehiclesPage() {
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transporterId) { toast.error("User session not loaded"); return; }
-    if (!newVehicle.license_plate.trim()) { toast.error("Plate number is required"); return; }
+    if (!newVehicle.plate_number.trim()) { toast.error("Plate number is required"); return; }
     if (!newVehicle.model.trim()) { toast.error("Vehicle model/name is required"); return; }
 
     const { data: userRow } = await supabase
       .from("users")
-      .select("id, organization_id")
+      .select("id, org_id")
       .eq("auth_user_id", (await supabase.auth.getUser()).data.user?.id)
       .single();
 
     if (!userRow) { toast.error("User profile not found"); return; }
 
+    // Resolve driver id
+    const { data: driverRow } = await supabase
+      .from("drivers")
+      .select("id")
+      .eq("user_id", userRow.id)
+      .single();
+
+    if (!driverRow) { toast.error("Driver profile not found"); return; }
+
     const { error } = await supabase.from("vehicles").insert([{
-      transporter_id: userRow.id,
-      organization_id: userRow.organization_id,
-      license_plate: newVehicle.license_plate.trim().toUpperCase(),
+      driver_id: driverRow.id,
+      org_id: userRow.org_id,
+      plate_number: newVehicle.plate_number.trim().toUpperCase(),
       model: newVehicle.model.trim(),
+      vehicle_type: newVehicle.vehicle_type,
     }]);
 
     if (error) {
       toast.error("Error: " + error.message);
     } else {
       toast.success("Vehicle added to fleet");
-      setNewVehicle({ license_plate: "", model: "" });
+      setNewVehicle({ plate_number: "", model: "", vehicle_type: "truck" });
       setShowAddForm(false);
       fetchVehicles();
     }
@@ -126,8 +141,8 @@ export default function TransporterVehiclesPage() {
               <input
                 required
                 placeholder="e.g. BA 1 PA 1234"
-                value={newVehicle.license_plate}
-                onChange={e => setNewVehicle({ ...newVehicle, license_plate: e.target.value })}
+                value={newVehicle.plate_number}
+                onChange={e => setNewVehicle({ ...newVehicle, plate_number: e.target.value })}
                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
               />
             </div>
@@ -140,6 +155,20 @@ export default function TransporterVehiclesPage() {
                 onChange={e => setNewVehicle({ ...newVehicle, model: e.target.value })}
                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
               />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#94a3b8", marginBottom: "4px" }}>VEHICLE TYPE *</label>
+              <select
+                required
+                value={newVehicle.vehicle_type}
+                onChange={e => setNewVehicle({ ...newVehicle, vehicle_type: e.target.value })}
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", background: "white" }}
+              >
+                <option value="truck">Truck</option>
+                <option value="van">Van</option>
+                <option value="bike">Bike</option>
+                <option value="car">Car</option>
+              </select>
             </div>
             <button type="submit" style={{ background: "#10b981", color: "white", border: "none", padding: "10px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
               Register
@@ -161,17 +190,8 @@ export default function TransporterVehiclesPage() {
               </div>
 
               <div style={{ marginBottom: "20px" }}>
-                <h3 style={{ fontSize: "1.3rem", fontWeight: "800", color: "#1e1b4b", margin: 0 }}>{v.license_plate}</h3>
-                <p style={{ color: "#64748b", margin: "4px 0 0", fontSize: "0.85rem" }}>{v.model}</p>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <span style={{ padding: "6px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, background: "#f1f5f9", color: "#334155" }}>
-                  Fuel: {v.fuel_level || "—"}
-                </span>
-                <span style={{ padding: "6px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, background: "#f1f5f9", color: "#334155" }}>
-                  Battery: {v.battery_level || "—"}
-                </span>
+                <h3 style={{ fontSize: "1.3rem", fontWeight: "800", color: "#1e1b4b", margin: 0 }}>{v.plate_number}</h3>
+                <p style={{ color: "#64748b", margin: "4px 0 0", fontSize: "0.85rem" }}>{v.model} • <span style={{ textTransform: "capitalize" }}>{v.vehicle_type}</span></p>
               </div>
             </div>
         ))}

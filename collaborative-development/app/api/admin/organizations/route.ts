@@ -13,7 +13,7 @@ export async function GET() {
     // Use the admin client to check the users table safely
     const { data: userRow } = await supabase
       .from('users')
-      .select('organization_id')
+      .select('org_id')
       .eq('auth_user_id', authUser?.id || '')
       .single();
 
@@ -22,8 +22,8 @@ export async function GET() {
       .select("id, name, created_at")
       .order("created_at", { ascending: false });
 
-    if (userRow?.organization_id) {
-      query = query.eq("id", userRow.organization_id);
+    if (userRow?.org_id) {
+      query = query.eq("id", userRow.org_id);
     }
 
     const { data, error } = await query;
