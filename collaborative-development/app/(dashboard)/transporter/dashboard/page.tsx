@@ -15,7 +15,6 @@ interface Order {
   assignment_id?: string;
   order_number: string | null;
   status: string;
-  priority: string;
   created_at: string;
   updated_at: string;
   notes?: string | null;
