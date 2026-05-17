@@ -179,7 +179,7 @@ export default function TransporterVehiclesPage() {
 
       {loading && <p style={{ textAlign: "center", color: "#94a3b8" }}>Loading fleet...</p>}
 
-      {/* Fleet grid */}
+      {/* Registered fleet vehicles */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" }}>
         {fleet.map((v) => (
             <div key={v.id} style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
