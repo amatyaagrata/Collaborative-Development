@@ -182,7 +182,7 @@ export default function TransporterVehiclesPage() {
       {/* Registered fleet vehicles */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" }}>
         {fleet.map((v) => (
-            <div key={v.id} style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+            <div key={v.id} style={{ background: "white", padding: "22px", borderRadius: "24px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <div style={{ background: "#f1f5f9", padding: "12px", borderRadius: "14px" }}>
                   <Car size={24} color="#0f172a" />
