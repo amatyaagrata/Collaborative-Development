@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import InventoryLandingChatbot from "@/components/shared/InventoryLandingChatbot";
 
 const FEATURES = [
   {
@@ -40,6 +41,7 @@ const STEPS = [
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full bg-white text-foreground">
+      <InventoryLandingChatbot />
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-zinc-100">
         <nav className="h-[72px] md:h-20 flex flex-row items-center justify-between px-6 md:px-12 max-w-7xl mx-auto w-full gap-4">
           <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
