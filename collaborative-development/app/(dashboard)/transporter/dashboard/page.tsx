@@ -215,7 +215,7 @@ export default function TransporterDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
               {stats.pendingRequests.map((order) => (
                 <div key={order.id} style={{
-                  background: "white", padding: "24px", borderRadius: "20px",
+                  background: "white", padding: "24px", borderRadius: "18px",
                   border: "2px solid #fed7aa", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)"
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
