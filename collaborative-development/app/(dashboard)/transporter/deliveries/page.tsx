@@ -483,7 +483,7 @@ export default function TransporterWorkPage() {
                 </div>
               )}
 
-              {/* ── Action Buttons (always visible) ──────────── */}
+              {/* ── Action Buttons (always visible)  */}
               <div style={{ padding: "0 24px 20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 {order.assignment_status === "pending" && (
                   <>
@@ -498,6 +498,7 @@ export default function TransporterWorkPage() {
                         transition: "transform 0.15s",
                       }}
                     >
+                      {/* Acceptance of Delivery */}
                       <CheckCircle size={18} /> Accept Delivery
                     </button>
                     <button
