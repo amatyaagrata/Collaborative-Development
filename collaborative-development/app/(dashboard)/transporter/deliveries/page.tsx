@@ -396,7 +396,7 @@ export default function TransporterWorkPage() {
               <div
                 onClick={() => setExpandedId(isExpanded ? null : order.id)}
                 style={{
-                  padding: "20px 24px",
+                  padding: "22px 24px",
                   cursor: "pointer",
                   display: "flex",
                   justifyContent: "space-between",
