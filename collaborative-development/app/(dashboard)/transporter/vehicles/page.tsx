@@ -137,7 +137,7 @@ export default function TransporterVehiclesPage() {
         <div style={{ background: "white", padding: "24px", borderRadius: "20px", marginBottom: "32px", border: "1px solid #e2e8f0" }}>
           <form onSubmit={handleAddVehicle} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", alignItems: "end" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#94a3b8", marginBottom: "4px" }}>PLATE NUMBER *</label>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "800", color: "#94a3b8", marginBottom: "4px" }}>PLATE NUMBER *</label>
               <input
                 required
                 placeholder="e.g. BA 1 PA 1234"
