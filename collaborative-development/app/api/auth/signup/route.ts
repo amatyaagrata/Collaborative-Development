@@ -57,6 +57,20 @@ export async function POST(request: Request) {
       ? createAdminClient()
       : createClient(supabaseUrl, supabaseAnonKey);
 
+    // Check if this email is already registered in the users table
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email.trim().toLowerCase())
+      .maybeSingle();
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "This email address is already registered." },
+        { status: 400 }
+      );
+    }
+
     const normalizedRole = normalizeRole(role);
     const warnings: string[] = [];
     let resolvedAuthUserId = auth_user_id;

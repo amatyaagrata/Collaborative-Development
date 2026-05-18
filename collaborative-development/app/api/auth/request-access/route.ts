@@ -71,6 +71,20 @@ export async function POST(request: Request) {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    // Check if this email is already registered in the users table
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email.trim().toLowerCase())
+      .maybeSingle();
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "This email address is already registered in our system." },
+        { status: 400 }
+      );
+    }
+
     const normalizedRole = normalizeRole(requested_role);
 
     // ── Insert into access_requests ─────────────────────────────────────────
