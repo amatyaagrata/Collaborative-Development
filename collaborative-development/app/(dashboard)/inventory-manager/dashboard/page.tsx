@@ -37,47 +37,53 @@ export default function IMDashboardPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Get user's org_id
         const { data: userRow } = await supabase
           .from("users")
-          .select("id")
+          .select("id, org_id")
           .eq("auth_user_id", user.id)
           .single();
 
-        if (!userRow) return;
+        if (!userRow?.org_id) return;
 
-        // Fetch delivered orders for THIS manager
-        const { data: deliveredOrders } = await supabase
-          .from("orders")
+        // Fetch delivered products directly from products table for THIS organization
+        const { data: prodData } = await supabase
+          .from("products")
           .select(`
             id,
-            order_items (
-              quantity,
-              products (
-                id,
-                name,
-                sku,
-                price
-              )
+            name,
+            sku,
+            selling_price,
+            current_stock,
+            min_stock_level,
+            suppliers:supplier_id (name),
+            categories:category_id (name),
+            order_items!inner(
+              purchase_orders!inner(status)
             )
           `)
-          .eq("user_id", userRow.id)
-          .eq("delivery_status", "delivered");
+          .eq("org_id", userRow.org_id)
+          .eq("order_items.purchase_orders.status", "delivered");
 
-        // Aggregate stock
-        const productMap = new Map<string, any>();
-        (deliveredOrders || []).forEach((order: any) => {
-          (order.order_items || []).forEach((item: any) => {
-            const p = item.products;
-            if (!p) return;
-            if (productMap.has(p.id)) {
-              productMap.get(p.id).stock += item.quantity;
-            } else {
-              productMap.set(p.id, { ...p, stock: item.quantity });
-            }
-          });
+        // Aggregate and de-duplicate products
+        const rawProducts = prodData || [];
+        const uniqueProducts: Record<string, any> = {};
+        rawProducts.forEach((p: any) => {
+          if (!uniqueProducts[p.id]) {
+            uniqueProducts[p.id] = {
+              id: p.id,
+              name: p.name,
+              sku: p.sku || "",
+              price: Number(p.selling_price || 0),
+              stock: Number(p.current_stock || 0),
+              min_stock_level: Number(p.min_stock_level || 0),
+              suppliers: Array.isArray(p.suppliers) ? p.suppliers[0] : p.suppliers,
+              categories: Array.isArray(p.categories) ? p.categories[0] : p.categories
+            };
+          }
         });
 
-        const inventory = Array.from(productMap.values());
+        const inventory = Object.values(uniqueProducts);
         const totalProducts = inventory.length;
         const lowStock = inventory.filter(p => p.stock > 0 && p.stock <= 10).length;
         const outOfStock = inventory.filter(p => p.stock === 0).length;

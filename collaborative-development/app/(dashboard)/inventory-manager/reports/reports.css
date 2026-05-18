@@ -1,0 +1,438 @@
+/* ═══════════════════════════════════════════════════════════════
+   Reports Styles — GoGodam Inventory Management System
+   Modern Premium Dashboard with Integrated Sales Log and Sell Form
+   ═══════════════════════════════════════════════════════════════ */
+
+.reports-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 0 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* ─── Header Section ────────────────────────────────────────── */
+.reports-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reports-title {
+  font-size: 28px;
+  font-weight: 750;
+  color: #1e004b;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.03em;
+}
+
+.reports-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 500;
+}
+
+.reports-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid #ece8f4;
+  border-radius: 12px;
+  background: white;
+  color: #1e004b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.btn-export:hover {
+  background: #faf9fd;
+  border-color: #6008f8;
+  color: #6008f8;
+  transform: translateY(-1px);
+}
+
+/* ─── Metrics Grid ──────────────────────────────────────────── */
+.reports-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.stat-card-premium {
+  background: white;
+  border-radius: 18px;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #ece8f4;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01), 0 2px 4px -1px rgba(0,0,0,0.01);
+}
+
+.stat-card-premium:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 20px -8px rgba(96, 8, 248, 0.12);
+  border-color: #d8cbf2;
+}
+
+.stat-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon-wrapper.purple { background: #f0edf5; color: #6008f8; }
+.stat-icon-wrapper.blue { background: #e0f2fe; color: #0284c7; }
+.stat-icon-wrapper.green { background: #dcfce7; color: #16a34a; }
+.stat-icon-wrapper.indigo { background: #e0e7ff; color: #4f46e5; }
+
+.stat-text h3 {
+  font-size: 24px;
+  font-weight: 850;
+  color: #1e004b;
+  margin: 0 0 3px 0;
+  letter-spacing: -0.02em;
+}
+
+.stat-text p {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8b8994;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Two Column Layout (Form & Reports) ────────────────────── */
+.reports-layout-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 28px;
+}
+
+@media (max-width: 1024px) {
+  .reports-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Cards & Sections ──────────────────────────────────────── */
+.premium-card {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #ece8f4;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01);
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f5f3f8;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 750;
+  color: #1e004b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  color: #8b8994;
+  font-weight: 500;
+}
+
+/* ─── Sell Product Form ─────────────────────────────────────── */
+.sell-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group-premium {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label-premium {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3b0099;
+}
+
+.input-premium {
+  height: 46px;
+  border-radius: 10px;
+  border: 1px solid #ece8f4;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #1e004b;
+  background: white;
+  transition: all 0.2s;
+}
+
+.input-premium:focus {
+  outline: none;
+  border-color: #6008f8;
+  box-shadow: 0 0 0 3px rgba(96, 8, 248, 0.08);
+}
+
+.input-premium::placeholder {
+  color: #b5b3bb;
+}
+
+.select-premium {
+  height: 46px;
+  border-radius: 10px;
+  border: 1px solid #ece8f4;
+  padding: 0 32px 0 14px;
+  font-size: 14px;
+  color: #1e004b;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236008f8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  transition: all 0.2s;
+}
+
+.select-premium:focus {
+  outline: none;
+  border-color: #6008f8;
+  box-shadow: 0 0 0 3px rgba(96, 8, 248, 0.08);
+}
+
+/* ─── Live Sale Preview Box ─────────────────────────────────── */
+.sale-preview-box {
+  background: #faf9fd;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1.5px dashed #d8cbf2;
+  margin-top: 6px;
+}
+
+.preview-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6008f8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #55535d;
+  margin-bottom: 8px;
+}
+
+.preview-row.total {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e004b;
+  border-top: 1px solid #ece8f4;
+  padding-top: 8px;
+  margin-bottom: 0;
+}
+
+.stock-change-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.stock-before { color: #8b8994; text-decoration: line-through; }
+.stock-after { color: #16a34a; }
+.stock-after.warning { color: #dc2626; }
+
+/* ─── Submit Button ─────────────────────────────────────────── */
+.btn-submit-sale {
+  height: 48px;
+  border-radius: 12px;
+  background: #6008f8;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px rgba(96, 8, 248, 0.15);
+}
+
+.btn-submit-sale:hover:not(:disabled) {
+  background: #4d00cc;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(96, 8, 248, 0.25);
+}
+
+.btn-submit-sale:disabled {
+  background: #d8cbf2;
+  color: #9490a2;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ─── Recent Sales Log ──────────────────────────────────────── */
+.sales-log-wrapper {
+  overflow-x: auto;
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.premium-table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-weight: 700;
+  color: #3b0099;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid #ece8f4;
+  background: #faf9fd;
+}
+
+.premium-table td {
+  padding: 14px 16px;
+  color: #1e004b;
+  border-bottom: 1px solid #f5f3f8;
+  vertical-align: middle;
+}
+
+.premium-table tbody tr:hover {
+  background: #faf9fd;
+}
+
+.buyer-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.buyer-name {
+  font-weight: 700;
+  color: #1e004b;
+}
+
+.buyer-phone {
+  font-size: 12px;
+  color: #8b8994;
+  font-weight: 500;
+}
+
+.buyer-org-badge {
+  font-size: 11px;
+  background: #f0edf5;
+  color: #6008f8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.product-sold-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.product-sold-name {
+  font-weight: 600;
+  color: #1e004b;
+}
+
+.product-sold-qty {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.sale-badge {
+  font-family: monospace;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.amount-col {
+  font-weight: 750;
+  color: #1e004b;
+}
+
+.date-col {
+  font-size: 13px;
+  color: #8b8994;
+  font-weight: 500;
+}
+
+/* ─── Empty state ───────────────────────────────────────────── */
+.empty-table-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: #b5b3bb;
+}
+
+.empty-table-state p {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: #8b8994;
+  font-weight: 500;
+}
+
+/* ─── Animations ────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

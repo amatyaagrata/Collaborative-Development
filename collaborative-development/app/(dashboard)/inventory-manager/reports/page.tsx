@@ -1,110 +1,698 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { FileText, Download, TrendingUp, Package, ShoppingCart, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { 
+  TrendingUp, 
+  Package, 
+  ShoppingCart, 
+  Download, 
+  Loader2, 
+  UserPlus, 
+  History, 
+  Tag, 
+  Phone, 
+  Building,
+  AlertCircle,
+  TrendingDown,
+  DollarSign
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import "./reports.css";
+
+// Interface definitions
+interface Product {
+  id: string;
+  name: string;
+  selling_price: number;
+  current_stock: number;
+}
+
+interface SaleItem {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  product_id: string;
+  products?: {
+    name: string;
+    selling_price: number;
+  };
+}
+
+interface Sale {
+  id: string;
+  sale_number: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  notes: string | null; // Used for organization name
+  total_amount: number;
+  created_at: string;
+  sale_items: SaleItem[];
+}
 
 export default function IMReportsPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({
+  const [submitting, setSubmitting] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+
+  // Data states
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [stats, setStats] = useState({
     totalInventoryValue: 0,
     totalProducts: 0,
-    orderStatusCounts: {} as Record<string, number>,
-    totalOrders: 0
+    totalSalesVal: 0,
+    totalOrders: 0,
+    totalQtySold: 0,
+    orderStatusCounts: {} as Record<string, number>
   });
 
-  useEffect(() => {
-    async function fetchReportData() {
-      try {
-        const [productsRes, ordersRes] = await Promise.all([
-          supabase.from("products").select("price, stock"),
-          supabase.from("orders").select("status")
-        ]);
+  // Form state
+  const [formData, setFormData] = useState({
+    buyerName: "",
+    phoneNumber: "",
+    orgName: "",
+    productId: "",
+    quantity: ""
+  });
 
-        const products = productsRes.data || [];
-        const orders = ordersRes.data || [];
-
-        const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
-        const statusCounts = orders.reduce((acc, o) => {
-          acc[o.status] = (acc[o.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        setData({
-          totalInventoryValue: totalValue,
-          totalProducts: products.length,
-          orderStatusCounts: statusCounts,
-          totalOrders: orders.length
-        });
-      } catch (err) {
-        console.error("Report fetch error:", err);
-      } finally {
-        setLoading(false);
+  // Fetch all necessary data for reports & sales
+  const fetchData = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login first.");
+        return;
       }
+
+      // Get user organization details
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("id, org_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (!userRow?.org_id) {
+        console.error("No organization found for current user.");
+        setLoading(false);
+        return;
+      }
+
+      setOrgId(userRow.org_id);
+
+      // Parallel queries to fetch products, sales history, and purchase orders status
+      const [prodRes, salesRes, poRes] = await Promise.all([
+        supabase
+          .from("products")
+          .select(`
+            id,
+            name,
+            selling_price,
+            current_stock,
+            order_items!inner(
+              purchase_orders!inner(status)
+            )
+          `)
+          .eq("org_id", userRow.org_id)
+          .eq("order_items.purchase_orders.status", "delivered")
+          .order("name"),
+        supabase
+          .from("sales")
+          .select(`
+            id,
+            sale_number,
+            customer_name,
+            customer_phone,
+            notes,
+            total_amount,
+            created_at,
+            sale_items (
+              id,
+              quantity,
+              unit_price,
+              total_price,
+              product_id,
+              products (
+                name,
+                selling_price
+              )
+            )
+          `)
+          .eq("org_id", userRow.org_id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("purchase_orders")
+          .select("status")
+          .eq("org_id", userRow.org_id)
+      ]);
+
+      // Filter and de-duplicate products to ensure we only load what is delivered in this IM's inventory
+      const rawProducts = prodRes.data || [];
+      const uniqueProducts: Record<string, Product> = {};
+      rawProducts.forEach((p: any) => {
+        if (!uniqueProducts[p.id]) {
+          uniqueProducts[p.id] = {
+            id: p.id,
+            name: p.name,
+            selling_price: Number(p.selling_price || 0),
+            current_stock: Number(p.current_stock || 0)
+          };
+        }
+      });
+      const fetchedProducts = Object.values(uniqueProducts);
+      const fetchedSales = (salesRes.data || []).map((sale: any) => {
+        const items = (sale.sale_items || []).map((item: any) => ({
+          ...item,
+          products: Array.isArray(item.products) ? item.products[0] : item.products
+        }));
+        return {
+          ...sale,
+          sale_items: items
+        };
+      });
+
+      setProducts(fetchedProducts);
+      setSales(fetchedSales);
+
+      // Calculations for metrics
+      const totalInventoryVal = fetchedProducts.reduce(
+        (sum, p) => sum + (p.selling_price * p.current_stock), 
+        0
+      );
+
+      const totalSalesRevenue = fetchedSales.reduce(
+        (sum, s) => sum + Number(s.total_amount || 0), 
+        0
+      );
+
+      const totalQtySold = fetchedSales.reduce(
+        (sum, s) => sum + (s.sale_items?.reduce((iSum, item) => iSum + (item.quantity || 0), 0) || 0),
+        0
+      );
+
+      // Purchase orders status count breakdown
+      const orders = poRes.data || [];
+      const statusCounts = orders.reduce((acc, o) => {
+        const status = o.status || "pending";
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      setStats({
+        totalInventoryValue: totalInventoryVal,
+        totalProducts: fetchedProducts.length,
+        totalSalesVal: totalSalesRevenue,
+        totalOrders: orders.length,
+        totalQtySold: totalQtySold,
+        orderStatusCounts: statusCounts
+      });
+
+    } catch (err) {
+      console.error("Report data fetch error:", err);
+      toast.error("Failed to load reports");
+    } finally {
+      setLoading(false);
     }
-    fetchReportData();
   }, [supabase]);
 
-  if (loading) return <div style={{ textAlign: "center", padding: 60 }}><Loader2 className="animate-spin" /> Preparing report data...</div>;
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Selected product details for preview in form
+  const selectedProduct = useMemo(() => {
+    return products.find(p => p.id === formData.productId) || null;
+  }, [products, formData.productId]);
+
+  // Real-time calculation of sale values
+  const saleCalculation = useMemo(() => {
+    if (!selectedProduct) return { subtotal: 0, tax: 0, total: 0 };
+    const qty = parseInt(formData.quantity, 10) || 0;
+    const subtotal = selectedProduct.selling_price * qty;
+    const tax = subtotal * 0.13; // 13% tax/VAT
+    const total = subtotal + tax;
+    return { subtotal, tax, total };
+  }, [selectedProduct, formData.quantity]);
+
+  // Input changes handler
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Form submission to insert sales and automatically update stock
+  const handleRecordSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!orgId) {
+      toast.error("Organization context not loaded. Please try again.");
+      return;
+    }
+
+    if (!formData.buyerName.trim()) {
+      toast.error("Buyer Name is required.");
+      return;
+    }
+
+    if (!formData.productId) {
+      toast.error("Please select a product to sell.");
+      return;
+    }
+
+    const qty = parseInt(formData.quantity, 10);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Please enter a valid quantity greater than 0.");
+      return;
+    }
+
+    if (!selectedProduct) {
+      toast.error("Selected product not found.");
+      return;
+    }
+
+    if (qty > selectedProduct.current_stock) {
+      toast.error(`Not enough stock. Available: ${selectedProduct.current_stock} units.`);
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const finalAmount = selectedProduct.selling_price * qty;
+
+      // 1. Insert sale record
+      const { data: newSale, error: saleError } = await supabase
+        .from("sales")
+        .insert({
+          org_id: orgId,
+          customer_name: formData.buyerName.trim(),
+          customer_phone: formData.phoneNumber.trim() || null,
+          notes: formData.orgName.trim() || null, // Store organization in notes
+          subtotal: finalAmount,
+          tax_amount: finalAmount * 0.13,
+          discount_amount: 0,
+          total_amount: finalAmount * 1.13,
+          payment_status: "paid",
+          payment_method: "cash"
+        })
+        .select()
+        .single();
+
+      if (saleError || !newSale) {
+        throw new Error(saleError?.message || "Failed to create sale record");
+      }
+
+      // 2. Insert sale item record (Triggers DB stock decrement automatically)
+      const { error: itemError } = await supabase
+        .from("sale_items")
+        .insert({
+          sale_id: newSale.id,
+          product_id: selectedProduct.id,
+          quantity: qty,
+          unit_price: selectedProduct.selling_price,
+          total_price: finalAmount
+        });
+
+      if (itemError) {
+        throw new Error(itemError.message || "Failed to log sale item");
+      }
+
+      toast.success(`Sale recorded successfully! Stock for ${selectedProduct.name} updated.`);
+
+      // Reset form
+      setFormData({
+        buyerName: "",
+        phoneNumber: "",
+        orgName: "",
+        productId: "",
+        quantity: ""
+      });
+
+      // Refresh data
+      await fetchData();
+
+    } catch (err: any) {
+      console.error("Sale submission error:", err);
+      toast.error(err.message || "Failed to submit sale.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Mock export reports function
+  const handleExportData = () => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ stats, sales }, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `GoGodam_Report_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      toast.success("Reports exported successfully as JSON!");
+    } catch (e) {
+      toast.error("Export failed.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 120, gap: 16 }}>
+        <Loader2 className="animate-spin" size={40} color="#6008f8" />
+        <p style={{ color: "#6b7280", fontWeight: 600 }}>Loading live reports and sales log...</p>
+        <style jsx>{`
+          .animate-spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#1a1a2e", margin: "0 0 4px" }}>Inventory Reports</h2>
-            <p style={{ fontSize: "0.875rem", color: "#64748b", margin: 0 }}>Live snapshot of your stock and order performance.</p>
-          </div>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "none", borderRadius: 10, background: "#3b82f6", color: "#fff", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
-            <Download size={14} /> Export Report
+    <div className="reports-container">
+      {/* Header Row */}
+      <div className="reports-header-row">
+        <div>
+          <h2 className="reports-title">Reports & Live Sales</h2>
+          <p className="reports-subtitle">Track products sold, buyers history, and automatic stock depletion.</p>
+        </div>
+        <div className="reports-actions">
+          <button className="btn-export" onClick={handleExportData}>
+            <Download size={16} /> Export Reports
           </button>
         </div>
+      </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 24 }}>
-          <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e9ecf0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#64748b" }}>
-              <TrendingUp size={16} /> <span style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase" }}>Total Value</span>
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1a1a2e" }}>Rs. {data.totalInventoryValue.toLocaleString()}</div>
+      {/* Premium Statistics Metrics Grid */}
+      <div className="reports-stats-grid">
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper purple">
+            <TrendingUp size={22} />
           </div>
-          <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e9ecf0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#64748b" }}>
-              <Package size={16} /> <span style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase" }}>SKU Count</span>
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1a1a2e" }}>{data.totalProducts}</div>
-          </div>
-          <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e9ecf0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#64748b" }}>
-              <ShoppingCart size={16} /> <span style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase" }}>Total Orders</span>
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1a1a2e" }}>{data.totalOrders}</div>
+          <div className="stat-text">
+            <h3>₹{stats.totalInventoryValue.toLocaleString()}</h3>
+            <p>Inventory Value</p>
           </div>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e9ecf0", padding: 24 }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1a1a2e", marginBottom: 16 }}>Order Status Breakdown</h3>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "2px solid #f1f5f9" }}>
-                <th style={{ padding: "12px 8px", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Status</th>
-                <th style={{ padding: "12px 8px", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Count</th>
-                <th style={{ padding: "12px 8px", color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase" }}>Percentage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(data.orderStatusCounts).map(([status, count]) => (
-                <tr key={status} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "14px 8px", fontWeight: 600, color: "#334155", textTransform: "capitalize" }}>{status.replace(/_/g, " ")}</td>
-                  <td style={{ padding: "14px 8px", color: "#334155" }}>{count}</td>
-                  <td style={{ padding: "14px 8px", color: "#64748b" }}>{((count / data.totalOrders) * 100).toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {data.totalOrders === 0 && <p style={{ textAlign: "center", padding: 20, color: "#94a3b8" }}>No order data available for breakdown.</p>}
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper blue">
+            <Package size={22} />
+          </div>
+          <div className="stat-text">
+            <h3>{stats.totalProducts}</h3>
+            <p>Total SKUs</p>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper green">
+            <DollarSign size={22} />
+          </div>
+          <div className="stat-text">
+            <h3>₹{stats.totalSalesVal.toLocaleString()}</h3>
+            <p>Total Sales Rev</p>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper indigo">
+            <ShoppingCart size={22} />
+          </div>
+          <div className="stat-text">
+            <h3>{stats.totalQtySold} units</h3>
+            <p>Total Qty Sold</p>
+          </div>
         </div>
       </div>
-    </>
+
+      {/* Main Split Grid (Form vs Sales Log) */}
+      <div className="reports-layout-grid">
+        
+        {/* Left Side: Recent Sales Log / Customer Purchases */}
+        <div className="premium-card">
+          <div className="card-title-row">
+            <h3 className="card-title"><History size={18} color="#6008f8" /> Sales & Customer Log</h3>
+            <span className="card-subtitle">{sales.length} transactions recorded</span>
+          </div>
+
+          <div className="sales-log-wrapper">
+            <table className="premium-table">
+              <thead>
+                <tr>
+                  <th>Sale #</th>
+                  <th>Buyer details</th>
+                  <th>Product Sold</th>
+                  <th>Total Paid</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="empty-table-state">
+                      <ShoppingCart size={32} color="#b5b3bb" style={{ marginBottom: 8 }} />
+                      <p>No sales logged yet.</p>
+                      <p>Use the form on the right to sell products and decrease stock.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  sales.map((sale) => {
+                    const item = sale.sale_items?.[0]; // Get the single product sold in this transaction
+                    return (
+                      <tr key={sale.id}>
+                        <td>
+                          <span className="sale-badge">{sale.sale_number}</span>
+                        </td>
+                        <td>
+                          <div className="buyer-info-col">
+                            <span className="buyer-name">{sale.customer_name || "Walk-in Customer"}</span>
+                            {sale.customer_phone && <span className="buyer-phone"><Phone size={10} style={{ display: "inline", marginRight: 4 }} />{sale.customer_phone}</span>}
+                            {sale.notes && <span className="buyer-org-badge"><Building size={9} style={{ display: "inline", marginRight: 3 }} /> {sale.notes}</span>}
+                          </div>
+                        </td>
+                        <td>
+                          {item ? (
+                            <div className="product-sold-info">
+                              <span className="product-sold-name">{item.products?.name || "Unknown Product"}</span>
+                              <span className="product-sold-qty">{item.quantity} unit{item.quantity > 1 ? "s" : ""} @ ₹{item.unit_price.toLocaleString()}</span>
+                            </div>
+                          ) : (
+                            <span style={{ color: "#8b8994" }}>No items listed</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="amount-col">₹{sale.total_amount.toLocaleString()}</span>
+                        </td>
+                        <td>
+                          <span className="date-col">{new Date(sale.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Right Side: Sell Product Form */}
+        <div className="premium-card" style={{ alignSelf: "start" }}>
+          <div className="card-title-row">
+            <h3 className="card-title"><UserPlus size={18} color="#6008f8" /> Record New Sale</h3>
+            <span className="card-subtitle">Depletes stock immediately</span>
+          </div>
+
+          <form className="sell-form" onSubmit={handleRecordSale}>
+            
+            <div className="form-group-premium">
+              <label className="form-label-premium">Buyer / Customer Name *</label>
+              <input 
+                type="text" 
+                name="buyerName"
+                className="input-premium"
+                placeholder="e.g. John Doe"
+                required
+                value={formData.buyerName}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="form-row-2col">
+              <div className="form-group-premium">
+                <label className="form-label-premium">Phone Number</label>
+                <input 
+                  type="tel" 
+                  name="phoneNumber"
+                  className="input-premium"
+                  placeholder="e.g. 9841234567"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group-premium">
+                <label className="form-label-premium">Buyer Organization</label>
+                <input 
+                  type="text" 
+                  name="orgName"
+                  className="input-premium"
+                  placeholder="e.g. Acme Corp (optional)"
+                  value={formData.orgName}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+
+            <div className="form-group-premium">
+              <label className="form-label-premium">Select Product *</label>
+              <select 
+                name="productId"
+                className="select-premium"
+                required
+                value={formData.productId}
+                onChange={handleInputChange}
+              >
+                <option value="">-- Choose in-stock product --</option>
+                {products.map((prod) => (
+                  <option key={prod.id} value={prod.id} disabled={prod.current_stock <= 0}>
+                    {prod.name} (Stock: {prod.current_stock} units) - ₹{prod.selling_price.toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group-premium">
+              <label className="form-label-premium">Quantity to Sell *</label>
+              <input 
+                type="number" 
+                name="quantity"
+                className="input-premium"
+                placeholder="Enter quantity"
+                required
+                min="1"
+                max={selectedProduct ? selectedProduct.current_stock : undefined}
+                value={formData.quantity}
+                onChange={handleInputChange}
+                disabled={!formData.productId}
+              />
+              {selectedProduct && (
+                <span style={{ fontSize: "11px", color: "#6b7280", marginTop: 2, fontWeight: 500 }}>
+                  Max allowed: {selectedProduct.current_stock} units
+                </span>
+              )}
+            </div>
+
+            {/* Live Transaction Preview */}
+            {selectedProduct && formData.quantity && (
+              <div className="sale-preview-box">
+                <div className="preview-title">Transaction Receipt</div>
+                <div className="preview-row">
+                  <span>Product:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedProduct.name}</span>
+                </div>
+                <div className="preview-row">
+                  <span>Price per Unit:</span>
+                  <span>₹{selectedProduct.selling_price.toLocaleString()}</span>
+                </div>
+                <div className="preview-row">
+                  <span>Subtotal:</span>
+                  <span>₹{saleCalculation.subtotal.toLocaleString()}</span>
+                </div>
+                <div className="preview-row">
+                  <span>VAT / Tax (13%):</span>
+                  <span>₹{saleCalculation.tax.toLocaleString()}</span>
+                </div>
+                <div className="preview-row">
+                  <span>Stock Depletion:</span>
+                  <div className="stock-change-indicator">
+                    <span className="stock-before">{selectedProduct.current_stock}</span>
+                    <span>→</span>
+                    <span className={`stock-after ${(selectedProduct.current_stock - (parseInt(formData.quantity, 10) || 0)) <= 10 ? "warning" : ""}`}>
+                      {selectedProduct.current_stock - (parseInt(formData.quantity, 10) || 0)} units
+                    </span>
+                  </div>
+                </div>
+                <div className="preview-row total">
+                  <span>Total Amount:</span>
+                  <span>₹{saleCalculation.total.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              className="btn-submit-sale"
+              disabled={submitting || !formData.buyerName || !formData.productId || !formData.quantity}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin" size={16} /> Recording Sale...
+                </>
+              ) : (
+                "Finalize & Record Sale"
+              )}
+            </button>
+
+          </form>
+        </div>
+
+      </div>
+
+      {/* Retained Feature: Purchase Order Status breakdown */}
+      <div className="premium-card" style={{ marginTop: 8 }}>
+        <div className="card-title-row">
+          <h3 className="card-title"><Building size={18} color="#6008f8" /> Supply Purchase Orders Breakdown</h3>
+          <span className="card-subtitle">{stats.totalOrders} total supply orders</span>
+        </div>
+        <table className="premium-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Count</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(stats.orderStatusCounts).map(([status, count]) => (
+              <tr key={status}>
+                <td style={{ fontWeight: 700, color: "#1e004b", textTransform: "capitalize" }}>
+                  {status.replace(/_/g, " ")}
+                </td>
+                <td>{count}</td>
+                <td style={{ color: "#6b7280", fontWeight: 500 }}>
+                  {((count / stats.totalOrders) * 100).toFixed(1)}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {stats.totalOrders === 0 && (
+          <p style={{ textAlign: "center", padding: 20, color: "#94a3b8", fontSize: "13px", fontWeight: 500 }}>
+            No purchase order data available.
+          </p>
+        )}
+      </div>
+
+      <style jsx>{`
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 }
