@@ -19,7 +19,6 @@ const adminNavItems = [
   { label: "Dashboard",     href: "/admin/dashboard",     Icon: LayoutDashboard },
   { label: "Requests",      href: "/admin/requests",      Icon: ClipboardList   },
   { label: "Users",         href: "/admin/users",         Icon: Users           },
-  { label: "Organizations", href: "/admin/organizations", Icon: Building2       },
   { label: "Products",      href: "/admin/products",      Icon: Package         },
   { label: "Suppliers",     href: "/admin/suppliers",     Icon: Briefcase       },
   { label: "Deliveries",    href: "/admin/deliveries",    Icon: Truck           },
