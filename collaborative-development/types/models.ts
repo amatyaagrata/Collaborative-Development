@@ -40,19 +40,21 @@ export interface Category {
   updated_at: string;
 }
 
+// /types/models.ts
 export interface Supplier {
   id: string;
-  organization_id: string;
-  user_id?: string;
+  org_id: string;
   name: string;
-  contact_email: string;
-  contact_phone?: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
   address?: string;
+  tax_number?: string;
+  payment_terms?: string;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
-
 export interface Product {
   id: string;
   organization_id: string;
