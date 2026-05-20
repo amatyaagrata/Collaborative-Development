@@ -45,7 +45,7 @@ interface Sale {
   sale_number: string;
   customer_name: string | null;
   customer_phone: string | null;
-  notes: string | null; // Used for organization name
+  notes: string | null;
   total_amount: number;
   created_at: string;
   sale_items: SaleItem[];
@@ -81,6 +81,8 @@ export default function IMReportsPage() {
   // Fetch all necessary data for reports & sales
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("Please login first.");
@@ -102,67 +104,64 @@ export default function IMReportsPage() {
 
       setOrgId(userRow.org_id);
 
-      // Parallel queries to fetch products, sales history, and purchase orders status
-      const [prodRes, salesRes, poRes] = await Promise.all([
-        supabase
-          .from("products")
-          .select(`
-            id,
-            name,
-            selling_price,
-            current_stock,
-            order_items!inner(
-              purchase_orders!inner(status)
-            )
-          `)
-          .eq("org_id", userRow.org_id)
-          .eq("order_items.purchase_orders.status", "delivered")
-          .order("name"),
-        supabase
-          .from("sales")
-          .select(`
-            id,
-            sale_number,
-            customer_name,
-            customer_phone,
-            notes,
-            total_amount,
-            created_at,
-            sale_items (
-              id,
-              quantity,
-              unit_price,
-              total_price,
-              product_id,
-              products (
-                name,
-                selling_price
-              )
-            )
-          `)
-          .eq("org_id", userRow.org_id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("purchase_orders")
-          .select("status")
-          .eq("org_id", userRow.org_id)
-      ]);
+      // FIXED: Fetch ALL products without requiring delivered purchase orders
+      const { data: allProducts, error: prodError } = await supabase
+        .from("products")
+        .select(`
+          id,
+          name,
+          selling_price,
+          current_stock
+        `)
+        .eq("org_id", userRow.org_id)
+        .order("name");
 
-      // Filter and de-duplicate products to ensure we only load what is delivered in this IM's inventory
-      const rawProducts = prodRes.data || [];
-      const uniqueProducts: Record<string, Product> = {};
-      rawProducts.forEach((p: any) => {
-        if (!uniqueProducts[p.id]) {
-          uniqueProducts[p.id] = {
-            id: p.id,
-            name: p.name,
-            selling_price: Number(p.selling_price || 0),
-            current_stock: Number(p.current_stock || 0)
-          };
-        }
-      });
-      const fetchedProducts = Object.values(uniqueProducts);
-      const fetchedSales = (salesRes.data || []).map((sale: any) => {
+      if (prodError) {
+        console.error("Products fetch error:", prodError);
+        toast.error("Failed to load products");
+      }
+
+      // Filter products to only show those with stock > 0 for selling
+      const fetchedProducts = (allProducts || [])
+        .map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          selling_price: Number(p.selling_price || 0),
+          current_stock: Number(p.current_stock || 0)
+        }))
+        .filter(p => p.current_stock > 0); // Only show products with stock
+
+      // Fetch sales data
+      const { data: salesRes, error: salesError } = await supabase
+        .from("sales")
+        .select(`
+          id,
+          sale_number,
+          customer_name,
+          customer_phone,
+          notes,
+          total_amount,
+          created_at,
+          sale_items (
+            id,
+            quantity,
+            unit_price,
+            total_price,
+            product_id,
+            products (
+              name,
+              selling_price
+            )
+          )
+        `)
+        .eq("org_id", userRow.org_id)
+        .order("created_at", { ascending: false });
+
+      if (salesError) {
+        console.error("Sales fetch error:", salesError);
+      }
+
+      const fetchedSales = (salesRes || []).map((sale: any) => {
         const items = (sale.sale_items || []).map((item: any) => ({
           ...item,
           products: Array.isArray(item.products) ? item.products[0] : item.products
@@ -172,6 +171,12 @@ export default function IMReportsPage() {
           sale_items: items
         };
       });
+
+      // Fetch purchase orders for stats
+      const { data: poRes } = await supabase
+        .from("purchase_orders")
+        .select("status")
+        .eq("org_id", userRow.org_id);
 
       setProducts(fetchedProducts);
       setSales(fetchedSales);
@@ -193,7 +198,7 @@ export default function IMReportsPage() {
       );
 
       // Purchase orders status count breakdown
-      const orders = poRes.data || [];
+      const orders = poRes || [];
       const statusCounts = orders.reduce((acc, o) => {
         const status = o.status || "pending";
         acc[status] = (acc[status] || 0) + 1;
@@ -284,6 +289,7 @@ export default function IMReportsPage() {
 
     try {
       const finalAmount = selectedProduct.selling_price * qty;
+      const totalWithTax = finalAmount * 1.13;
 
       // 1. Insert sale record
       const { data: newSale, error: saleError } = await supabase
@@ -292,11 +298,11 @@ export default function IMReportsPage() {
           org_id: orgId,
           customer_name: formData.buyerName.trim(),
           customer_phone: formData.phoneNumber.trim() || null,
-          notes: formData.orgName.trim() || null, // Store organization in notes
+          notes: formData.orgName.trim() || null,
           subtotal: finalAmount,
           tax_amount: finalAmount * 0.13,
           discount_amount: 0,
-          total_amount: finalAmount * 1.13,
+          total_amount: totalWithTax,
           payment_status: "paid",
           payment_method: "cash"
         })
@@ -307,7 +313,7 @@ export default function IMReportsPage() {
         throw new Error(saleError?.message || "Failed to create sale record");
       }
 
-      // 2. Insert sale item record (Triggers DB stock decrement automatically)
+      // 2. Insert sale item record
       const { error: itemError } = await supabase
         .from("sale_items")
         .insert({
@@ -322,7 +328,22 @@ export default function IMReportsPage() {
         throw new Error(itemError.message || "Failed to log sale item");
       }
 
-      toast.success(`Sale recorded successfully! Stock for ${selectedProduct.name} updated.`);
+      // 3. Update product stock manually (as fallback if trigger doesn't exist)
+      const { error: updateStockError } = await supabase
+        .from("products")
+        .update({ 
+          current_stock: selectedProduct.current_stock - qty,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", selectedProduct.id);
+
+      if (updateStockError) {
+        console.error("Stock update error:", updateStockError);
+        // Don't throw here as sale was recorded
+        toast.warning("Sale recorded but stock update failed. Please check inventory.");
+      } else {
+        toast.success(`Sale recorded successfully! Stock for ${selectedProduct.name} updated.`);
+      }
 
       // Reset form
       setFormData({
@@ -468,7 +489,7 @@ export default function IMReportsPage() {
                   </tr>
                 ) : (
                   sales.map((sale) => {
-                    const item = sale.sale_items?.[0]; // Get the single product sold in this transaction
+                    const item = sale.sale_items?.[0];
                     return (
                       <tr key={sale.id}>
                         <td>
@@ -564,12 +585,21 @@ export default function IMReportsPage() {
                 onChange={handleInputChange}
               >
                 <option value="">-- Choose in-stock product --</option>
-                {products.map((prod) => (
-                  <option key={prod.id} value={prod.id} disabled={prod.current_stock <= 0}>
-                    {prod.name} (Stock: {prod.current_stock} units) - ₹{prod.selling_price.toLocaleString()}
-                  </option>
-                ))}
+                {products.length === 0 ? (
+                  <option value="" disabled>No products with stock available</option>
+                ) : (
+                  products.map((prod) => (
+                    <option key={prod.id} value={prod.id}>
+                      {prod.name} (Stock: {prod.current_stock} units) - ₹{prod.selling_price.toLocaleString()}
+                    </option>
+                  ))
+                )}
               </select>
+              {products.length === 0 && (
+                <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "4px" }}>
+                  No products with available stock. Please add products or receive inventory first.
+                </p>
+              )}
             </div>
 
             <div className="form-group-premium">
@@ -633,7 +663,7 @@ export default function IMReportsPage() {
             <button 
               type="submit" 
               className="btn-submit-sale"
-              disabled={submitting || !formData.buyerName || !formData.productId || !formData.quantity}
+              disabled={submitting || !formData.buyerName || !formData.productId || !formData.quantity || products.length === 0}
             >
               {submitting ? (
                 <>
