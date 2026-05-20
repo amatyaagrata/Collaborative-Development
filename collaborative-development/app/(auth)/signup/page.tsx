@@ -18,7 +18,7 @@ const roles = [
 
 // Terms and Conditions Modal Component - FIXED (Hooks before conditional return)
 function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: () => void; onAccept: () => void }) {
-  // ✅ ALL hooks at the top level, BEFORE any conditional returns
+  // ALL hooks at the top level, BEFORE any conditional returns
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -46,7 +46,7 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
     }
   }, [isOpen]);
 
-  // ✅ Conditional return AFTER all hooks
+  // Conditional return AFTER all hooks
   if (!isOpen) return null;
 
   return (
@@ -521,9 +521,9 @@ export default function RequestAccess() {
                     Your request has been sent to the administrator. We will contact you once it is reviewed.
                   </p>
                   <Link href="/">
-                    <Button className="mt-6 bg-white text-green-700 border border-green-200 hover:bg-green-50">
+                    <button className="mt-6 px-6 py-2.5 bg-green-600 text-white font-semibold rounded-xl shadow-md">
                       Return to Home
-                    </Button>
+                    </button>
                   </Link>
                 </div>
               ) : (
