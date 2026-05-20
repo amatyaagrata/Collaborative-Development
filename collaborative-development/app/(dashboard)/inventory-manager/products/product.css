@@ -599,3 +599,38 @@
   display: flex;
   gap: 8px;
 }
+
+/* Add to product.css */
+.stock-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.stock-badge.in-stock {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.stock-badge.low-stock {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.stock-badge.out-of-stock {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.product-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+}
