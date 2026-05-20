@@ -33,11 +33,11 @@ export default function AdminDeliveriesPage() {
 
     const { data: userRow } = await supabase
       .from('users')
-      .select('organization_id')
+      .select('org_id')
       .eq('auth_user_id', user.id)
       .single();
 
-    if (userRow?.organization_id) {
+    if (userRow?.org_id) {
       const { data, error } = await supabase
         .from("driver_assignments")
         .select(`
@@ -55,7 +55,7 @@ export default function AdminDeliveriesPage() {
           ),
           transporter:transporter_id(name)
         `)
-        .eq("orders.organization_id", userRow.organization_id)
+        .eq("orders.organization_id", userRow.org_id)
         .order("assigned_at", { ascending: false });
 
       if (!error && data) return data as unknown as Trip[];

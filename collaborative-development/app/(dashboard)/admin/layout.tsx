@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, ClipboardList, Users, Building2, Settings, LogOut, User, ChevronDown, Package, Truck, Briefcase,
+  LayoutDashboard, ClipboardList, Users, Building2, Settings, LogOut, User, ChevronDown, Package, Truck, Briefcase, BarChart3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ const adminNavItems = [
   { label: "Products",      href: "/admin/products",      Icon: Package         },
   { label: "Suppliers",     href: "/admin/suppliers",     Icon: Briefcase       },
   { label: "Deliveries",    href: "/admin/deliveries",    Icon: Truck           },
+  { label: "Reports",       href: "/admin/reports",       Icon: BarChart3       },
   { label: "Settings",      href: "/admin/settings",      Icon: Settings        },
 ];
 
@@ -41,12 +42,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         // Fetch org info
         const { data: userData } = await supabase
           .from("users")
-          .select("organization_id, organizations(name)")
+          .select("org_id, organizations(name)")
           .eq("auth_user_id", user.id)
           .single();
         if (userData?.organizations) {
           setOrgName((userData.organizations as any).name);
-          setHasOrg(!!userData.organization_id);
+          setHasOrg(!!userData.org_id);
         }
 
         // Fetch pending requests count via API for security/RLS bypass

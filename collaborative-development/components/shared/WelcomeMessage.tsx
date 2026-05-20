@@ -36,7 +36,7 @@ export function WelcomeMessage({ className, roleOverride }: WelcomeMessageProps)
       try {
         const { data: userRecord } = await supabase
           .from("users")
-          .select("created_at, organization_id, role, organizations(name)")
+          .select("created_at, org_id, role, organizations(name)")
           .eq("auth_user_id", user.id)
           .single();
 

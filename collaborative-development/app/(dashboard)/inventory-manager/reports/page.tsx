@@ -193,7 +193,7 @@ export default function IMReportsPage() {
       );
 
       const totalQtySold = fetchedSales.reduce(
-        (sum, s) => sum + (s.sale_items?.reduce((iSum, item) => iSum + (item.quantity || 0), 0) || 0),
+        (sum, s) => sum + (s.sale_items?.reduce((iSum: number, item: SaleItem) => iSum + (item.quantity || 0), 0) || 0),
         0
       );
 
