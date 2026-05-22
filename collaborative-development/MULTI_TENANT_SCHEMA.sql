@@ -300,26 +300,26 @@ ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
 /*
 To execute these verifications, pick the logged Store ID and Cafe ID from the notice above.
 
--- ❌ WRONG (Fails because RLS drops all rows when org_id context is missing)
+--  WRONG (Fails because RLS drops all rows when org_id context is missing)
 SELECT * FROM products;
 
--- ✅ CORRECT - Acting as All-in-One Store
+-- CORRECT - Acting as All-in-One Store
 SET app.current_org_id = '<store_id_here>';
 SELECT * FROM products;
 -- Output will ONLY show Laptops, Smartphones, T-shirts, Jeans, Refrigerators, Microwaves.
 
--- ✅ CORRECT - Acting as Cafe
+-- CORRECT - Acting as Cafe
 SET app.current_org_id = '<cafe_id_here>';
 SELECT * FROM categories;
 -- Output will ONLY show Coffee, Pastries, Smoothies.
 
--- 🛡️ PROVING DATA ISOLATION (No Data Leakage)
+-- ROVING DATA ISOLATION (No Data Leakage)
 SET app.current_org_id = '<cafe_id_here>';
 -- Attempt to query Store drivers:
 SELECT * FROM vehicles WHERE vehicle_type = 'Truck';
 -- Result: 0 rows
 
--- 🛡️ FOREIGN KEY PROTECTION ACROSS TENANTS
+-- FOREIGN KEY PROTECTION ACROSS TENANTS
 -- If Cafe tries to create a product using a Store's Supplier ID, it will error out.
 SET app.current_org_id = '<cafe_id_here>';
 INSERT INTO products (org_id, category_id, supplier_id, name, price) 
