@@ -17,7 +17,6 @@ const users = [
   // ========== ALL-IN-ONE STORE USERS ==========
   { email: 'admin@allinonestore.com', password: 'StoreAdmin2025!', name: 'Store Manager', role: 'admin', org_id: STORE_ORG_ID },
   { email: 'inventory@allinonestore.com', password: 'Inventory2025!', name: 'John Inventory', role: 'inventory_manager', org_id: STORE_ORG_ID },
-  { email: 'cashier@allinonestore.com', password: 'Cashier2025!', name: 'Sarah Cashier', role: 'cashier', org_id: STORE_ORG_ID },
   { email: 'driver@allinonestore.com', password: 'Driver2025!', name: 'Mike Driver', role: 'driver', org_id: STORE_ORG_ID },
 
   // Store Suppliers
@@ -29,7 +28,6 @@ const users = [
   // ========== CAFE USERS ==========
   { email: 'admin@cafe.com', password: 'CafeAdmin2025!', name: 'Cafe Owner', role: 'admin', org_id: CAFE_ORG_ID },
   { email: 'inventory@cafe.com', password: 'Inventory2025!', name: 'Emma Inventory', role: 'inventory_manager', org_id: CAFE_ORG_ID },
-  { email: 'cashier@cafe.com', password: 'Cashier2025!', name: 'Lisa Cashier', role: 'cashier', org_id: CAFE_ORG_ID },
   { email: 'driver@cafe.com', password: 'Driver2025!', name: 'Alex Driver', role: 'driver', org_id: CAFE_ORG_ID },
   { email: 'supplier@beanmaster.com', password: 'Supplier2025!', name: 'BeanMaster Rep', role: 'supplier', org_id: CAFE_ORG_ID },
 ];
