@@ -127,9 +127,9 @@ export default function TransporterVehiclesPage() {
           <h2 style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e1b4b" }}>My Fleet</h2>
           <p style={{ color: "#64748b" }}>Manage your registered vehicles</p>
         </div>
-        <button onClick={() => setShowAddForm(!showAddForm)} style={{ background: "#7c3aed", color: "white", border: "none", padding: "12px 24px", borderRadius: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-          <Plus size={20} /> {showAddForm ? "Cancel" : "Add Vehicle"}
-        </button>
+       <button onClick={() => setShowAddForm(!showAddForm)} style={{ background: "#7c3aed", color: "white", border: "none", padding: "12px 24px", borderRadius: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+  {showAddForm ? "Cancel" : <><Plus size={20} /> Add Vehicle</>}
+</button>
       </div>
 
       {/* Add vehicle form */}
