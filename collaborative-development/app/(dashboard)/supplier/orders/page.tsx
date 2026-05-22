@@ -10,6 +10,7 @@ import {
   MessageSquare, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import { getSupplierOrders } from "./actions";
 
 interface OrderItem {
   id: string;
@@ -158,36 +159,7 @@ export default function SupplierOrders() {
       }
       setSupplierId(id);
       
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(`
-          id,
-          order_number,
-          status,
-          priority,
-          total_amount,
-          expected_delivery_date,
-          notes,
-          created_at,
-          supplier_id,
-          order_items(
-            id,
-            quantity,
-            unit_price,
-            total_price,
-            products(
-              id,
-              name,
-              selling_price
-            )
-          ),
-          suppliers!supplier_id(name, email),
-          organizations!org_id(name, address, phone)
-        `)
-        .eq("supplier_id", id)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
+      const data = await getSupplierOrders(id);
       const mapped: PurchaseOrder[] = (data || []).map((order: any) => {
         const suppliers = Array.isArray(order.suppliers) ? order.suppliers[0] : order.suppliers;
         const organizations = Array.isArray(order.organizations) ? order.organizations[0] : order.organizations;

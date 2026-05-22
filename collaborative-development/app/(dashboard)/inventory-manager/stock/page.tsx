@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, Search, Loader2, X, Package, Truck, Clock, CheckCircle, Eye, Filter, Flag, MessageSquare, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, Loader2, X, Package, Truck, Clock, CheckCircle, Eye, Filter, Flag, MessageSquare, AlertTriangle, ChevronDown, ChevronUp, MessageCircle, ThumbsDown } from "lucide-react";
 
 interface Order { 
   id: string; 
@@ -19,7 +19,8 @@ interface Order {
   status: string;
   priority?: string;
   notes?: string;
-  created_at?: string; 
+  created_at?: string;
+  rejection_reason?: string;
 }
 
 interface Product { 
@@ -50,13 +51,15 @@ export default function IMStockPage() {
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "form">("list");
+  const [viewMode, setViewMode] = useState<"list" | "form" | "detail">("list");
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
+  const [orderItems, setOrderItems] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({ 
     product_name: "", 
@@ -82,6 +85,31 @@ export default function IMStockPage() {
       .single();
     
     return userRow?.org_id || null;
+  }, [supabase]);
+
+  const fetchOrderItems = useCallback(async (orderId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("order_items")
+        .select(`
+          product_id,
+          quantity,
+          unit_price,
+          total_price,
+          products:product_id (id, name, selling_price, sku)
+        `)
+        .eq("purchase_order_id", orderId);
+
+      if (error) {
+        console.error("Order items fetch error:", error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      return [];
+    }
   }, [supabase]);
 
   const fetchOrders = useCallback(async () => {
@@ -126,7 +154,8 @@ export default function IMStockPage() {
           status: order.status,
           priority: order.priority || "medium",
           notes: order.notes || "",
-          created_at: order.created_at
+          created_at: order.created_at,
+          rejection_reason: order.status === 'rejected' && order.notes?.startsWith('Rejected:') ? order.notes : undefined
         }));
         setOrders(transformedOrders);
       }
@@ -137,31 +166,6 @@ export default function IMStockPage() {
       setLoading(false);
     }
   }, [supabase, getCurrentOrgId]);
-
-  const fetchOrderItems = useCallback(async (orderId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("order_items")
-        .select(`
-          product_id,
-          quantity,
-          unit_price,
-          products:product_id (id, name, selling_price, sku, category_id, categories:category_id (name))
-        `)
-        .eq("purchase_order_id", orderId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Order items fetch error:", error);
-        return null;
-      }
-      
-      return data;
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      return null;
-    }
-  }, [supabase]);
 
   const fetchProducts = useCallback(async (supplierId?: string) => {
     setLoadingProducts(true);
@@ -242,6 +246,7 @@ export default function IMStockPage() {
       case 'approved': return <CheckCircle size={14} />;
       case 'shipped': return <Truck size={14} />;
       case 'delivered': return <Package size={14} />;
+      case 'rejected': return <ThumbsDown size={14} />;
       default: return <Clock size={14} />;
     }
   };
@@ -252,6 +257,7 @@ export default function IMStockPage() {
       case 'approved': return '#10b981';
       case 'shipped': return '#3b82f6';
       case 'delivered': return '#059669';
+      case 'rejected': return '#dc2626';
       default: return '#6b7280';
     }
   };
@@ -288,6 +294,13 @@ export default function IMStockPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
+  const handleOrderClick = async (order: Order) => {
+    const items = await fetchOrderItems(order.id);
+    setOrderItems(items);
+    setSelectedOrderForDetail(order);
+    setViewMode("detail");
+  };
+
   const handleAddClick = () => {
     setFormMode("add");
     setFormData({ 
@@ -306,14 +319,19 @@ export default function IMStockPage() {
   };
 
   const handleEditClick = async (order: Order) => {
+    // Prevent editing rejected orders
+    if (order.status === 'rejected') {
+      toast.error("Cannot edit rejected orders. Please create a new order instead.");
+      return;
+    }
+    
     setFormMode("edit");
     setEditingId(order.id);
     
-    // Fetch order items to get product details
-    const orderItem = await fetchOrderItems(order.id);
+    const orderItemsList = await fetchOrderItems(order.id);
+    const orderItem = orderItemsList[0];
     
     if (orderItem && orderItem.product_id) {
-      // Fetch product details to populate the form
       const { data: productData } = await supabase
         .from("products")
         .select("id, name, selling_price, sku, category_id, categories:category_id (name)")
@@ -331,47 +349,12 @@ export default function IMStockPage() {
           quantity: orderItem.quantity?.toString() || "1", 
           selected_product_id: orderItem.product_id,
           priority: order.priority || "medium",
-          notes: order.notes || ""
-        });
-        
-        // Load products for this supplier
-        if (order.supplier_id) {
-          await fetchProducts(order.supplier_id);
-        }
-      } else {
-        setFormData({ 
-          product_name: "", 
-          supplier_name: order.supplier_name || "", 
-          supplier_id: order.supplier_id || "", 
-          custom_product_id: "", 
-          category: "", 
-          total_price: "0", 
-          quantity: "1", 
-          selected_product_id: "",
-          priority: order.priority || "medium",
-          notes: order.notes || ""
+          notes: order.notes?.startsWith('Rejected:') ? '' : (order.notes || "")
         });
         
         if (order.supplier_id) {
           await fetchProducts(order.supplier_id);
         }
-      }
-    } else {
-      setFormData({ 
-        product_name: "", 
-        supplier_name: order.supplier_name || "", 
-        supplier_id: order.supplier_id || "", 
-        custom_product_id: "", 
-        category: "", 
-        total_price: "0", 
-        quantity: "1", 
-        selected_product_id: "",
-        priority: order.priority || "medium",
-        notes: order.notes || ""
-      });
-      
-      if (order.supplier_id) {
-        await fetchProducts(order.supplier_id);
       }
     }
     
@@ -482,13 +465,26 @@ export default function IMStockPage() {
 
         toast.success("Purchase order created successfully!");
       } else if (formMode === "edit" && editingId) {
-        // Update purchase order
+        // Check if order is rejected before updating
+        const { data: currentOrder } = await supabase
+          .from("purchase_orders")
+          .select("status")
+          .eq("id", editingId)
+          .single();
+        
+        if (currentOrder?.status === 'rejected') {
+          toast.error("Cannot edit rejected orders. Please create a new order.");
+          setSubmitting(false);
+          return;
+        }
+        
         const { error: updateError } = await supabase
           .from("purchase_orders")
           .update({
             priority: formData.priority,
             notes: formData.notes || `Product: ${formData.product_name}, Quantity: ${quantity}`,
-            total_amount: total_price * quantity
+            total_amount: total_price * quantity,
+            status: "pending" // Reset status to pending when editing
           })
           .eq("id", editingId);
 
@@ -498,9 +494,7 @@ export default function IMStockPage() {
           return;
         }
 
-        // Update or insert order item
         if (formData.selected_product_id) {
-          // Check if order item exists
           const { data: existingItem } = await supabase
             .from("order_items")
             .select("id")
@@ -508,7 +502,6 @@ export default function IMStockPage() {
             .maybeSingle();
 
           if (existingItem) {
-            // Update existing order item
             const { error: itemError } = await supabase
               .from("order_items")
               .update({
@@ -523,7 +516,6 @@ export default function IMStockPage() {
               console.error("Failed to update order item:", itemError);
             }
           } else {
-            // Insert new order item
             const { error: itemError } = await supabase
               .from("order_items")
               .insert([{
@@ -540,7 +532,7 @@ export default function IMStockPage() {
           }
         }
 
-        toast.success("Order updated successfully!");
+        toast.success("Order updated successfully! Supplier will see the changes.");
       }
       
       await fetchOrders();
@@ -553,7 +545,8 @@ export default function IMStockPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (confirm("Are you sure you want to permanently delete this order?")) {
       const { error } = await supabase.from("purchase_orders").delete().eq("id", id);
       if (error) {
@@ -565,10 +558,20 @@ export default function IMStockPage() {
     }
   };
 
+  const handleEditFromDetail = (e: React.MouseEvent, order: Order) => {
+    e.stopPropagation();
+    if (order.status === 'rejected') {
+      toast.error("Rejected orders cannot be edited. Please create a new order.");
+      return;
+    }
+    handleEditClick(order);
+  };
+
   const totalOrders = filteredOrders.length;
   const totalAmount = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
   const pendingOrders = filteredOrders.filter(o => o.status === 'pending').length;
   const highPriorityOrders = filteredOrders.filter(o => o.priority === 'high').length;
+  const rejectedOrders = filteredOrders.filter(o => o.status === 'rejected').length;
 
   return (
     <>
@@ -603,6 +606,15 @@ export default function IMStockPage() {
                 <div className="po-stat-info">
                   <h3>{pendingOrders}</h3>
                   <p>Pending Orders</p>
+                </div>
+              </div>
+              <div className="po-stat-card">
+                <div className="po-stat-icon" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                  <ThumbsDown size={22} />
+                </div>
+                <div className="po-stat-info">
+                  <h3>{rejectedOrders}</h3>
+                  <p>Rejected Orders</p>
                 </div>
               </div>
               <div className="po-stat-card">
@@ -648,6 +660,7 @@ export default function IMStockPage() {
                   <option value="approved">Approved</option>
                   <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>
+                  <option value="rejected">Rejected</option>
                 </select>
               </div>
               <div className="po-filter-group">
@@ -699,9 +712,13 @@ export default function IMStockPage() {
                   </thead>
                   <tbody>
                     {filteredOrders.map((order) => (
-                      <tr key={order.id}>
+                      <tr 
+                        key={order.id} 
+                        className="po-table-row-clickable"
+                        onClick={() => handleOrderClick(order)}
+                      >
                         <td>
-                          <input type="checkbox" className="po-checkbox" />
+                          <input type="checkbox" className="po-checkbox" onClick={(e) => e.stopPropagation()} />
                         </td>
                         <td>
                           <div className="po-order-number">{order.order_number}</div>
@@ -743,17 +760,19 @@ export default function IMStockPage() {
                           {order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}
                         </td>
                         <td>
-                          <div className="po-action-buttons">
+                          <div className="po-action-buttons" onClick={(e) => e.stopPropagation()}>
                             <button 
-                              className="po-action-btn po-edit-btn"
-                              onClick={() => handleEditClick(order)}
-                              title="Edit Order"
+                              className={`po-action-btn po-edit-btn ${order.status === 'rejected' ? 'disabled' : ''}`}
+                              onClick={(e) => handleEditFromDetail(e, order)}
+                              title={order.status === 'rejected' ? "Cannot edit rejected orders" : "Edit Order"}
+                              disabled={order.status === 'rejected'}
+                              style={order.status === 'rejected' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                             >
                               <Pencil size={16} />
                             </button>
                             <button 
                               className="po-action-btn po-delete-btn"
-                              onClick={() => handleDelete(order.id)}
+                              onClick={(e) => handleDelete(order.id, e)}
                               title="Delete Order"
                             >
                               <Trash2 size={16} />
@@ -769,6 +788,143 @@ export default function IMStockPage() {
           </>
         )}
         
+        {viewMode === "detail" && selectedOrderForDetail && (
+          <div className="po-detail-wrapper">
+            <div className="po-detail-header">
+              <div>
+                <h2>Order Details</h2>
+                <p className="po-order-number-detail">Order #{selectedOrderForDetail.order_number}</p>
+              </div>
+              <button className="po-close-btn" onClick={() => setViewMode("list")}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="po-detail-card">
+              <div className="po-detail-section">
+                <h3>Order Information</h3>
+                <div className="po-detail-grid">
+                  <div className="po-detail-item">
+                    <label>Supplier</label>
+                    <p>{selectedOrderForDetail.supplier_name}</p>
+                  </div>
+                  <div className="po-detail-item">
+                    <label>Status</label>
+                    <p>
+                      <span 
+                        className="po-status-badge"
+                        style={{ 
+                          background: `${getStatusColor(selectedOrderForDetail.status)}15`,
+                          color: getStatusColor(selectedOrderForDetail.status)
+                        }}
+                      >
+                        {getStatusIcon(selectedOrderForDetail.status)}
+                        {selectedOrderForDetail.status?.charAt(0).toUpperCase() + selectedOrderForDetail.status?.slice(1)}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="po-detail-item">
+                    <label>Priority</label>
+                    <p>
+                      <span 
+                        className="po-priority-badge"
+                        style={{ 
+                          background: `${getPriorityColor(selectedOrderForDetail.priority || 'medium')}15`,
+                          color: getPriorityColor(selectedOrderForDetail.priority || 'medium')
+                        }}
+                      >
+                        {getPriorityIcon(selectedOrderForDetail.priority || 'medium')}
+                        {(selectedOrderForDetail.priority || 'medium').charAt(0).toUpperCase() + (selectedOrderForDetail.priority || 'medium').slice(1)}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="po-detail-item">
+                    <label>Total Amount</label>
+                    <p className="po-amount-large">₹{selectedOrderForDetail.total_amount.toLocaleString()}</p>
+                  </div>
+                  <div className="po-detail-item">
+                    <label>Order Date</label>
+                    <p>{selectedOrderForDetail.created_at ? new Date(selectedOrderForDetail.created_at).toLocaleString() : '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {orderItems.length > 0 && (
+                <div className="po-detail-section">
+                  <h3>Order Items</h3>
+                  <div className="po-items-table">
+                    <div className="po-items-header">
+                      <span>Product</span>
+                      <span>Quantity</span>
+                      <span>Unit Price</span>
+                      <span>Total</span>
+                    </div>
+                    {orderItems.map((item, idx) => (
+                      <div key={idx} className="po-items-row">
+                        <span className="po-product-name">
+                          {(item.products as any)?.name || 'Product'}
+                        </span>
+                        <span>{item.quantity}</span>
+                        <span>₹{item.unit_price?.toLocaleString()}</span>
+                        <span>₹{(item.quantity * item.unit_price).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Show rejection reason if order is rejected */}
+              {selectedOrderForDetail.status === 'rejected' && selectedOrderForDetail.rejection_reason && (
+                <div className="po-detail-section po-rejection-section">
+                  <h3 className="po-rejection-title">
+                    <ThumbsDown size={18} />
+                    Rejection Feedback from Supplier
+                  </h3>
+                  <div className="po-rejection-card">
+                    <div className="po-rejection-message">
+                      <MessageCircle size={16} />
+                      <p>{selectedOrderForDetail.rejection_reason.replace('Rejected: ', '')}</p>
+                    </div>
+                    <p className="po-rejection-note">
+                      This order was rejected by the supplier. Please review the feedback and create a new order if needed.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {selectedOrderForDetail.notes && selectedOrderForDetail.status !== 'rejected' && (
+                <div className="po-detail-section">
+                  <h3>Notes</h3>
+                  <div className="po-notes-box">
+                    <MessageSquare size={16} />
+                    <p>{selectedOrderForDetail.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="po-detail-actions">
+                <button className="po-btn-cancel" onClick={() => setViewMode("list")}>
+                  Back to Orders
+                </button>
+                {selectedOrderForDetail.status !== 'rejected' ? (
+                  <button 
+                    className="po-btn-submit" 
+                    onClick={(e) => handleEditFromDetail(e, selectedOrderForDetail)}
+                  >
+                    <Pencil size={16} />
+                    Edit Order
+                  </button>
+                ) : (
+                  <button className="po-btn-primary" onClick={handleAddClick}>
+                    <Plus size={16} />
+                    Create New Order
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {viewMode === "form" && (
           <div className="po-form-wrapper">
             <div className="po-form-header">
@@ -1002,7 +1158,7 @@ export default function IMStockPage() {
 
         .po-stats-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: 20px;
           margin-bottom: 32px;
         }
@@ -1138,6 +1294,15 @@ export default function IMStockPage() {
           background: #fafbff;
         }
 
+        .po-table-row-clickable {
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .po-table-row-clickable:hover {
+          background: #f8fafc;
+        }
+
         .po-checkbox {
           width: 16px;
           height: 16px;
@@ -1213,7 +1378,7 @@ export default function IMStockPage() {
           align-items: center;
         }
 
-        .po-edit-btn:hover {
+        .po-edit-btn:hover:not(.disabled) {
           background: #d1fae5;
           color: #059669;
         }
@@ -1234,6 +1399,197 @@ export default function IMStockPage() {
           color: #1a1a2e;
         }
 
+        /* Detail View Styles */
+        .po-detail-wrapper {
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .po-detail-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 24px;
+        }
+
+        .po-detail-header h2 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1a1a2e;
+          margin: 0 0 4px;
+        }
+
+        .po-order-number-detail {
+          font-size: 0.875rem;
+          color: #3b82f6;
+          font-weight: 500;
+          margin: 0;
+        }
+
+        .po-close-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 8px;
+          transition: all 0.2s;
+        }
+
+        .po-close-btn:hover {
+          background: #f1f5f9;
+        }
+
+        .po-detail-card {
+          background: white;
+          border-radius: 20px;
+          border: 1px solid #e2e8f0;
+          overflow: hidden;
+        }
+
+        .po-detail-section {
+          padding: 24px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .po-detail-section h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1a1a2e;
+          margin: 0 0 20px 0;
+        }
+
+        .po-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+        }
+
+        .po-detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .po-detail-item label {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .po-detail-item p {
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: #1a1a2e;
+          margin: 0;
+        }
+
+        .po-amount-large {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #3b82f6;
+        }
+
+        .po-items-table {
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .po-items-header {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+          background: #f8fafc;
+          padding: 12px 16px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #64748b;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .po-items-row {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+          padding: 12px 16px;
+          font-size: 0.85rem;
+          color: #334155;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .po-items-row:last-child {
+          border-bottom: none;
+        }
+
+        .po-product-name {
+          font-weight: 600;
+          color: #1a1a2e;
+        }
+
+        .po-notes-box {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 12px;
+          color: #475569;
+        }
+
+        .po-notes-box p {
+          margin: 0;
+          font-size: 0.875rem;
+        }
+
+        .po-rejection-section {
+          background: #fef2f2;
+        }
+
+        .po-rejection-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #dc2626;
+        }
+
+        .po-rejection-card {
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          border: 1px solid #fecaca;
+        }
+
+        .po-rejection-message {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          margin-bottom: 12px;
+          padding: 12px;
+          background: #fef2f2;
+          border-radius: 8px;
+          color: #dc2626;
+        }
+
+        .po-rejection-message p {
+          margin: 0;
+          font-size: 0.9rem;
+          font-weight: 500;
+          flex: 1;
+        }
+
+        .po-rejection-note {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 12px 0 0 28px;
+        }
+
+        .po-detail-actions {
+          display: flex;
+          gap: 12px;
+          padding: 20px 24px;
+          background: #f8fafc;
+        }
+
+        /* Form Styles */
         .po-form-wrapper {
           max-width: 800px;
           margin: 0 auto;
@@ -1257,19 +1613,6 @@ export default function IMStockPage() {
           font-size: 0.875rem;
           color: #64748b;
           margin: 0;
-        }
-
-        .po-close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 8px;
-          transition: all 0.2s;
-        }
-
-        .po-close-btn:hover {
-          background: #f1f5f9;
         }
 
         .po-form-card {
@@ -1321,7 +1664,7 @@ export default function IMStockPage() {
           color: #ef4444;
         }
 
-        .po-form-input, .po-form-select {
+        .po-form-input, .po-form-select, .po-form-textarea {
           padding: 10px 12px;
           border: 1px solid #e2e8f0;
           border-radius: 10px;
@@ -1331,22 +1674,11 @@ export default function IMStockPage() {
         }
 
         .po-form-textarea {
-          padding: 10px 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          font-size: 0.875rem;
-          outline: none;
-          transition: all 0.2s;
           font-family: inherit;
           resize: vertical;
         }
 
-        .po-form-textarea:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-        }
-
-        .po-form-input:focus, .po-form-select:focus {
+        .po-form-input:focus, .po-form-select:focus, .po-form-textarea:focus {
           border-color: #3b82f6;
           box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
         }
@@ -1424,7 +1756,7 @@ export default function IMStockPage() {
           .po-container {
             padding: 16px;
           }
-          .po-form-grid {
+          .po-form-grid, .po-detail-grid {
             grid-template-columns: 1fr;
           }
           .po-stats-grid {
