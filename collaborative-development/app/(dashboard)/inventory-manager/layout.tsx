@@ -49,7 +49,7 @@ export default function IMLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) { toast.error("Logout failed."); return; }
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   return (

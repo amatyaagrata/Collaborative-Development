@@ -45,7 +45,7 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
       toast.error("Logout failed.");
       return;
     }
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   return (

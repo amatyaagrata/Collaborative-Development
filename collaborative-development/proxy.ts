@@ -124,6 +124,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Disable caching for authenticated routes to prevent back-button bfcache leaks
+  if (user) {
+    supabaseResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, s-maxage=0');
+    supabaseResponse.headers.set('Pragma', 'no-cache');
+    supabaseResponse.headers.set('Expires', '0');
+  }
+
   return supabaseResponse;
 }
 

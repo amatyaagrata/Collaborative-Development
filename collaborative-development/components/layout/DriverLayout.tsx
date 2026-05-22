@@ -26,7 +26,7 @@ export default function DriverLayout({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     localStorage.clear();
     toast.success("Logged out successfully");
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   return (

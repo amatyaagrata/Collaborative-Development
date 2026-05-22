@@ -88,7 +88,7 @@ export function AppLayout({ title, children }: AppLayoutProps) {
       toast.error("Logout failed.");
       return;
     }
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const getDisplayName = () => {

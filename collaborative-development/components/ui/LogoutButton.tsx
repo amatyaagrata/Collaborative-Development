@@ -16,7 +16,7 @@ export default function LogoutButton() {
       return;
     }
     toast.success("Logged out successfully");
-    router.push("/login");
+    window.location.href = "/login";
     router.refresh();
   };
 

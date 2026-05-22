@@ -46,7 +46,7 @@ export default function SupplierLayout({ children }: { children: ReactNode }) {
       toast.error("Logout failed. Please try again.");
       return;
     }
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const navItems = [
