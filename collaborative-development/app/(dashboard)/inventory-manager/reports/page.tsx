@@ -7,78 +7,49 @@ import {
   ShoppingCart, 
   Download, 
   Loader2, 
-  UserPlus, 
   History, 
-  Tag, 
-  Phone, 
   Building,
-  AlertCircle,
-  TrendingDown,
-  DollarSign
+  DollarSign,
+  MapPin,
+  Filter,
+  Layers
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import "./reports.css";
 
-// Interface definitions
 interface Product {
   id: string;
   name: string;
   selling_price: number;
   current_stock: number;
+  location: string;
 }
 
-interface SaleItem {
+interface PurchaseOrder {
   id: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  product_id: string;
-  products?: {
-    name: string;
-    selling_price: number;
-  };
+  status: string;
+  location: string;
+  total_amount?: number;
 }
 
-interface Sale {
-  id: string;
-  sale_number: string;
-  customer_name: string | null;
-  customer_phone: string | null;
-  notes: string | null;
-  total_amount: number;
-  created_at: string;
-  sale_items: SaleItem[];
+interface LocationReportSummary {
+  locationName: string;
+  totalSKUs: number;
+  totalStockVolume: number;
+  estimatedValue: number;
+  associatedOrdersCount: number;
 }
 
-export default function IMReportsPage() {
+export default function LocationReportsPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
 
-  // Data states
   const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [stats, setStats] = useState({
-    totalInventoryValue: 0,
-    totalProducts: 0,
-    totalSalesVal: 0,
-    totalOrders: 0,
-    totalQtySold: 0,
-    orderStatusCounts: {} as Record<string, number>
-  });
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    buyerName: "",
-    phoneNumber: "",
-    orgName: "",
-    productId: "",
-    quantity: ""
-  });
-
-  // Fetch all necessary data for reports & sales
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -89,7 +60,6 @@ export default function IMReportsPage() {
         return;
       }
 
-      // Get user organization details
       const { data: userRow } = await supabase
         .from("users")
         .select("id, org_id")
@@ -104,119 +74,53 @@ export default function IMReportsPage() {
 
       setOrgId(userRow.org_id);
 
-      // FIXED: Fetch ALL products without requiring delivered purchase orders
       const { data: allProducts, error: prodError } = await supabase
         .from("products")
         .select(`
           id,
           name,
           selling_price,
-          current_stock
+          current_stock,
+          location
         `)
         .eq("org_id", userRow.org_id)
         .order("name");
 
       if (prodError) {
         console.error("Products fetch error:", prodError);
-        toast.error("Failed to load products");
+        toast.error("Failed to load products database records");
       }
 
-      // Filter products to only show those with stock > 0 for selling
-      const fetchedProducts = (allProducts || [])
-        .map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          selling_price: Number(p.selling_price || 0),
-          current_stock: Number(p.current_stock || 0)
-        }))
-        .filter(p => p.current_stock > 0); // Only show products with stock
+      const fetchedProducts = (allProducts || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        selling_price: Number(p.selling_price || 0),
+        current_stock: Number(p.current_stock || 0),
+        location: p.location || "Primary Hub Warehouse"
+      }));
 
-      // Fetch sales data
-      const { data: salesRes, error: salesError } = await supabase
-        .from("sales")
-        .select(`
-          id,
-          sale_number,
-          customer_name,
-          customer_phone,
-          notes,
-          total_amount,
-          created_at,
-          sale_items (
-            id,
-            quantity,
-            unit_price,
-            total_price,
-            product_id,
-            products (
-              name,
-              selling_price
-            )
-          )
-        `)
-        .eq("org_id", userRow.org_id)
-        .order("created_at", { ascending: false });
-
-      if (salesError) {
-        console.error("Sales fetch error:", salesError);
-      }
-
-      const fetchedSales = (salesRes || []).map((sale: any) => {
-        const items = (sale.sale_items || []).map((item: any) => ({
-          ...item,
-          products: Array.isArray(item.products) ? item.products[0] : item.products
-        }));
-        return {
-          ...sale,
-          sale_items: items
-        };
-      });
-
-      // Fetch purchase orders for stats
-      const { data: poRes } = await supabase
+      const { data: poRes, error: poError } = await supabase
         .from("purchase_orders")
-        .select("status")
+        .select("id, status, location, total_amount")
         .eq("org_id", userRow.org_id);
 
+      if (poError) {
+        console.error("Purchase orders fetch error:", poError);
+      }
+
+      const fetchedOrders = (poRes || []).map((o: any) => ({
+        id: o.id,
+        status: o.status || "pending",
+        location: o.location || "Primary Hub Warehouse",
+        total_amount: Number(o.total_amount || 0)
+      }));
+
       setProducts(fetchedProducts);
-      setSales(fetchedSales);
-
-      // Calculations for metrics
-      const totalInventoryVal = fetchedProducts.reduce(
-        (sum, p) => sum + (p.selling_price * p.current_stock), 
-        0
-      );
-
-      const totalSalesRevenue = fetchedSales.reduce(
-        (sum, s) => sum + Number(s.total_amount || 0), 
-        0
-      );
-
-      const totalQtySold = fetchedSales.reduce(
-        (sum, s) => sum + (s.sale_items?.reduce((iSum: number, item: SaleItem) => iSum + (item.quantity || 0), 0) || 0),
-        0
-      );
-
-      // Purchase orders status count breakdown
-      const orders = poRes || [];
-      const statusCounts = orders.reduce((acc, o) => {
-        const status = o.status || "pending";
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      setStats({
-        totalInventoryValue: totalInventoryVal,
-        totalProducts: fetchedProducts.length,
-        totalSalesVal: totalSalesRevenue,
-        totalOrders: orders.length,
-        totalQtySold: totalQtySold,
-        orderStatusCounts: statusCounts
-      });
+      setPurchaseOrders(fetchedOrders);
 
     } catch (err) {
-      console.error("Report data fetch error:", err);
-      toast.error("Failed to load reports");
+      console.error("Location report metrics aggregation failed:", err);
+      toast.error("System error loading location distributed data assets");
     } finally {
       setLoading(false);
     }
@@ -226,158 +130,75 @@ export default function IMReportsPage() {
     fetchData();
   }, [fetchData]);
 
-  // Selected product details for preview in form
-  const selectedProduct = useMemo(() => {
-    return products.find(p => p.id === formData.productId) || null;
-  }, [products, formData.productId]);
+  const locationMetricsList = useMemo(() => {
+    const trackingMap: Record<string, LocationReportSummary> = {};
 
-  // Real-time calculation of sale values
-  const saleCalculation = useMemo(() => {
-    if (!selectedProduct) return { subtotal: 0, tax: 0, total: 0 };
-    const qty = parseInt(formData.quantity, 10) || 0;
-    const subtotal = selectedProduct.selling_price * qty;
-    const tax = subtotal * 0.13; // 13% tax/VAT
-    const total = subtotal + tax;
-    return { subtotal, tax, total };
-  }, [selectedProduct, formData.quantity]);
-
-  // Input changes handler
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Form submission to insert sales and automatically update stock
-  const handleRecordSale = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!orgId) {
-      toast.error("Organization context not loaded. Please try again.");
-      return;
-    }
-
-    if (!formData.buyerName.trim()) {
-      toast.error("Buyer Name is required.");
-      return;
-    }
-
-    if (!formData.productId) {
-      toast.error("Please select a product to sell.");
-      return;
-    }
-
-    const qty = parseInt(formData.quantity, 10);
-    if (isNaN(qty) || qty <= 0) {
-      toast.error("Please enter a valid quantity greater than 0.");
-      return;
-    }
-
-    if (!selectedProduct) {
-      toast.error("Selected product not found.");
-      return;
-    }
-
-    if (qty > selectedProduct.current_stock) {
-      toast.error(`Not enough stock. Available: ${selectedProduct.current_stock} units.`);
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const finalAmount = selectedProduct.selling_price * qty;
-      const totalWithTax = finalAmount * 1.13;
-
-      // 1. Insert sale record
-      const { data: newSale, error: saleError } = await supabase
-        .from("sales")
-        .insert({
-          org_id: orgId,
-          customer_name: formData.buyerName.trim(),
-          customer_phone: formData.phoneNumber.trim() || null,
-          notes: formData.orgName.trim() || null,
-          subtotal: finalAmount,
-          tax_amount: finalAmount * 0.13,
-          discount_amount: 0,
-          total_amount: totalWithTax,
-          payment_status: "paid",
-          payment_method: "cash"
-        })
-        .select()
-        .single();
-
-      if (saleError || !newSale) {
-        throw new Error(saleError?.message || "Failed to create sale record");
+    products.forEach(p => {
+      const loc = p.location;
+      if (!trackingMap[loc]) {
+        trackingMap[loc] = {
+          locationName: loc,
+          totalSKUs: 0,
+          totalStockVolume: 0,
+          estimatedValue: 0,
+          associatedOrdersCount: 0
+        };
       }
+      trackingMap[loc].totalSKUs += 1;
+      trackingMap[loc].totalStockVolume += p.current_stock;
+      trackingMap[loc].estimatedValue += (p.selling_price * p.current_stock);
+    });
 
-      // 2. Insert sale item record
-      const { error: itemError } = await supabase
-        .from("sale_items")
-        .insert({
-          sale_id: newSale.id,
-          product_id: selectedProduct.id,
-          quantity: qty,
-          unit_price: selectedProduct.selling_price,
-          total_price: finalAmount
-        });
-
-      if (itemError) {
-        throw new Error(itemError.message || "Failed to log sale item");
+    purchaseOrders.forEach(o => {
+      const loc = o.location;
+      if (!trackingMap[loc]) {
+        trackingMap[loc] = {
+          locationName: loc,
+          totalSKUs: 0,
+          totalStockVolume: 0,
+          estimatedValue: 0,
+          associatedOrdersCount: 0
+        };
       }
+      trackingMap[loc].associatedOrdersCount += 1;
+    });
 
-      // 3. Update product stock manually (as fallback if trigger doesn't exist)
-      const { error: updateStockError } = await supabase
-        .from("products")
-        .update({ 
-          current_stock: selectedProduct.current_stock - qty,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", selectedProduct.id);
+    return Object.values(trackingMap);
+  }, [products, purchaseOrders]);
 
-      if (updateStockError) {
-        console.error("Stock update error:", updateStockError);
-        // Don't throw here as sale was recorded
-        toast.warning("Sale recorded but stock update failed. Please check inventory.");
-      } else {
-        toast.success(`Sale recorded successfully! Stock for ${selectedProduct.name} updated.`);
-      }
+  const localFilteredMetrics = useMemo(() => {
+    const targets = selectedLocation 
+      ? products.filter(p => p.location === selectedLocation)
+      : products;
+      
+    const targetedOrders = selectedLocation
+      ? purchaseOrders.filter(o => o.location === selectedLocation)
+      : purchaseOrders;
 
-      // Reset form
-      setFormData({
-        buyerName: "",
-        phoneNumber: "",
-        orgName: "",
-        productId: "",
-        quantity: ""
-      });
+    const totalVal = targets.reduce((sum, p) => sum + (p.selling_price * p.current_stock), 0);
+    const totalItems = targets.reduce((sum, p) => sum + p.current_stock, 0);
+    
+    return {
+      totalInventoryValue: totalVal,
+      totalSKUsCount: targets.length,
+      totalStockVolume: totalItems,
+      ordersCount: targetedOrders.length
+    };
+  }, [products, purchaseOrders, selectedLocation]);
 
-      // Refresh data
-      await fetchData();
-
-    } catch (err: any) {
-      console.error("Sale submission error:", err);
-      toast.error(err.message || "Failed to submit sale.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Mock export reports function
   const handleExportData = () => {
     try {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ stats, sales }, null, 2));
-      const downloadAnchor = document.createElement('a');
+      const payload = JSON.stringify({ locationMetricsList, localFilteredMetrics }, null, 2);
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(payload);
+      const downloadAnchor = document.createElement("a");
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `GoGodam_Report_${new Date().toISOString().slice(0,10)}.json`);
+      downloadAnchor.setAttribute("download", `Location_Report_${new Date().toISOString().slice(0,10)}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      toast.success("Reports exported successfully as JSON!");
+      toast.success("Location breakdown matrix metrics saved safely to files");
     } catch (e) {
-      toast.error("Export failed.");
+      toast.error("Export generation task terminal break exception triggered");
     }
   };
 
@@ -385,44 +206,53 @@ export default function IMReportsPage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 120, gap: 16 }}>
         <Loader2 className="animate-spin" size={40} color="#6008f8" />
-        <p style={{ color: "#6b7280", fontWeight: 600 }}>Loading live reports and sales log...</p>
-        <style jsx>{`
-          .animate-spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+        <p style={{ color: "#6b7280", fontWeight: 600 }}>{"Loading secure location reports metrics ledger..."}</p>
       </div>
     );
   }
 
   return (
     <div className="reports-container">
-      {/* Header Row */}
       <div className="reports-header-row">
         <div>
-          <h2 className="reports-title">Reports & Live Sales</h2>
-          <p className="reports-subtitle">Track products sold, buyers history, and automatic stock depletion.</p>
+          <h2 className="reports-title">{"Location Stock & Operations Analytics"}</h2>
+          <p className="reports-subtitle">{"Track product deployment values, item counts, and incoming orders grouped by facility layout."}</p>
         </div>
         <div className="reports-actions">
           <button className="btn-export" onClick={handleExportData}>
-            <Download size={16} /> Export Reports
+            <Download size={16} /> {"Export Location Reports"}
           </button>
         </div>
       </div>
 
-      {/* Premium Statistics Metrics Grid */}
+      <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 20px", borderRadius: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px" }}>
+        <Filter size={18} color="#6008f8" />
+        <span style={{ fontWeight: 600, fontSize: "14px", color: "#334155" }}>{"Active Scope Filter:"}</span>
+        <button 
+          style={{ padding: "6px 14px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: selectedLocation === null ? "#6008f8" : "#e2e8f0", color: selectedLocation === null ? "#ffffff" : "#475569", transition: "all 0.2s" }}
+          onClick={() => setSelectedLocation(null)}
+        >
+          {"Global System Combined Metrics"}
+        </button>
+        {locationMetricsList.map(m => (
+          <button
+            key={m.locationName}
+            style={{ padding: "6px 14px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: selectedLocation === m.locationName ? "#6008f8" : "#e2e8f0", color: selectedLocation === m.locationName ? "#ffffff" : "#475569", transition: "all 0.2s" }}
+            onClick={() => setSelectedLocation(m.locationName)}
+          >
+            {m.locationName}
+          </button>
+        ))}
+      </div>
+
       <div className="reports-stats-grid">
         <div className="stat-card-premium">
           <div className="stat-icon-wrapper purple">
             <TrendingUp size={22} />
           </div>
           <div className="stat-text">
-            <h3>₹{stats.totalInventoryValue.toLocaleString()}</h3>
-            <p>Inventory Value</p>
+            <h3>{"₹"}{localFilteredMetrics.totalInventoryValue.toLocaleString()}</h3>
+            <p>{selectedLocation ? `${selectedLocation} Asset Worth` : "Global Vault Stock Value"}</p>
           </div>
         </div>
 
@@ -431,18 +261,18 @@ export default function IMReportsPage() {
             <Package size={22} />
           </div>
           <div className="stat-text">
-            <h3>{stats.totalProducts}</h3>
-            <p>Total SKUs</p>
+            <h3>{localFilteredMetrics.totalSKUsCount} {"SKUs"}</h3>
+            <p>{"Unique Registered Items"}</p>
           </div>
         </div>
 
         <div className="stat-card-premium">
           <div className="stat-icon-wrapper green">
-            <DollarSign size={22} />
+            <Layers size={22} />
           </div>
           <div className="stat-text">
-            <h3>₹{stats.totalSalesVal.toLocaleString()}</h3>
-            <p>Total Sales Rev</p>
+            <h3>{localFilteredMetrics.totalStockVolume.toLocaleString()} {"units"}</h3>
+            <p>{"Accumulated Physical Units"}</p>
           </div>
         </div>
 
@@ -451,278 +281,96 @@ export default function IMReportsPage() {
             <ShoppingCart size={22} />
           </div>
           <div className="stat-text">
-            <h3>{stats.totalQtySold} units</h3>
-            <p>Total Qty Sold</p>
+            <h3>{localFilteredMetrics.ordersCount} {"Orders"}</h3>
+            <p>{"Supply Pipeline Operations"}</p>
           </div>
         </div>
       </div>
 
-      {/* Main Split Grid (Form vs Sales Log) */}
-      <div className="reports-layout-grid">
-        
-        {/* Left Side: Recent Sales Log / Customer Purchases */}
+      <div className="reports-layout-grid" style={{ gridTemplateColumns: "2fr 1fr" }}>
         <div className="premium-card">
           <div className="card-title-row">
-            <h3 className="card-title"><History size={18} color="#6008f8" /> Sales & Customer Log</h3>
-            <span className="card-subtitle">{sales.length} transactions recorded</span>
+            <h3 className="card-title"><MapPin size={18} color="#6008f8" /> {"Regional Location Matrix Audit"}</h3>
+            <span className="card-subtitle">{locationMetricsList.length} {"active nodes online"}</span>
           </div>
 
           <div className="sales-log-wrapper">
             <table className="premium-table">
               <thead>
                 <tr>
-                  <th>Sale #</th>
-                  <th>Buyer details</th>
-                  <th>Product Sold</th>
-                  <th>Total Paid</th>
-                  <th>Date</th>
+                  <th>{"Target Facility Location"}</th>
+                  <th>{"Unique Profiles (SKUs)"}</th>
+                  <th>{"Units Stock Count"}</th>
+                  <th>{"Financial Asset Value"}</th>
+                  <th>{"Operational Orders"}</th>
                 </tr>
               </thead>
               <tbody>
-                {sales.length === 0 ? (
+                {locationMetricsList.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="empty-table-state">
-                      <ShoppingCart size={32} color="#b5b3bb" style={{ marginBottom: 8 }} />
-                      <p>No sales logged yet.</p>
-                      <p>Use the form on the right to sell products and decrease stock.</p>
+                      <Building size={32} color="#b5b3bb" style={{ marginBottom: 8 }} />
+                      <p>{"No location metadata tracks mapped to inventory yet."}</p>
                     </td>
                   </tr>
                 ) : (
-                  sales.map((sale) => {
-                    const item = sale.sale_items?.[0];
-                    return (
-                      <tr key={sale.id}>
-                        <td>
-                          <span className="sale-badge">{sale.sale_number}</span>
-                        </td>
-                        <td>
-                          <div className="buyer-info-col">
-                            <span className="buyer-name">{sale.customer_name || "Walk-in Customer"}</span>
-                            {sale.customer_phone && <span className="buyer-phone"><Phone size={10} style={{ display: "inline", marginRight: 4 }} />{sale.customer_phone}</span>}
-                            {sale.notes && <span className="buyer-org-badge"><Building size={9} style={{ display: "inline", marginRight: 3 }} /> {sale.notes}</span>}
-                          </div>
-                        </td>
-                        <td>
-                          {item ? (
-                            <div className="product-sold-info">
-                              <span className="product-sold-name">{item.products?.name || "Unknown Product"}</span>
-                              <span className="product-sold-qty">{item.quantity} unit{item.quantity > 1 ? "s" : ""} @ ₹{item.unit_price.toLocaleString()}</span>
-                            </div>
-                          ) : (
-                            <span style={{ color: "#8b8994" }}>No items listed</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className="amount-col">₹{sale.total_amount.toLocaleString()}</span>
-                        </td>
-                        <td>
-                          <span className="date-col">{new Date(sale.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  locationMetricsList.map((metric) => (
+                    <tr 
+                      key={metric.locationName}
+                      style={{ cursor: "pointer", background: selectedLocation === metric.locationName ? "#f5f3ff" : "transparent" }}
+                      onClick={() => setSelectedLocation(metric.locationName)}
+                    >
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, color: "#1e1b4b" }}>
+                          <MapPin size={14} color="#6008f8" />
+                          {metric.locationName}
+                        </div>
+                      </td>
+                      <td><span className="sale-badge" style={{ background: "#eff6ff", color: "#1e40af" }}>{metric.totalSKUs}</span></td>
+                      <td><span style={{ fontWeight: 600 }}>{metric.totalStockVolume.toLocaleString()}</span></td>
+                      <td><span className="amount-col" style={{ color: "#16a34a", fontWeight: 700 }}>{"₹"}{metric.estimatedValue.toLocaleString()}</span></td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <History size={12} color="#64748b" />
+                          <span style={{ fontSize: "13px", color: "#475569", fontWeight: 500 }}>{metric.associatedOrdersCount} {"records"}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Right Side: Sell Product Form */}
-        <div className="premium-card" style={{ alignSelf: "start" }}>
+        <div className="premium-card">
           <div className="card-title-row">
-            <h3 className="card-title"><UserPlus size={18} color="#6008f8" /> Record New Sale</h3>
-            <span className="card-subtitle">Depletes stock immediately</span>
+            <h3 className="card-title"><Building size={18} color="#6008f8" /> {"Context Specific Manifest"}</h3>
           </div>
+          <p style={{ fontSize: "13px", color: "#64748b", lineHeight: "1.5", marginBottom: "16px" }}>
+            {selectedLocation 
+              ? `Displaying catalog list filtered explicitly down to items located within ${selectedLocation}.` 
+              : "Showing all catalog products across the entire corporate supply grid ecosystem."}
+          </p>
 
-          <form className="sell-form" onSubmit={handleRecordSale}>
-            
-            <div className="form-group-premium">
-              <label className="form-label-premium">Buyer / Customer Name *</label>
-              <input 
-                type="text" 
-                name="buyerName"
-                className="input-premium"
-                placeholder="e.g. John Doe"
-                required
-                value={formData.buyerName}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="form-row-2col">
-              <div className="form-group-premium">
-                <label className="form-label-premium">Phone Number</label>
-                <input 
-                  type="tel" 
-                  name="phoneNumber"
-                  className="input-premium"
-                  placeholder="e.g. 9841234567"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="form-group-premium">
-                <label className="form-label-premium">Buyer Organization</label>
-                <input 
-                  type="text" 
-                  name="orgName"
-                  className="input-premium"
-                  placeholder="e.g. Acme Corp (optional)"
-                  value={formData.orgName}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-
-            <div className="form-group-premium">
-              <label className="form-label-premium">Select Product *</label>
-              <select 
-                name="productId"
-                className="select-premium"
-                required
-                value={formData.productId}
-                onChange={handleInputChange}
-              >
-                <option value="">-- Choose in-stock product --</option>
-                {products.length === 0 ? (
-                  <option value="" disabled>No products with stock available</option>
-                ) : (
-                  products.map((prod) => (
-                    <option key={prod.id} value={prod.id}>
-                      {prod.name} (Stock: {prod.current_stock} units) - ₹{prod.selling_price.toLocaleString()}
-                    </option>
-                  ))
-                )}
-              </select>
-              {products.length === 0 && (
-                <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "4px" }}>
-                  No products with available stock. Please add products or receive inventory first.
-                </p>
-              )}
-            </div>
-
-            <div className="form-group-premium">
-              <label className="form-label-premium">Quantity to Sell *</label>
-              <input 
-                type="number" 
-                name="quantity"
-                className="input-premium"
-                placeholder="Enter quantity"
-                required
-                min="1"
-                max={selectedProduct ? selectedProduct.current_stock : undefined}
-                value={formData.quantity}
-                onChange={handleInputChange}
-                disabled={!formData.productId}
-              />
-              {selectedProduct && (
-                <span style={{ fontSize: "11px", color: "#6b7280", marginTop: 2, fontWeight: 500 }}>
-                  Max allowed: {selectedProduct.current_stock} units
-                </span>
-              )}
-            </div>
-
-            {/* Live Transaction Preview */}
-            {selectedProduct && formData.quantity && (
-              <div className="sale-preview-box">
-                <div className="preview-title">Transaction Receipt</div>
-                <div className="preview-row">
-                  <span>Product:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedProduct.name}</span>
-                </div>
-                <div className="preview-row">
-                  <span>Price per Unit:</span>
-                  <span>₹{selectedProduct.selling_price.toLocaleString()}</span>
-                </div>
-                <div className="preview-row">
-                  <span>Subtotal:</span>
-                  <span>₹{saleCalculation.subtotal.toLocaleString()}</span>
-                </div>
-                <div className="preview-row">
-                  <span>VAT / Tax (13%):</span>
-                  <span>₹{saleCalculation.tax.toLocaleString()}</span>
-                </div>
-                <div className="preview-row">
-                  <span>Stock Depletion:</span>
-                  <div className="stock-change-indicator">
-                    <span className="stock-before">{selectedProduct.current_stock}</span>
-                    <span>→</span>
-                    <span className={`stock-after ${(selectedProduct.current_stock - (parseInt(formData.quantity, 10) || 0)) <= 10 ? "warning" : ""}`}>
-                      {selectedProduct.current_stock - (parseInt(formData.quantity, 10) || 0)} units
-                    </span>
+          <div style={{ maxHeight: "380px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px", paddingRight: "4px" }}>
+            {products
+              .filter(p => !selectedLocation || p.location === selectedLocation)
+              .map(p => (
+                <div key={p.id} style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#1e293b" }}>{p.name}</span>
+                    <span style={{ fontSize: "11px", color: "#94a3b8" }}><MapPin size={10} style={{ display: "inline", marginRight: 2 }} /> {p.location}</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#475569" }}>{p.current_stock} {"units left"}</span>
+                    <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: 600 }}>{"₹"}{p.selling_price}</span>
                   </div>
                 </div>
-                <div className="preview-row total">
-                  <span>Total Amount:</span>
-                  <span>₹{saleCalculation.total.toLocaleString()}</span>
-                </div>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              className="btn-submit-sale"
-              disabled={submitting || !formData.buyerName || !formData.productId || !formData.quantity || products.length === 0}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="animate-spin" size={16} /> Recording Sale...
-                </>
-              ) : (
-                "Finalize & Record Sale"
-              )}
-            </button>
-
-          </form>
+              ))}
+          </div>
         </div>
-
       </div>
-
-      {/* Retained Feature: Purchase Order Status breakdown */}
-      <div className="premium-card" style={{ marginTop: 8 }}>
-        <div className="card-title-row">
-          <h3 className="card-title"><Building size={18} color="#6008f8" /> Supply Purchase Orders Breakdown</h3>
-          <span className="card-subtitle">{stats.totalOrders} total supply orders</span>
-        </div>
-        <table className="premium-table">
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Count</th>
-              <th>Percentage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(stats.orderStatusCounts).map(([status, count]) => (
-              <tr key={status}>
-                <td style={{ fontWeight: 700, color: "#1e004b", textTransform: "capitalize" }}>
-                  {status.replace(/_/g, " ")}
-                </td>
-                <td>{count}</td>
-                <td style={{ color: "#6b7280", fontWeight: 500 }}>
-                  {((count / stats.totalOrders) * 100).toFixed(1)}%
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {stats.totalOrders === 0 && (
-          <p style={{ textAlign: "center", padding: 20, color: "#94a3b8", fontSize: "13px", fontWeight: 500 }}>
-            No purchase order data available.
-          </p>
-        )}
-      </div>
-
-      <style jsx>{`
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
