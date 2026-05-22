@@ -88,12 +88,11 @@ export async function POST(request: Request) {
     const normalizedRole = normalizeRole(requested_role);
     const trimmedEmail = email.trim().toLowerCase();
 
-    // ── Check for existing requests with this email + org ───────────────────
+    // ── Check for existing requests with this email ───────────────────
     const { data: existingRequests } = await supabase
       .from("access_requests")
       .select("id, status")
-      .eq("email", trimmedEmail)
-      .eq("organization_id", organization_id || "");
+      .eq("email", trimmedEmail);
 
     if (existingRequests && existingRequests.length > 0) {
       const pending = existingRequests.find((r) => r.status === "pending");
