@@ -262,7 +262,7 @@ export default function SupplierProductsPage() {
           </div>
         </div>
         
-        <div style={{ background: "white", borderRadius: "16px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px", border: "1px solid #e2e8f0", background: lowStockCount > 0 ? "#fef2f2" : "white" }}>
+        <div style={{ borderRadius: "16px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px", border: "1px solid #e2e8f0", background: lowStockCount > 0 ? "#fef2f2" : "white" }}>
           <div style={{ width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", background: lowStockCount > 0 ? "#fee2e2" : "#f3e8ff" }}>
             <AlertCircle size={22} color={lowStockCount > 0 ? "#dc2626" : "#7c3aed"} />
           </div>

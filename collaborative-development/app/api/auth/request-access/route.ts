@@ -86,11 +86,51 @@ export async function POST(request: Request) {
     }
 
     const normalizedRole = normalizeRole(requested_role);
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // ── Check for existing requests with this email + org ───────────────────
+    const { data: existingRequests } = await supabase
+      .from("access_requests")
+      .select("id, status")
+      .eq("email", trimmedEmail)
+      .eq("organization_id", organization_id || "");
+
+    if (existingRequests && existingRequests.length > 0) {
+      const pending = existingRequests.find((r) => r.status === "pending");
+      const approved = existingRequests.find((r) => r.status === "approved");
+
+      if (pending) {
+        return NextResponse.json(
+          { error: "A request with this email is already pending. Please wait for admin review." },
+          { status: 409 }
+        );
+      }
+
+      if (approved) {
+        return NextResponse.json(
+          { error: "This email has already been approved. Please sign in instead." },
+          { status: 409 }
+        );
+      }
+
+      // If all existing requests are rejected, delete them so user can re-apply
+      const rejectedIds = existingRequests
+        .filter((r) => r.status === "rejected")
+        .map((r) => r.id);
+
+      if (rejectedIds.length > 0) {
+        await supabase
+          .from("access_requests")
+          .delete()
+          .in("id", rejectedIds);
+        console.log("[REQUEST-ACCESS] Cleared old rejected requests for:", trimmedEmail);
+      }
+    }
 
     // ── Insert into access_requests ─────────────────────────────────────────
     const { error } = await supabase.from("access_requests").insert({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: trimmedEmail,
       phone: phone?.trim() || null,
       requested_role: normalizedRole,
       reason: reason?.trim() || null,
@@ -103,7 +143,7 @@ export async function POST(request: Request) {
     if (error) {
       console.error("[REQUEST-ACCESS] Insert error:", error);
 
-      // Duplicate email → already submitted
+      // Duplicate email → already submitted (fallback safety net)
       if (
         error.code === "23505" ||
         error.message?.toLowerCase().includes("unique")

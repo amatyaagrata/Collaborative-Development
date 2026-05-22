@@ -13,9 +13,17 @@ interface Product {
   min_stock_level: number;
   sku: string;
   category_id: string;
-  categories: { name: string };
+  categories: { name: string } | { name: string }[] | null;
   created_at: string;
 }
+
+/** Safely extract category name from Supabase join result */
+function getCategoryName(categories: Product["categories"]): string | undefined {
+  if (!categories) return undefined;
+  if (Array.isArray(categories)) return categories[0]?.name;
+  return categories.name;
+}
+
 
 export default function InventoryManagerProductsPage() {
   const supabase = createClient();
@@ -106,7 +114,7 @@ export default function InventoryManagerProductsPage() {
           <p style={{ fontSize: "12px", color: "#64748b" }}>Total Stock</p>
           <p style={{ fontSize: "28px", fontWeight: "bold", color: "#1e1b4b" }}>{totalStock} units</p>
         </div>
-        <div style={{ background: "white", borderRadius: "12px", padding: "16px", border: "1px solid #e2e8f0", background: lowStockCount > 0 ? "#fef2f2" : "white" }}>
+        <div style={{ borderRadius: "12px", padding: "16px", border: "1px solid #e2e8f0", background: lowStockCount > 0 ? "#fef2f2" : "white" }}>
           <p style={{ fontSize: "12px", color: "#64748b" }}>Low Stock Items</p>
           <p style={{ fontSize: "28px", fontWeight: "bold", color: lowStockCount > 0 ? "#dc2626" : "#1e1b4b" }}>{lowStockCount}</p>
         </div>
@@ -170,10 +178,10 @@ export default function InventoryManagerProductsPage() {
                     <span style={{ fontSize: "13px" }}>Added: {new Date(product.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
-                {product.categories?.name && (
+                {getCategoryName(product.categories) && (
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #e2e8f0" }}>
                     <Hash size={14} color="#64748b" />
-                    <span style={{ fontSize: "13px", color: "#64748b" }}>Category: {product.categories.name}</span>
+                    <span style={{ fontSize: "13px", color: "#64748b" }}>Category: {getCategoryName(product.categories)}</span>
                   </div>
                 )}
               </div>
