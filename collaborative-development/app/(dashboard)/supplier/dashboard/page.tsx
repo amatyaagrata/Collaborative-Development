@@ -6,6 +6,7 @@ import { Package, ShoppingCart, Truck, CreditCard, DollarSign, CheckCircle, Load
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import styles from "@/components/layout/PortalLayout.module.css";
+import { getSupplierOrders } from "../orders/actions";
 
 interface DashboardStats {
   totalProducts: number;
@@ -63,12 +64,9 @@ export default function SupplierDashboardPage() {
       }
 
       // 1. Fetch Stats & Orders from V3 tables
-      const [productsRes, allOrdersRes] = await Promise.all([
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId),
-        supabase.from("orders").select("id, order_number, status, created_at, total_amount, organizations:organizations!organization_id(name)").eq("supplier_id", resolvedSupplierId).order("created_at", { ascending: false })
-      ]);
+      const productsRes = await supabase.from("products").select("id", { count: "exact", head: true }).eq("supplier_id", resolvedSupplierId);
+      const allOrders = await getSupplierOrders(resolvedSupplierId);
 
-      const allOrders = allOrdersRes.data || [];
       const pendingOrders = allOrders.filter(o => o.status === "pending").length;
       const completedOrders = allOrders.filter(o => o.status === "delivered").length;
       const totalEarnings = allOrders.filter(o => o.status === "delivered").reduce((sum, o) => sum + (o.total_amount || 0), 0);

@@ -46,7 +46,7 @@ export default function IMDashboardPage() {
 
         if (!userRow?.org_id) return;
 
-        // Fetch delivered products directly from products table for THIS organization
+        // Fetch all products for THIS organization to reflect true inventory count
         const { data: prodData } = await supabase
           .from("products")
           .select(`
@@ -57,13 +57,9 @@ export default function IMDashboardPage() {
             current_stock,
             min_stock_level,
             suppliers:supplier_id (name),
-            categories:category_id (name),
-            order_items!inner(
-              purchase_orders!inner(status)
-            )
+            categories:category_id (name)
           `)
-          .eq("org_id", userRow.org_id)
-          .eq("order_items.purchase_orders.status", "delivered");
+          .eq("org_id", userRow.org_id);
 
         // Aggregate and de-duplicate products
         const rawProducts = prodData || [];
