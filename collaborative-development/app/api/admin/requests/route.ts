@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWelcomeEmail, sendRejectionEmail } from "@/lib/email-service";
 
 export async function GET(request: Request) {
   try {
@@ -146,6 +147,13 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: updateError.message }, { status: 500 });
       }
 
+      // Send rejection email notification
+      try {
+        await sendRejectionEmail(accessReq.email, accessReq.name, orgName, rejection_reason);
+      } catch (emailErr) {
+        console.error("[ADMIN-REQUESTS] Failed to send rejection email:", emailErr);
+      }
+
       return NextResponse.json({ message: "Request rejected" });
     }
 
@@ -226,6 +234,13 @@ export async function PATCH(request: Request) {
           reviewed_at: new Date().toISOString(),
         })
         .eq("id", id);
+
+      // Send welcome email notification with temporary password
+      try {
+        await sendWelcomeEmail(accessReq.email, accessReq.name, orgName, password);
+      } catch (emailErr) {
+        console.error("[ADMIN-REQUESTS] Failed to send welcome email:", emailErr);
+      }
 
       return NextResponse.json({ message: "Request approved. User account created." });
     }

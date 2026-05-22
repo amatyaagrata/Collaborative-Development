@@ -3,17 +3,32 @@
  * This service handles welcome and rejection notifications.
  */
 
+import nodemailer from "nodemailer";
+
 export interface EmailOptions {
   to: string;
   subject: string;
   html: string;
 }
 
-export async function sendEmail({ to, subject, html }: EmailOptions) {
-  const apiKey = process.env.RESEND_API_KEY;
+// Create a reusable transporter using Gmail SMTP
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // Use SSL
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
-  if (!apiKey) {
-    // 📝 FOR DEVELOPMENT: Log the email to the console if no key
+export async function sendEmail({ to, subject, html }: EmailOptions) {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!gmailUser || !gmailPass) {
+    // 📝 FOR DEVELOPMENT: Log the email to the console if no credentials
+    console.warn("⚠️  No GMAIL_USER or GMAIL_APP_PASSWORD found — falling back to console output.");
     console.log("------------------------------------------");
     console.log(`📧 [SIMULATED] SENDING EMAIL TO: ${to}`);
     console.log(`📝 SUBJECT: ${subject}`);
@@ -23,40 +38,14 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
   }
 
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: 'GoGodam <onboarding@resend.dev>', // Resend's default testing address
-        to,
-        subject,
-        html,
-      }),
+    const info = await transporter.sendMail({
+      from: `"GoGodam" <${gmailUser}>`, // sender address
+      to, // list of receivers
+      subject, // Subject line
+      html, // html body
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-
-      // Graceful fallback for 403 (domain not verified / testing-tier restriction)
-      // Instead of failing, log the email to the console so the flow continues
-      if (error.statusCode === 403) {
-        console.warn("⚠️  Resend domain not verified — falling back to console output.");
-        console.log("------------------------------------------");
-        console.log(`📧 [FALLBACK] EMAIL TO: ${to}`);
-        console.log(`📝 SUBJECT: ${subject}`);
-        console.log(`📄 CONTENT:\n${html.replace(/<[^>]*>?/gm, "")}`);
-        console.log("------------------------------------------");
-        return { success: true, fallback: true };
-      }
-
-      console.error("❌ Resend API Error:", error);
-      return { success: false, error };
-    }
-
-    console.log(`✅ Email sent successfully to ${to} via Resend`);
+    console.log(`✅ Email sent successfully to ${to}. Message ID: ${info.messageId}`);
     return { success: true };
   } catch (error) {
     console.error("❌ Email service failure:", error);

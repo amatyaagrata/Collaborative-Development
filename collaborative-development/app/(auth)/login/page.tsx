@@ -75,7 +75,16 @@ function LoginContent() {
 
       // Step 2: Check if user belongs to multiple organizations
       const orgsResponse = await fetch("/api/auth/user-role?orgs=true");
-      const orgsData = await orgsResponse.json();
+      
+      let orgsData: any = {};
+      const contentType = orgsResponse.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        orgsData = await orgsResponse.json();
+      } else {
+        const text = await orgsResponse.text();
+        console.error("[LOGIN] Non-JSON response from user-role:", text);
+        throw new Error(`Server returned an invalid response (${orgsResponse.status}). Please verify the server is running and try again.`);
+      }
 
       if (orgsResponse.ok && orgsData.organizations && orgsData.organizations.length > 1) {
         // User belongs to multiple orgs — show picker
@@ -108,7 +117,16 @@ function LoginContent() {
         : "/api/auth/user-role";
 
       const roleResponse = await fetch(roleUrl);
-      const roleData = await roleResponse.json();
+      
+      let roleData: any = {};
+      const roleContentType = roleResponse.headers.get("content-type");
+      if (roleContentType && roleContentType.includes("application/json")) {
+        roleData = await roleResponse.json();
+      } else {
+        const text = await roleResponse.text();
+        console.error("[LOGIN] Non-JSON response from user-role redirect check:", text);
+        throw new Error(`Server returned an invalid response (${roleResponse.status}). Please check the console.`);
+      }
 
       console.log("[LOGIN] Role data received:", roleData);
 

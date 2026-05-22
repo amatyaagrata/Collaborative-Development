@@ -245,18 +245,13 @@ export default function AdminRequestsPage() {
     addAnimationStyles();
   }, []);
 
-  // Get the current admin's user ID for auditing
+  // Get the current admin's auth user ID for auditing
+  // reviewed_by FK references auth.users(id), so we need the auth UUID
   useEffect(() => {
     const getAdminUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Get the user record from users table
-        const { data: userRecord } = await supabase
-          .from("users")
-          .select("id")
-          .eq("auth_user_id", user.id)
-          .single();
-        if (userRecord) setAdminUserId(userRecord.id);
+        setAdminUserId(user.id);
       }
     };
     getAdminUser();
