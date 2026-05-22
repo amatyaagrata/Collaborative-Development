@@ -12,15 +12,10 @@ import {
   TrendingUp, 
   ShoppingCart,
   ArrowUpRight,
-  ArrowDownRight,
   Clock,
   CheckCircle,
-  XCircle,
   BarChart3,
-  Layers,
-  Truck,
-  Users,
-  MoreVertical
+  Truck
 } from "lucide-react";
 import {
   AreaChart,
@@ -34,10 +29,8 @@ import {
   Pie,
   Cell,
   BarChart,
-  Bar,
-  Legend
+  Bar
 } from 'recharts';
-import styles from "@/components/layout/PortalLayout.module.css";
 
 export default function IMDashboardPage() {
   const supabase = createClient();
@@ -57,6 +50,11 @@ export default function IMDashboardPage() {
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [categoryData, setCategoryData] = useState<any[]>([]);
+
+  const getRandomColor = () => {
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
   // Get organization ID first
   useEffect(() => {
@@ -79,10 +77,6 @@ export default function IMDashboardPage() {
       }
     };
 
-<<<<<<< Updated upstream
-        // Fetch all products for THIS organization to reflect true inventory count
-        const { data: prodData } = await supabase
-=======
     getOrgId();
   }, [supabase]);
 
@@ -94,9 +88,8 @@ export default function IMDashboardPage() {
       try {
         setLoading(true);
         
-        // Fetch products
+        // Fetch all products for THIS organization
         const { data: prodData, error: prodError } = await supabase
->>>>>>> Stashed changes
           .from("products")
           .select(`
             id,
@@ -107,17 +100,11 @@ export default function IMDashboardPage() {
             min_stock_level,
             supplier_id,
             suppliers:supplier_id (name),
-<<<<<<< Updated upstream
-            categories:category_id (name)
-          `)
-          .eq("org_id", userRow.org_id);
-=======
             category_id,
             categories:category_id (name),
             created_at
           `)
           .eq("org_id", orgId);
->>>>>>> Stashed changes
 
         if (prodError) throw prodError;
 
@@ -206,11 +193,6 @@ export default function IMDashboardPage() {
     fetchDashboardData();
   }, [supabase, orgId]);
 
-  const getRandomColor = () => {
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
   const getStatusColor = (status: string) => {
     switch(status?.toLowerCase()) {
       case 'pending': return '#f59e0b';
@@ -263,7 +245,7 @@ export default function IMDashboardPage() {
               <h3 className="stat-value">{stats.totalProducts}</h3>
               <span className="stat-trend positive">
                 <TrendingUp size={12} />
-                +12% this month
+                Total in inventory
               </span>
             </div>
           </div>
@@ -305,7 +287,7 @@ export default function IMDashboardPage() {
               <h3 className="stat-value">₹{stats.totalValue.toLocaleString()}</h3>
               <span className="stat-trend positive">
                 <ArrowUpRight size={12} />
-                +8.2% from last month
+                Total value
               </span>
             </div>
           </div>
@@ -358,7 +340,7 @@ export default function IMDashboardPage() {
                 <BarChart data={topProducts} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" />
+                  <YAxis type="category" dataKey="name" width={100} />
                   <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
                   <Bar dataKey="price" fill="#3b82f6" radius={[0, 4, 4, 0]}>
                     {topProducts.map((entry, index) => (
@@ -391,7 +373,6 @@ export default function IMDashboardPage() {
                       <th>Current Stock</th>
                       <th>Min Level</th>
                       <th>Status</th>
-                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -414,9 +395,6 @@ export default function IMDashboardPage() {
                             {item.stock === 0 ? 'Out of Stock' : 'Low Stock'}
                           </span>
                         </td>
-                        <td>
-                          <button className="action-button">Reorder</button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -437,7 +415,9 @@ export default function IMDashboardPage() {
                 <Truck size={18} color="#3b82f6" />
                 <h3 className="table-title">Recent Purchase Orders</h3>
               </div>
-              <button className="view-all-btn">View All →</button>
+              <button className="view-all-btn" onClick={() => window.location.href = '/inventory-manager/stock'}>
+                View All →
+              </button>
             </div>
             {recentOrders.length > 0 ? (
               <div className="table-responsive">
@@ -489,7 +469,7 @@ export default function IMDashboardPage() {
           max-width: 1400px;
           margin: 0 auto;
           padding: 24px;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          background: linear-gradient(135deg, #f5f7fa 0%, #e9eef5 100%);
           min-height: 100vh;
         }
 
@@ -810,23 +790,6 @@ export default function IMDashboardPage() {
         .amount {
           font-weight: 600;
           color: #1e293b;
-        }
-
-        .action-button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          padding: 6px 16px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .action-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(102,126,234,0.3);
         }
 
         .empty-state-enhanced {

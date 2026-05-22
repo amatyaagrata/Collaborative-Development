@@ -5,7 +5,7 @@ import path from 'path';
 // 1. Load environment variables manually
 const envPath = path.resolve('.env.local');
 if (!fs.existsSync(envPath)) {
-  console.error("❌ ERROR: .env.local not found in root directory.");
+  console.error("ERROR: .env.local not found in root directory.");
   process.exit(1);
 }
 
@@ -22,7 +22,7 @@ const supabaseUrl = env['NEXT_PUBLIC_SUPABASE_URL'];
 const serviceRoleKey = env['SUPABASE_SERVICE_ROLE_KEY'];
 
 if (!supabaseUrl || !serviceRoleKey) {
-  console.error("❌ ERROR: Missing Supabase variables in .env.local");
+  console.error("ERROR: Missing Supabase variables in .env.local");
   process.exit(1);
 }
 
@@ -64,7 +64,7 @@ async function setup() {
         user_metadata: { name: user.name, role: user.role }
       });
       if (error) {
-        console.error("❌ Failed to create user:", error.message);
+        console.error("Failed to create user:", error.message);
         continue;
       }
       authUserId = data.user.id;
@@ -80,7 +80,7 @@ async function setup() {
       is_active: true
     }, { onConflict: 'email' });
 
-    if (usersError) console.error("❌ Error syncing public.users:", usersError.message);
+    if (usersError) console.error("Error syncing public.users:", usersError.message);
     else console.log(`- Synced to public.users table`);
 
     // 3. Sync to public.user_roles
@@ -90,11 +90,11 @@ async function setup() {
       organization_name: organization
     }, { onConflict: 'user_id' });
 
-    if (rolesError) console.error("❌ Error syncing public.user_roles:", rolesError.message);
+    if (rolesError) console.error("Error syncing public.user_roles:", rolesError.message);
     else console.log(`- Synced to public.user_roles table`);
   }
 
-  console.log("\n✅ ALL TEST ACCOUNTS CREATED SUCCESSFULLY!");
+  console.log("\nALL TEST ACCOUNTS CREATED SUCCESSFULLY!");
 }
 
 setup();
