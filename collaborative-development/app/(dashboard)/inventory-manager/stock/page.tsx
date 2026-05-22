@@ -238,7 +238,15 @@ export default function IMStockPage() {
       fetchProducts(); 
       fetchSuppliers(); 
     });
-  }, [fetchOrders, fetchProducts, fetchSuppliers]);
+
+    // Realtime: auto-refresh when purchase_orders change (e.g. transporter marks delivered)
+    const channel = supabase
+      .channel("realtime_im_stock")
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, () => fetchOrders())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchOrders, fetchProducts, fetchSuppliers, supabase]);
 
   const getStatusIcon = (status: string) => {
     switch(status?.toLowerCase()) {
