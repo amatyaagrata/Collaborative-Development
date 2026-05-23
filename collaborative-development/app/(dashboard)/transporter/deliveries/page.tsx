@@ -36,7 +36,7 @@ interface WorkOrder {
 
 type FilterTab = "all" | "pending" | "active" | "completed" | "rejected";
 
-/* ── Stepper Steps ───────────────────────────────────────────── */
+/*   Steps  */
 
 const STEPS = [
   { key: "pending", label: "Pending" },
@@ -45,7 +45,7 @@ const STEPS = [
   { key: "delivered", label: "Delivered" },
 ];
 
-/* ── Page Component ──────────────────────────────────────────── */
+/* Page Component  */
 
 export default function TransporterWorkPage() {
   const [orders, setOrders] = useState<WorkOrder[]>([]);
@@ -279,7 +279,7 @@ export default function TransporterWorkPage() {
     };
   }, [orders]);
 
-  /* ── Step Index Helper ─────────────────────────────────────── */
+  /* Step Index Helper  */
 
   const getStepIndex = (status: string) => {
     if (status === "delivered") return 3;
@@ -288,7 +288,7 @@ export default function TransporterWorkPage() {
     return 0;
   };
 
-  /* ── Render ────────────────────────────────────────────────── */
+  /* Render */
 
   const tabs: { key: FilterTab; label: string }[] = [
     { key: "all",       label: "All" },
@@ -451,7 +451,7 @@ export default function TransporterWorkPage() {
                 </div>
               </div>
 
-              {/* ── Status Stepper (always visible) ──────────── */}
+              {/*  Status Stepper (always visible)  */}
               {!isRejected && (
                 <div style={{ padding: "0 24px 16px" }}>
                   <div style={{ display: "flex", alignItems: "center", position: "relative", padding: "0 4px" }}>

@@ -108,18 +108,25 @@ export async function PATCH(req: NextRequest) {
 
     // 6. Sync purchase order status
     const poStatus = DELIVERY_TO_ORDER_STATUS[deliveryStatus as DeliveryStatus];
-    if (orderId) {
+    const targetPoId = orderId || assignment.purchase_order_id;
+
+    if (targetPoId) {
       const { error: poErr } = await admin
         .from("purchase_orders")
         .update({ status: poStatus || deliveryStatus })
-        .eq("id", orderId);
-      if (poErr) console.error("PO sync error:", poErr);
-    } else if (assignment.purchase_order_id) {
-      const { error: poErr } = await admin
-        .from("purchase_orders")
-        .update({ status: poStatus || deliveryStatus })
-        .eq("id", assignment.purchase_order_id);
-      if (poErr) console.error("PO sync error:", poErr);
+        .eq("id", targetPoId);
+
+      if (poErr) {
+        console.error("[delivery-status] PO sync error:", poErr);
+      } else {
+        console.log(`[delivery-status] PO ${targetPoId} status → ${poStatus}`);
+      }
+
+      // 7. Stock auto-increment is handled by the database trigger
+      //    (handle_purchase_order_delivery) when status → 'delivered'
+      if (deliveryStatus === "delivered") {
+        console.log(`[delivery-status] PO ${targetPoId} delivered — stock update handled by DB trigger`);
+      }
     }
 
     return NextResponse.json({ success: true });
