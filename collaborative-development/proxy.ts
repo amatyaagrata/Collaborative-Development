@@ -70,7 +70,7 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // ✅ Always allow API routes and Next.js internals
+  // Always allow API routes and Next.js internals
   if (path.startsWith('/api') || path.startsWith('/_next')) {
     return supabaseResponse;
   }

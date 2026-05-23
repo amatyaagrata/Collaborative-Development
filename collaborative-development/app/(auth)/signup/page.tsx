@@ -16,16 +16,16 @@ const roles = [
   { value: "inventory manager", label: "Inventory Manager", description: "Manage products and stock" },
 ];
 
-// Terms and Conditions Modal Component - FIXED (Hooks before conditional return)
+// Terms and Conditions Modal Component
 function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: () => void; onAccept: () => void }) {
-  // ALL hooks at the top level, BEFORE any conditional returns
+  // Track scroll state for terms acceptance
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
+  // Detect when user scrolls to bottom of terms content
   const handleScroll = () => {
     if (contentRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-      // Consider "bottom" when scrolled within 10px of the bottom
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 10;
       if (isAtBottom && !hasScrolledToBottom) {
         setHasScrolledToBottom(true);
@@ -33,11 +33,10 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
     }
   };
 
-  // Reset scroll state when modal opens
+  // Reset scroll state and position when modal opens
   useEffect(() => {
     if (isOpen) {
       setHasScrolledToBottom(false);
-      // Reset scroll position
       setTimeout(() => {
         if (contentRef.current) {
           contentRef.current.scrollTop = 0;
@@ -46,7 +45,6 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
     }
   }, [isOpen]);
 
-  // Conditional return AFTER all hooks
   if (!isOpen) return null;
 
   return (
@@ -65,7 +63,7 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </button>
         </div>
 
-        {/* Content */}
+        {/* Scrollable Terms Content */}
         <div 
           ref={contentRef}
           onScroll={handleScroll}
@@ -135,7 +133,7 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer with Accept/Decline Buttons */}
         <div className="p-6 border-t border-gray-200 flex justify-between items-center gap-4">
           <button
             onClick={onClose}
@@ -156,6 +154,7 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </button>
         </div>
         
+        {/* Scroll Warning */}
         {!hasScrolledToBottom && (
           <div className="px-6 pb-4 text-xs text-amber-600 text-center">
             📜 Please scroll to the bottom to accept the terms and conditions
@@ -168,6 +167,8 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
 
 export default function RequestAccess() {
   const router = useRouter();
+  
+  // Form Data State
   const [formData, setFormData] = useState({
     email: "",
     name: "",
@@ -175,6 +176,8 @@ export default function RequestAccess() {
     reason: "",
     organizationId: "",
   });
+  
+  // Error State
   const [errors, setErrors] = useState({
     email: "",
     name: "",
@@ -182,13 +185,15 @@ export default function RequestAccess() {
     reason: "",
     organizationId: "",
   });
+  
+  // UI State
   const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   
-  // OTP States
+  // OTP Verification States
   const [otpSent, setOtpSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -198,6 +203,7 @@ export default function RequestAccess() {
   const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
 
+  // Fetch organizations on component mount
   useEffect(() => {
     async function fetchOrgs() {
       try {
@@ -215,7 +221,7 @@ export default function RequestAccess() {
     fetchOrgs();
   }, []);
 
-  // Validation functions
+  // Validation Functions
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) return "Email is required";
@@ -239,6 +245,7 @@ export default function RequestAccess() {
     return "";
   };
 
+  // Handle input changes with real-time validation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
@@ -279,6 +286,7 @@ export default function RequestAccess() {
     setShowTermsModal(true);
   };
 
+  // Comprehensive form validation
   const validateForm = () => {
     const emailError = validateEmail(formData.email);
     const nameError = validateName(formData.name);
@@ -308,6 +316,7 @@ export default function RequestAccess() {
     return true;
   };
 
+  // Send OTP to email
   const handleSendOTP = async () => {
     const emailError = validateEmail(formData.email);
     if (emailError) {
@@ -335,6 +344,7 @@ export default function RequestAccess() {
     }
   };
 
+  // Verify OTP code
   const handleVerifyOTP = async () => {
     if (otpCode.length < 6) {
       toast.error("Please enter the verification code");
@@ -361,6 +371,7 @@ export default function RequestAccess() {
     }
   };
 
+  // Submit access request
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -410,6 +421,7 @@ export default function RequestAccess() {
       />
       
       <div className="min-h-screen bg-white">
+        {/* Background Decorations */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-primary/10 blur-[120px] rounded-full" />
           <div className="absolute -bottom-56 right-0 w-[600px] h-[600px] bg-[#1e004b]/10 blur-[120px] rounded-full" />
@@ -417,7 +429,8 @@ export default function RequestAccess() {
 
         <div className="min-h-screen flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-            {/* Left Panel */}
+            
+            {/* Left Panel - Branding Section */}
             <div className="hidden lg:flex flex-col rounded-[32px] border border-zinc-100 bg-white shadow-sm p-10 lg:p-12 relative overflow-hidden">
               <Link href="/" className="flex items-center gap-3 w-fit">
                 <div className="relative w-12 h-12">
@@ -442,6 +455,7 @@ export default function RequestAccess() {
                 </p>
               </div>
 
+              {/* Feature List */}
               <div className="mt-12 space-y-4">
                 {[
                   "Track inventory in real-time",
@@ -459,6 +473,7 @@ export default function RequestAccess() {
                 ))}
               </div>
 
+              {/* Selected Role Preview */}
               <div className="mt-12">
                 <div className="p-7 rounded-2xl bg-zinc-50 border border-zinc-100">
                   <div className="flex items-center gap-2 mb-3">
@@ -477,8 +492,9 @@ export default function RequestAccess() {
               </div>
             </div>
 
-            {/* Right Panel (Form) */}
+            {/* Right Panel - Registration Form */}
             <div className="rounded-[32px] border border-zinc-100 bg-white shadow-sm p-8 md:p-10">
+              {/* Header Links */}
               <div className="flex items-center justify-between gap-4">
                 <Link href="/" className="flex items-center gap-2 lg:hidden">
                   <div className="relative w-10 h-10">
@@ -500,6 +516,7 @@ export default function RequestAccess() {
                 </p>
               </div>
 
+              {/* Form Title */}
               <div className="mt-8">
                 <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
                   Request Access
@@ -509,6 +526,7 @@ export default function RequestAccess() {
                 </p>
               </div>
 
+              {/* Success Screen */}
               {submitted ? (
                 <div className="mt-12 text-center py-10 bg-green-50 rounded-2xl border border-green-100">
                   <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -521,14 +539,15 @@ export default function RequestAccess() {
                     Your request has been sent to the administrator. We will contact you once it is reviewed.
                   </p>
                   <Link href="/">
-                    <button className="mt-6 px-6 py-2.5 bg-green-600 text-white font-semibold rounded-xl shadow-md">
+                    <Button className="mt-6 bg-white text-green-700 border border-green-200 hover:bg-green-50">
                       Return to Home
-                    </button>
+                    </Button>
                   </Link>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5 mt-8">
-                  {/* Role Selector */}
+                  
+                  {/* Role Selection */}
                   <div className="space-y-2.5">
                     <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -536,7 +555,6 @@ export default function RequestAccess() {
                       </svg>
                       Select Role *
                     </label>
-
                     <div className="relative">
                       <select
                         value={selectedRole}
@@ -560,7 +578,7 @@ export default function RequestAccess() {
                     </p>
                   </div>
 
-                  {/* Organization Selector */}
+                  {/* Organization Selection */}
                   <div className="space-y-2.5">
                     <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -568,7 +586,6 @@ export default function RequestAccess() {
                       </svg>
                       Select Organization *
                     </label>
-
                     <div className="relative">
                       <select
                         name="organizationId"
@@ -626,7 +643,7 @@ export default function RequestAccess() {
                     </div>
                   </div>
 
-                  {/* Email */}
+                  {/* Email with OTP Verification */}
                   <div className="space-y-2.5">
                     <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -657,6 +674,7 @@ export default function RequestAccess() {
                       <p className="text-xs text-red-500 mt-1">{errors.email}</p>
                     )}
                     
+                    {/* Send OTP Button */}
                     {!isEmailVerified && !otpSent && (
                       <button
                         type="button"
@@ -668,6 +686,7 @@ export default function RequestAccess() {
                       </button>
                     )}
 
+                    {/* OTP Verification Section */}
                     {otpSent && !isEmailVerified && (
                       <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-3">
                         <label className="text-[12px] font-bold text-zinc-600 uppercase tracking-wider">
@@ -729,7 +748,7 @@ export default function RequestAccess() {
                     </div>
                   </div>
 
-                  {/* Reason */}
+                  {/* Reason for Joining */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -770,7 +789,7 @@ export default function RequestAccess() {
                     </label>
                   </div>
 
-                  {/* Submit Button */}
+                  {/* Submit Button - Disabled until email is verified */}
                   <Button
                     type="submit"
                     className={`w-full font-semibold py-3.5 px-4 rounded-2xl transition-all duration-200 active:scale-[0.99] shadow-sm mt-4 ${
