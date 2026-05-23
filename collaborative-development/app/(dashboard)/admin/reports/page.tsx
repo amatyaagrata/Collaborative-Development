@@ -11,6 +11,8 @@ import {
   Tag, 
   Phone, 
   Building,
+  AlertCircle,
+  TrendingDown,
   DollarSign,
   Search,
   Filter
@@ -75,6 +77,7 @@ export default function AdminReportsPage() {
   // Fetch all necessary data for reports & sales
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("Please login first.");
@@ -142,7 +145,7 @@ export default function AdminReportsPage() {
           .eq("org_id", finalOrgId)
       ]);
 
-      // Filter and de-duplicate products to ensure we only load what is delivered in this org's inventory
+      // Filter and de-duplicate products
       const rawProducts = prodRes.data || [];
       const uniqueProducts: Record<string, Product> = {};
       rawProducts.forEach((p: any) => {
@@ -325,123 +328,127 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      {/* Full-width Sales Log Card */}
-      <div className="premium-card">
-        <div className="card-title-row">
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <h3 className="card-title"><History size={18} color="#6008f8" /> Sales & Customer Log</h3>
-            <span className="card-subtitle">{filteredSales.length} transactions match filters</span>
-          </div>
-          
-          {/* Search & Filter Controls */}
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <Search size={14} style={{ position: "absolute", left: 10, color: "#8b8994" }} />
-              <input
-                type="text"
-                placeholder="Search buyer/phone/sale #..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  height: 34,
-                  width: 220,
-                  borderRadius: 8,
-                  border: "1px solid #ece8f4",
-                  paddingLeft: 30,
-                  paddingRight: 10,
-                  fontSize: "12px",
-                  color: "#1e004b",
-                }}
-              />
+      {/* Main Split Grid (Form vs Sales Log) */}
+      <div className="reports-layout-grid" style={{ gridTemplateColumns: '1fr' }}>
+        
+        {/* Full Width: Recent Sales Log / Customer Purchases */}
+        <div className="premium-card">
+          <div className="card-title-row">
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <h3 className="card-title"><History size={18} color="#6008f8" /> Sales & Customer Log</h3>
+              <span className="card-subtitle">{filteredSales.length} transactions match filters</span>
             </div>
+            
+            {/* Search & Filter Controls */}
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <Search size={14} style={{ position: "absolute", left: 10, color: "#8b8994" }} />
+                <input
+                  type="text"
+                  placeholder="Search buyer/phone/sale #..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    height: 34,
+                    width: 200,
+                    borderRadius: 8,
+                    border: "1px solid #ece8f4",
+                    paddingLeft: 30,
+                    paddingRight: 10,
+                    fontSize: "12px",
+                    color: "#1e004b",
+                  }}
+                />
+              </div>
 
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <Filter size={14} style={{ position: "absolute", left: 10, color: "#8b8994" }} />
-              <select
-                value={filterProduct}
-                onChange={(e) => setFilterProduct(e.target.value)}
-                style={{
-                  height: 34,
-                  width: 180,
-                  borderRadius: 8,
-                  border: "1px solid #ece8f4",
-                  paddingLeft: 30,
-                  paddingRight: 20,
-                  fontSize: "12px",
-                  color: "#1e004b",
-                  appearance: "none",
-                  background: "white",
-                  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236008f8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "right 10px center",
-                }}
-              >
-                <option value="">All Products</option>
-                {products.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <Filter size={14} style={{ position: "absolute", left: 10, color: "#8b8994" }} />
+                <select
+                  value={filterProduct}
+                  onChange={(e) => setFilterProduct(e.target.value)}
+                  style={{
+                    height: 34,
+                    width: 150,
+                    borderRadius: 8,
+                    border: "1px solid #ece8f4",
+                    paddingLeft: 30,
+                    paddingRight: 20,
+                    fontSize: "12px",
+                    color: "#1e004b",
+                    appearance: "none",
+                    background: "white",
+                    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236008f8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 10px center",
+                  }}
+                >
+                  <option value="">All Products</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="sales-log-wrapper">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Sale #</th>
-                <th>Buyer details</th>
-                <th>Product Sold</th>
-                <th>Total Paid</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.length === 0 ? (
+          <div className="sales-log-wrapper">
+            <table className="premium-table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="empty-table-state">
-                    <ShoppingCart size={32} color="#b5b3bb" style={{ marginBottom: 8 }} />
-                    <p>No sales matches the criteria.</p>
-                    <p>Clear search or filters to see all recorded sales.</p>
-                  </td>
+                  <th>Sale #</th>
+                  <th>Buyer details</th>
+                  <th>Product Sold</th>
+                  <th>Total Paid</th>
+                  <th>Date</th>
                 </tr>
-              ) : (
-                filteredSales.map((sale) => {
-                  const item = sale.sale_items?.[0]; // Get the single product sold in this transaction
-                  return (
-                    <tr key={sale.id}>
-                      <td>
-                        <span className="sale-badge">{sale.sale_number}</span>
-                      </td>
-                      <td>
-                        <div className="buyer-info-col">
-                          <span className="buyer-name">{sale.customer_name || "Walk-in Customer"}</span>
-                          {sale.customer_phone && <span className="buyer-phone"><Phone size={10} style={{ display: "inline", marginRight: 4 }} />{sale.customer_phone}</span>}
-                          {sale.notes && <span className="buyer-org-badge"><Building size={9} style={{ display: "inline", marginRight: 3 }} /> {sale.notes}</span>}
-                        </div>
-                      </td>
-                      <td>
-                        {item ? (
-                          <div className="product-sold-info">
-                            <span className="product-sold-name">{item.products?.name || "Unknown Product"}</span>
-                            <span className="product-sold-qty">{item.quantity} unit{item.quantity > 1 ? "s" : ""} @ ₹{item.unit_price.toLocaleString()}</span>
+              </thead>
+              <tbody>
+                {filteredSales.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="empty-table-state">
+                      <ShoppingCart size={32} color="#b5b3bb" style={{ marginBottom: 8 }} />
+                      <p>No sales matches the criteria.</p>
+                      <p>Clear search or filters, or use the form to record a new sale.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSales.map((sale) => {
+                    const item = sale.sale_items?.[0];
+                    return (
+                      <tr key={sale.id}>
+                        <td>
+                          <span className="sale-badge">{sale.sale_number}</span>
+                        </td>
+                        <td>
+                          <div className="buyer-info-col">
+                            <span className="buyer-name">{sale.customer_name || "Walk-in Customer"}</span>
+                            {sale.customer_phone && <span className="buyer-phone"><Phone size={10} style={{ display: "inline", marginRight: 4 }} />{sale.customer_phone}</span>}
+                            {sale.notes && <span className="buyer-org-badge"><Building size={9} style={{ display: "inline", marginRight: 3 }} /> {sale.notes}</span>}
                           </div>
-                        ) : (
-                          <span style={{ color: "#8b8994" }}>No items listed</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="amount-col">₹{sale.total_amount.toLocaleString()}</span>
-                      </td>
-                      <td>
-                        <span className="date-col">{new Date(sale.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                        <td>
+                          {item ? (
+                            <div className="product-sold-info">
+                              <span className="product-sold-name">{item.products?.name || "Unknown Product"}</span>
+                              <span className="product-sold-qty">{item.quantity} unit{item.quantity > 1 ? "s" : ""} @ ₹{item.unit_price.toLocaleString()}</span>
+                            </div>
+                          ) : (
+                            <span style={{ color: "#8b8994" }}>No items listed</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="amount-col">₹{sale.total_amount.toLocaleString()}</span>
+                        </td>
+                        <td>
+                          <span className="date-col">{new Date(sale.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

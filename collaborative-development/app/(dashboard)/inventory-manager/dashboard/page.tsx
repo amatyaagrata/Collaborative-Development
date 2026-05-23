@@ -314,7 +314,7 @@ export default function IMDashboardPage() {
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
                     labelLine={false}
                   >
                     {categoryData.map((entry, index) => (
@@ -341,7 +341,7 @@ export default function IMDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="name" width={100} />
-                  <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value) => `₹${Number(value || 0).toLocaleString()}`} />
                   <Bar dataKey="price" fill="#3b82f6" radius={[0, 4, 4, 0]}>
                     {topProducts.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
