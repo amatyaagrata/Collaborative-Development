@@ -16,16 +16,14 @@ const roles = [
   { value: "inventory manager", label: "Inventory Manager", description: "Manage products and stock" },
 ];
 
-// Terms and Conditions Modal Component - FIXED (Hooks before conditional return)
+// Terms and Conditions Modal Component
 function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: () => void; onAccept: () => void }) {
-  // ALL hooks at the top level, BEFORE any conditional returns
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const handleScroll = () => {
     if (contentRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-      // Consider "bottom" when scrolled within 10px of the bottom
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 10;
       if (isAtBottom && !hasScrolledToBottom) {
         setHasScrolledToBottom(true);
@@ -33,11 +31,9 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
     }
   };
 
-  // Reset scroll state when modal opens
   useEffect(() => {
     if (isOpen) {
       setHasScrolledToBottom(false);
-      // Reset scroll position
       setTimeout(() => {
         if (contentRef.current) {
           contentRef.current.scrollTop = 0;
@@ -46,31 +42,21 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
     }
   }, [isOpen]);
 
-  // Conditional return AFTER all hooks
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-primary">Terms and Conditions</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Content */}
-        <div 
-          ref={contentRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-6 space-y-6 text-gray-700"
-        >
+        <div ref={contentRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-6 space-y-6 text-gray-700">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">1. Acceptance of Terms</h3>
             <p className="text-sm leading-relaxed">
@@ -135,12 +121,8 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </div>
         </div>
 
-        {/* Footer */}
         <div className="p-6 border-t border-gray-200 flex justify-between items-center gap-4">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-          >
+          <button onClick={onClose} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors">
             Decline
           </button>
           <button
@@ -168,6 +150,7 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
 
 export default function RequestAccess() {
   const router = useRouter();
+  
   const [formData, setFormData] = useState({
     email: "",
     name: "",
@@ -175,6 +158,7 @@ export default function RequestAccess() {
     reason: "",
     organizationId: "",
   });
+  
   const [errors, setErrors] = useState({
     email: "",
     name: "",
@@ -182,19 +166,18 @@ export default function RequestAccess() {
     reason: "",
     organizationId: "",
   });
+  
   const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   
-  // OTP States
   const [otpSent, setOtpSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
 
-  // Organizations State
   const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
 
@@ -215,7 +198,6 @@ export default function RequestAccess() {
     fetchOrgs();
   }, []);
 
-  // Validation functions
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) return "Email is required";
@@ -247,7 +229,6 @@ export default function RequestAccess() {
       [name]: value,
     });
 
-    // Clear error when user starts typing
     if (errors[name as keyof typeof errors]) {
       setErrors({
         ...errors,
@@ -255,7 +236,6 @@ export default function RequestAccess() {
       });
     }
 
-    // Real-time validation
     if (name === "email") {
       setErrors({ ...errors, email: validateEmail(value) });
     } else if (name === "name") {
@@ -417,7 +397,8 @@ export default function RequestAccess() {
 
         <div className="min-h-screen flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-            {/* Left Panel */}
+            
+            {/* Left Panel - Branding Section */}
             <div className="hidden lg:flex flex-col rounded-[32px] border border-zinc-100 bg-white shadow-sm p-10 lg:p-12 relative overflow-hidden">
               <Link href="/" className="flex items-center gap-3 w-fit">
                 <div className="relative w-12 h-12">
@@ -477,7 +458,7 @@ export default function RequestAccess() {
               </div>
             </div>
 
-            {/* Right Panel (Form) */}
+            {/* Right Panel - Registration Form */}
             <div className="rounded-[32px] border border-zinc-100 bg-white shadow-sm p-8 md:p-10">
               <div className="flex items-center justify-between gap-4">
                 <Link href="/" className="flex items-center gap-2 lg:hidden">
@@ -521,14 +502,21 @@ export default function RequestAccess() {
                     Your request has been sent to the administrator. We will contact you once it is reviewed.
                   </p>
                   <Link href="/">
-                    <button className="mt-6 px-6 py-2.5 bg-green-600 text-white font-semibold rounded-xl shadow-md">
+                    <button
+                      type="button"
+                      className="mt-6 px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-md cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
                       Return to Home
                     </button>
                   </Link>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5 mt-8">
-                  {/* Role Selector */}
+                  
+                  {/* Role Selection */}
                   <div className="space-y-2.5">
                     <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -536,7 +524,6 @@ export default function RequestAccess() {
                       </svg>
                       Select Role *
                     </label>
-
                     <div className="relative">
                       <select
                         value={selectedRole}
@@ -560,7 +547,7 @@ export default function RequestAccess() {
                     </p>
                   </div>
 
-                  {/* Organization Selector */}
+                  {/* Organization Selection */}
                   <div className="space-y-2.5">
                     <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -568,7 +555,6 @@ export default function RequestAccess() {
                       </svg>
                       Select Organization *
                     </label>
-
                     <div className="relative">
                       <select
                         name="organizationId"
@@ -626,7 +612,7 @@ export default function RequestAccess() {
                     </div>
                   </div>
 
-                  {/* Email */}
+                  {/* Email with OTP Verification */}
                   <div className="space-y-2.5">
                     <label className="text-[13px] font-bold text-zinc-900 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -729,7 +715,7 @@ export default function RequestAccess() {
                     </div>
                   </div>
 
-                  {/* Reason */}
+                  {/* Reason for Joining */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                       <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
