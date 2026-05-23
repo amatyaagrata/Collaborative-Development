@@ -79,10 +79,6 @@ export default function IMDashboardPage() {
       }
     };
 
-<<<<<<< Updated upstream
-        // Fetch all products for THIS organization to reflect true inventory count
-        const { data: prodData } = await supabase
-=======
     getOrgId();
   }, [supabase]);
 
@@ -96,7 +92,6 @@ export default function IMDashboardPage() {
         
         // Fetch products
         const { data: prodData, error: prodError } = await supabase
->>>>>>> Stashed changes
           .from("products")
           .select(`
             id,
@@ -107,17 +102,11 @@ export default function IMDashboardPage() {
             min_stock_level,
             supplier_id,
             suppliers:supplier_id (name),
-<<<<<<< Updated upstream
-            categories:category_id (name)
-          `)
-          .eq("org_id", userRow.org_id);
-=======
             category_id,
             categories:category_id (name),
             created_at
           `)
           .eq("org_id", orgId);
->>>>>>> Stashed changes
 
         if (prodError) throw prodError;
 
@@ -332,7 +321,7 @@ export default function IMDashboardPage() {
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }: any) => `${name} (${(percent * 100).toFixed(0)}%)`}
                     labelLine={false}
                   >
                     {categoryData.map((entry, index) => (
@@ -359,7 +348,7 @@ export default function IMDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="name" />
-                  <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                 <Tooltip formatter={(value: any) => `₹${Number(value || 0).toLocaleString()}`} />
                   <Bar dataKey="price" fill="#3b82f6" radius={[0, 4, 4, 0]}>
                     {topProducts.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
