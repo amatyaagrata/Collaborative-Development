@@ -18,11 +18,9 @@ const roles = [
 
 // Terms and Conditions Modal Component
 function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: () => void; onAccept: () => void }) {
-  // Track scroll state for terms acceptance
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  // Detect when user scrolls to bottom of terms content
   const handleScroll = () => {
     if (contentRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
@@ -33,7 +31,6 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
     }
   };
 
-  // Reset scroll state and position when modal opens
   useEffect(() => {
     if (isOpen) {
       setHasScrolledToBottom(false);
@@ -50,25 +47,16 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-primary">Terms and Conditions</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Scrollable Terms Content */}
-        <div 
-          ref={contentRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-6 space-y-6 text-gray-700"
-        >
+        <div ref={contentRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-6 space-y-6 text-gray-700">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">1. Acceptance of Terms</h3>
             <p className="text-sm leading-relaxed">
@@ -133,12 +121,8 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </div>
         </div>
 
-        {/* Footer with Accept/Decline Buttons */}
         <div className="p-6 border-t border-gray-200 flex justify-between items-center gap-4">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-          >
+          <button onClick={onClose} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors">
             Decline
           </button>
           <button
@@ -154,7 +138,6 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
           </button>
         </div>
         
-        {/* Scroll Warning */}
         {!hasScrolledToBottom && (
           <div className="px-6 pb-4 text-xs text-amber-600 text-center">
             📜 Please scroll to the bottom to accept the terms and conditions
@@ -168,7 +151,6 @@ function TermsModal({ isOpen, onClose, onAccept }: { isOpen: boolean; onClose: (
 export default function RequestAccess() {
   const router = useRouter();
   
-  // Form Data State
   const [formData, setFormData] = useState({
     email: "",
     name: "",
@@ -177,7 +159,6 @@ export default function RequestAccess() {
     organizationId: "",
   });
   
-  // Error State
   const [errors, setErrors] = useState({
     email: "",
     name: "",
@@ -186,24 +167,20 @@ export default function RequestAccess() {
     organizationId: "",
   });
   
-  // UI State
   const [selectedRole, setSelectedRole] = useState("inventory manager");
   const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   
-  // OTP Verification States
   const [otpSent, setOtpSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
 
-  // Organizations State
   const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
 
-  // Fetch organizations on component mount
   useEffect(() => {
     async function fetchOrgs() {
       try {
@@ -221,7 +198,6 @@ export default function RequestAccess() {
     fetchOrgs();
   }, []);
 
-  // Validation Functions
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) return "Email is required";
@@ -245,7 +221,6 @@ export default function RequestAccess() {
     return "";
   };
 
-  // Handle input changes with real-time validation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
@@ -254,7 +229,6 @@ export default function RequestAccess() {
       [name]: value,
     });
 
-    // Clear error when user starts typing
     if (errors[name as keyof typeof errors]) {
       setErrors({
         ...errors,
@@ -262,7 +236,6 @@ export default function RequestAccess() {
       });
     }
 
-    // Real-time validation
     if (name === "email") {
       setErrors({ ...errors, email: validateEmail(value) });
     } else if (name === "name") {
@@ -286,7 +259,6 @@ export default function RequestAccess() {
     setShowTermsModal(true);
   };
 
-  // Comprehensive form validation
   const validateForm = () => {
     const emailError = validateEmail(formData.email);
     const nameError = validateName(formData.name);
@@ -316,7 +288,6 @@ export default function RequestAccess() {
     return true;
   };
 
-  // Send OTP to email
   const handleSendOTP = async () => {
     const emailError = validateEmail(formData.email);
     if (emailError) {
@@ -344,7 +315,6 @@ export default function RequestAccess() {
     }
   };
 
-  // Verify OTP code
   const handleVerifyOTP = async () => {
     if (otpCode.length < 6) {
       toast.error("Please enter the verification code");
@@ -371,7 +341,6 @@ export default function RequestAccess() {
     }
   };
 
-  // Submit access request
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -421,7 +390,6 @@ export default function RequestAccess() {
       />
       
       <div className="min-h-screen bg-white">
-        {/* Background Decorations */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-primary/10 blur-[120px] rounded-full" />
           <div className="absolute -bottom-56 right-0 w-[600px] h-[600px] bg-[#1e004b]/10 blur-[120px] rounded-full" />
@@ -455,7 +423,6 @@ export default function RequestAccess() {
                 </p>
               </div>
 
-              {/* Feature List */}
               <div className="mt-12 space-y-4">
                 {[
                   "Track inventory in real-time",
@@ -473,7 +440,6 @@ export default function RequestAccess() {
                 ))}
               </div>
 
-              {/* Selected Role Preview */}
               <div className="mt-12">
                 <div className="p-7 rounded-2xl bg-zinc-50 border border-zinc-100">
                   <div className="flex items-center gap-2 mb-3">
@@ -494,7 +460,6 @@ export default function RequestAccess() {
 
             {/* Right Panel - Registration Form */}
             <div className="rounded-[32px] border border-zinc-100 bg-white shadow-sm p-8 md:p-10">
-              {/* Header Links */}
               <div className="flex items-center justify-between gap-4">
                 <Link href="/" className="flex items-center gap-2 lg:hidden">
                   <div className="relative w-10 h-10">
@@ -516,7 +481,6 @@ export default function RequestAccess() {
                 </p>
               </div>
 
-              {/* Form Title */}
               <div className="mt-8">
                 <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
                   Request Access
@@ -526,7 +490,6 @@ export default function RequestAccess() {
                 </p>
               </div>
 
-              {/* Success Screen */}
               {submitted ? (
                 <div className="mt-12 text-center py-10 bg-green-50 rounded-2xl border border-green-100">
                   <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -539,9 +502,15 @@ export default function RequestAccess() {
                     Your request has been sent to the administrator. We will contact you once it is reviewed.
                   </p>
                   <Link href="/">
-                    <Button className="mt-6 bg-white text-green-700 border border-green-200 hover:bg-green-50">
+                    <button
+                      type="button"
+                      className="mt-6 px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-md cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
                       Return to Home
-                    </Button>
+                    </button>
                   </Link>
                 </div>
               ) : (
@@ -674,7 +643,6 @@ export default function RequestAccess() {
                       <p className="text-xs text-red-500 mt-1">{errors.email}</p>
                     )}
                     
-                    {/* Send OTP Button */}
                     {!isEmailVerified && !otpSent && (
                       <button
                         type="button"
@@ -686,7 +654,6 @@ export default function RequestAccess() {
                       </button>
                     )}
 
-                    {/* OTP Verification Section */}
                     {otpSent && !isEmailVerified && (
                       <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-3">
                         <label className="text-[12px] font-bold text-zinc-600 uppercase tracking-wider">
@@ -789,7 +756,7 @@ export default function RequestAccess() {
                     </label>
                   </div>
 
-                  {/* Submit Button - Disabled until email is verified */}
+                  {/* Submit Button */}
                   <Button
                     type="submit"
                     className={`w-full font-semibold py-3.5 px-4 rounded-2xl transition-all duration-200 active:scale-[0.99] shadow-sm mt-4 ${
