@@ -22,6 +22,7 @@ export default function SupplierProductsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<SupplierProduct | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -66,6 +67,15 @@ export default function SupplierProductsPage() {
       
       if (error) throw error;
       setProducts(data || []);
+      
+      // Fetch available categories for this organization
+      const { data: catData } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("org_id", supplier.org_id)
+        .order("name");
+        
+      if (catData) setCategories(catData);
       
     } catch (err) {
       console.error("Error:", err);
@@ -480,14 +490,30 @@ export default function SupplierProductsPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#1e1b4b", marginBottom: "8px" }}>Category</label>
-                  <input 
-                    type="text" 
-                    value={formData.category} 
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })} 
-                    placeholder="e.g., Electronics"
-                    style={{ width: "100%", padding: "12px 14px", border: "1px solid #e2e8f0", borderRadius: "12px", fontSize: "14px", outline: "none" }}
-                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: 600, color: "#1e1b4b" }}>Category</label>
+                  </div>
+                  <select 
+                    value={categories.some(c => c.name === formData.category) ? formData.category : (formData.category ? "custom" : "")} 
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value === "custom" ? "" : e.target.value })} 
+                    style={{ width: "100%", padding: "12px 14px", border: "1px solid #e2e8f0", borderRadius: "12px", fontSize: "14px", outline: "none", background: "white", marginBottom: "8px" }}
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                    <option value="custom">+ Add new category...</option>
+                  </select>
+                  
+                  {(!categories.some(c => c.name === formData.category)) && (
+                    <input 
+                      type="text" 
+                      value={formData.category} 
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })} 
+                      placeholder="Type new category name..."
+                      style={{ width: "100%", padding: "12px 14px", border: "1px solid #e2e8f0", borderRadius: "12px", fontSize: "14px", outline: "none" }}
+                    />
+                  )}
                 </div>
               </div>
               
